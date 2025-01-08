@@ -9,7 +9,7 @@ function LoginPage() {
     <section className="bg-gray-50 dark:bg-gray-900 p-4 mx-auto" id="scrollID">
       <div  className="flex flex-col items-center justify-center px-6 py-8 mx-auto" >
         <a
-          href="#"
+          href="/"
           className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white"
         >
           <img
@@ -27,7 +27,7 @@ function LoginPage() {
             <form className="space-y-4 md:space-y-6" action="#">
               <div>
                 <label
-                  for="email"
+                  htmlFor="email"
                   className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                 >
                   Email
@@ -43,7 +43,7 @@ function LoginPage() {
               </div>
               <div>
                 <label
-                  for="password"
+                  htmlFor="password"
                   className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                 >
                   Mật khẩu

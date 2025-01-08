@@ -9,7 +9,7 @@ function Register() {
     <section ref={scrollToRef} className="bg-gray-50 dark:bg-gray-900">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto">
         <a
-          href="#"
+          href="/"
           className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white"
         >
           <img
@@ -27,7 +27,7 @@ function Register() {
             <form className="space-y-4 md:space-y-6" action="#">
               <div>
                 <label
-                  for="email"
+                  htmlFor="email"
                   className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                 >
                   Email
@@ -43,7 +43,7 @@ function Register() {
               </div>
               <div>
                 <label
-                  for="password"
+                  htmlFor="password"
                   className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                 >
                   Mật khẩu
@@ -59,7 +59,7 @@ function Register() {
               </div>
               <div>
                 <label
-                  for="confirm-password"
+                  htmlFor="confirm-password"
                   className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                 >
                   Xác nhận mật khẩu
@@ -83,7 +83,7 @@ function Register() {
                     required
                   />
                   <label
-                    for="showPass"
+                    htmlFor="showPass"
                     className=" text-gray-500 dark:text-gray-300 cursor-pointer"
                   >
                     Hiện mật khẩu
@@ -99,7 +99,7 @@ function Register() {
               <p className="text-sm font-light text-gray-500 dark:text-gray-400">
                 Đã có tài khoản?{" "}
                 <a
-                  href="#"
+                  href="/"
                   className="font-medium text-primary-600 hover:underline dark:text-primary-500"
                 >
                   Đăng nhập

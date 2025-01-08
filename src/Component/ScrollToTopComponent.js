@@ -1,4 +1,4 @@
-import { faAngleDoubleUp, faArrowUp } from '@fortawesome/free-solid-svg-icons';
+import { faAngleDoubleUp } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import React, { useState, useEffect } from 'react';
 
