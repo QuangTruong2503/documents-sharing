@@ -2,12 +2,13 @@ import "./CSS/App.css";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./Pages/Home";
-import HeaderComponent from "./Component/HeaderComponent";
-import LoginPage from "./Pages/Login-Register/LoginPage.js";
-import Register from "./Pages/Login-Register/Register.js";
+import HeaderComponent from "./Component/Headers/HeaderComponent.jsx";
+import LoginPage from "./Pages/Login-Register/LoginPage.tsx";
+import Register from "./Pages/Login-Register/Register.tsx";
 import FooterComponent from "./Component/FooterComponent.js";
 import ForgotPassword from "./Pages/Login-Register/ForgotPassword.js";
 import ScrollToTopComponent from "./Component/ScrollToTopComponent.js";
+import { ToastContainer } from "react-toastify";
 
 function App() {
   return (
@@ -25,6 +26,11 @@ function App() {
       </div>
       <ScrollToTopComponent />
       <FooterComponent />
+      <Routes>
+        
+      </Routes>
+      {/* Toaster */}
+      <ToastContainer />
     </BrowserRouter>
   );
 }
