@@ -5,8 +5,8 @@ const userApi = {
   getAllUsers: () => {
     return axiosInstance.get('/Users');
   },
-  getUserById: (id) => {
-    return axiosInstance.get(`/Users/${id}`);
+  getUserById: (userID) => {
+    return axiosInstance.get(`/Users/my-profile?userID=${userID}`);
   },
   postLogin: (data) => {
     return axiosInstance.post('/Users/request-login', data);

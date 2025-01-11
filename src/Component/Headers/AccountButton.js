@@ -42,12 +42,12 @@ const AccountButton = () => {
         <div className="relative">
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center justify-center w-10 h-10 p-2 rounded-full overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-colors"
+          className="flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-colors"
         >
           <img 
             src={user.avatarUrl} 
             alt="User avatar"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover rounded-full"
           />
         </button>
   

@@ -1,7 +1,10 @@
 import { faImage } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import LoaderButton from "../../Component/Loaders/LoaderButton";
+import Cookies from "js-cookie";
+import userApi from "../../api/usersApi";
+import jwt from "jsonwebtoken";
 
 interface User {
   username: string;
@@ -14,18 +17,10 @@ interface User {
 }
 
 function Profile() {
+  const TokenSecretKey = process.env.REACT_APP_TOKEN_SECRET_KEY || "23f9dc32-e9ee-4f39-b1dd-040a6b69ac21"; // Default value
   const [isSavingImage, setIsSavingImage] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [user, setUser] = useState<User | null>({
-    username: "truong25",
-    full_name: null,
-    email: "truong25@gmail.com",
-    avatar_url:
-      "https://res.cloudinary.com/brandocloud/image/upload/v1736401991/DocShare/users/default-avt.png",
-    created_at: "2025-01-10T06:16:07",
-    role: "user",
-    is_verified: false,
-  });
+  const [user, setUser] = useState<User | null>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Your image handling logic
@@ -46,6 +41,33 @@ function Profile() {
       });
     }
   };
+
+  useEffect(() => {
+    const token = Cookies.get("token");
+
+    if (token) {
+      try {
+
+
+        // Use extracted userID to fetch user data
+        const fetchUserByID = async () => {
+          try {
+            const response = await userApi.getUserById();
+            const user: User = response.data;
+            setUser(user);
+          } catch (error: any) {
+            console.error("Error fetching user data:", error.message);
+          }
+        };
+
+        fetchUserByID();
+      } catch (error) {
+        console.error("Invalid token:", error.message);
+      }
+    } else {
+      console.error("No token found in cookies.");
+    }
+  }, []);
 
   return (
     <div className="container mx-auto p-4">
