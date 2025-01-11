@@ -9,26 +9,27 @@ import FooterComponent from "./Component/FooterComponent.js";
 import ForgotPassword from "./Pages/Login-Register/ForgotPassword.js";
 import ScrollToTopComponent from "./Component/ScrollToTopComponent.js";
 import { ToastContainer } from "react-toastify";
+import AccountPage from "./Pages/Account/AccountPage.js";
 
 function App() {
   return (
     <BrowserRouter>
       <HeaderComponent />
       <div className="max-w-screen-xl mx-auto p-4 min-h-screen">
-      <Routes>
-        <Route path="/" Component={Home} />
-        
-        {/* Login */}
-        <Route path="/login" Component={LoginPage}/>
-        <Route path="/register" Component={Register}/>
-        <Route path="/forgot-password" Component={ForgotPassword}/>
-      </Routes>
+        <Routes>
+          <Route path="/" Component={Home} />
+
+          {/* Login */}
+          <Route path="/login" Component={LoginPage} />
+          <Route path="/register" Component={Register} />
+          <Route path="/forgot-password" Component={ForgotPassword} />
+
+          {/* Account */}
+          <Route path="/account/*" Component={AccountPage} />
+        </Routes>
       </div>
       <ScrollToTopComponent />
       <FooterComponent />
-      <Routes>
-        
-      </Routes>
       {/* Toaster */}
       <ToastContainer />
     </BrowserRouter>
