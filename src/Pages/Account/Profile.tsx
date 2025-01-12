@@ -28,10 +28,15 @@ interface ImageUser {
   avatarUrl: string;
 }
 
+interface UpdateResponse{
+  message: string;
+  success: boolean;
+}
 function Profile() {
   const [isSavingImage, setIsSavingImage] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
+  const [updateMessage, setUpdateMessage] = useState<UpdateResponse | null>();
 
   //Cập nhật hình ảnh
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,8 +95,9 @@ function Profile() {
     if (user) {
       try {
         setIsSaving(true);
-        await userApi.updateUser(user);
-        console.log("User updated successfully");
+        const response = await userApi.updateUser(user);
+        const responseData = response.data;
+        setUpdateMessage(responseData)
       } catch (error: any) {
         console.error("Error updating user:", error.message);
       } finally {
@@ -133,7 +139,9 @@ function Profile() {
       console.error("No token found in cookies.");
     }
   }, []);
-
+  useEffect(() =>{
+    console.log(user)
+  },[user])
   return (
     <div>
       {user === null ? (
@@ -211,6 +219,16 @@ function Profile() {
               </div>
               <hr className="my-4 border-gray-300" />
               <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="form-group flex flex-col gap-1">
+                  <label className="text-gray-600">Tên đăng nhập</label>
+                  <input
+                    type="text"
+                    name="username"
+                    value={user.username || ""}
+                    onChange={handleChange}
+                    className="border rounded px-3 py-2 text-sm w-1/3"
+                  />
+                </div>
                 <div className="form-group flex flex-col gap-1">
                   <label className="text-gray-600">Họ và Tên</label>
                   <input
@@ -230,6 +248,10 @@ function Profile() {
                     onChange={handleChange}
                     className="border rounded px-3 py-2 text-sm w-1/3"
                   />
+                </div>
+                {/* Response */}
+                <div className={`${updateMessage?.success ? 'text-green-600' : 'text-red-600'}`}>
+                  <p>{updateMessage?.message}</p>
                 </div>
                 <div className="flex space-x-2">
                   <button

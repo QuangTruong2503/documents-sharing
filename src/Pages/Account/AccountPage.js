@@ -21,7 +21,7 @@ function AccountPage() {
     <div className="flex flex-col lg:flex-row">
 
       {/* Sidebar cho màn hình lớn */}
-      <div className="hidden lg:block lg:w-1/5 bg-white rounded shadow-lg sticky top-0 h-auto p-4 mt-5">
+      <div className="hidden lg:block lg:w-1/5 bg-white rounded shadow-lg sticky top-0 h-fit p-4 mt-5">
         <ManageDashboard data={collapseData} />
       </div>
 

@@ -29,8 +29,8 @@ const userApi = {
     });
   
   },
-  updateUser: (id, data) => {
-    return axiosInstance.put(`/Users/${id}`, data);
+  updateUser: (data) => {
+    return axiosInstance.put(`/Users/update-user`, data);
   },
   deleteUser: (id) => {
     return axiosInstance.delete(`/Users/${id}`);
