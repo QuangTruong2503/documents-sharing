@@ -2,6 +2,7 @@
 import axiosInstance from './axiosInstance';
 
 const userApi = {
+  //Lấy tất cả người dùng
   getAllUsers: () => {
     return axiosInstance.get('/Users');
   },
@@ -14,8 +15,19 @@ const userApi = {
   postRegister: (data) =>{
     return axiosInstance.post('/Users/request-register', data);
   },
+  verifyToken: (token) =>{
+    return axiosInstance.get(`Users/verify-token/${token}`)
+  },
   createUser: (data) => {
     return axiosInstance.post('/Users', data);
+  },
+  updateImage: (image, userID) => {
+    return axiosInstance.put(`Users/update-image?userID=${userID}`, image, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  
   },
   updateUser: (id, data) => {
     return axiosInstance.put(`/Users/${id}`, data);
