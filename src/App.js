@@ -10,7 +10,7 @@ import ForgotPassword from "./Pages/Login-Register/ForgotPassword.js";
 import ScrollToTopComponent from "./Component/ScrollToTopComponent.js";
 import { ToastContainer } from "react-toastify";
 import AccountPage from "./Pages/Account/AccountPage.js";
-import UploadDocument from "./Pages/Documents/UploadDocument.js";
+import UploadDocument from "./Pages/Documents/UploadDocument.tsx";
 
 function App() {
   return (

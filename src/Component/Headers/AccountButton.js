@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Cookies from 'js-cookie';
 import { NavLink } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowUp, faGear, faSignOut, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faBookmark } from '@fortawesome/free-regular-svg-icons';
 
 const AccountButton = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -61,19 +64,33 @@ const AccountButton = () => {
   
             {/* Menu items */}
             <div className="p-2" onClick={() => setIsOpen(false)}>
+              {/* Saved Document */}
+              <NavLink to={'/saved'} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md">
+                <span className='me-2'><FontAwesomeIcon icon={faBookmark}/></span>
+                <span>Tài liệu đã lưu</span>
+              </NavLink>
+              {/* Upload */}
+              <NavLink to={'/upload-document'} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md">
+                <span className='me-2'><FontAwesomeIcon icon={faArrowUp}/></span>
+                <span>Tải lên</span>
+              </NavLink>
+              {/* Profile */}
               <NavLink  to={'/account/profile'} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md">
-                Thông tin cá nhân
+                <span className='me-2'><FontAwesomeIcon icon={faUser}/></span>
+                <span>Thông tin cá nhân</span>
               </NavLink>
               
               <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md">
-                Cài đặt
+              <span className='me-2'><FontAwesomeIcon icon={faGear}/></span>
+              <span>Cài đặt</span>
               </button>
               
               <button 
                 onClick={handleLogout}
                 className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md"
               >
-                Đăng xuất
+                <span className='me-2'><FontAwesomeIcon icon={faSignOut}/></span>
+                <span>Đăng xuất</span>
               </button>
             </div>
           </div>

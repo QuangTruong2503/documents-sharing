@@ -7,9 +7,9 @@ const CheckSigned = () => {
 
   useEffect(() => {
     const token = Cookies.get("token");
-
+    const userToken = Cookies.get("user")
     // Kiểm tra token
-    if (token) {
+    if (token && userToken) {
       // Chuyển hướng nếu đã đăng nhập
       navigate("/");
     } else {
