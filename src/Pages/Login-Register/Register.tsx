@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import CheckSigned from "./CheckSigned";
 import { NavLink, useNavigate } from "react-router-dom";
 import userApi from "../../api/usersApi";
 import { toast } from "react-toastify";
@@ -77,7 +76,6 @@ function RegisterPage() {
       setIsActing(false);
     }
   };
-
   return (
     <section ref={scrollToRef} className="bg-gray-50 dark:bg-gray-900">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto">
@@ -197,7 +195,6 @@ function RegisterPage() {
           </div>
         </div>
       </div>
-      <CheckSigned />
     </section>
   );
 }

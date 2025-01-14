@@ -5,7 +5,7 @@ import Cookies from "js-cookie";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
-import CheckSigned from "./CheckSigned";
+import {CheckSigned} from "../../Helpers/CheckSigned";
 import LoaderButton from "../../Component/Loaders/LoaderButton.js";
 interface Login {
   email: string;
@@ -67,8 +67,8 @@ function LoginPage() {
   };
 
   useEffect(() => {
-    console.log(loginData);
-  }, [loginData]);
+    CheckSigned();
+  }, []);
 
   return (
     <section className="bg-gray-50 dark:bg-gray-900 p-4 mx-auto" id="scrollID">
@@ -175,7 +175,6 @@ function LoginPage() {
           </div>
         </div>
       </div>
-      <CheckSigned />
     </section>
   );
 }
