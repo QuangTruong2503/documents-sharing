@@ -1,9 +1,9 @@
 // src/api/axiosInstance.js
 import axios from 'axios';
+import config from '../config';
 
 const axiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_API_URL, // Thay bằng URL API của bạn
-  timeout: 5000,
+  baseURL: config.apiUrl, // Thay bằng URL API của bạn
   headers: {
     'Content-Type': 'application/json',
   },

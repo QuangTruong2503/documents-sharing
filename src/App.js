@@ -1,6 +1,8 @@
 import "./CSS/App.css";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
+
 import Home from "./Pages/Home";
 import HeaderComponent from "./Component/Headers/HeaderComponent.jsx";
 import LoginPage from "./Pages/Login-Register/LoginPage.tsx";
@@ -12,9 +14,13 @@ import { ToastContainer } from "react-toastify";
 import AccountPage from "./Pages/Account/AccountPage.js";
 import UploadDocument from "./Pages/Documents/UploadDocument.tsx";
 
+const queryClient = new QueryClient();
+
 function App() {
+
   return (
-    <BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
       <HeaderComponent />
       <div className="max-w-screen-xl mx-auto p-4 min-h-screen">
         <Routes>
@@ -37,6 +43,7 @@ function App() {
       {/* Toaster */}
       <ToastContainer />
     </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

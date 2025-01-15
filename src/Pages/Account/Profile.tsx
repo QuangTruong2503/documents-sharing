@@ -20,9 +20,9 @@ interface User {
 interface UpdateImage {
   message: string;
   success: string;
-  user: ImageUser;
+  user: UserUpdate;
 }
-interface ImageUser {
+interface UserUpdate {
   email: string;
   fullName: string;
   avatarUrl: string;
@@ -31,25 +31,16 @@ interface ImageUser {
 interface UpdateResponse{
   message: string;
   success: boolean;
+  user: UserUpdate;
 }
 function Profile() {
   const [isSavingImage, setIsSavingImage] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
-  const [updateMessage, setUpdateMessage] = useState<UpdateResponse | null>();
-
   //Cập nhật hình ảnh
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-
-      // Kiểm tra định dạng tập tin
-      const allowedFormats = ["image/jpeg", "image/png", "image/jpg"];
-      if (!allowedFormats.includes(file.type)) {
-        toast.warning("Vui lòng chọn file ảnh hợp lệ (jpg, jpeg, png).");
-        e.target.value = ""; // Làm sạch giá trị input
-        return;
-      }
 
       // Kiểm tra kích thước tập tin (<3MB)
       if (file.size > 3 * 1024 * 1024) {
@@ -79,9 +70,7 @@ function Profile() {
           toast.error(data.message);
         }
       } catch (error: any) {
-        toast.error(
-          error.response?.data?.message || "Đã xảy ra lỗi khi tải ảnh lên."
-        );
+        console.error(error.message);
         console.error("Error uploading image:", error.message);
       } finally {
         setIsSavingImage(false); // Kết thúc trạng thái đang tải
@@ -96,8 +85,13 @@ function Profile() {
       try {
         setIsSaving(true);
         const response = await userApi.updateUser(user);
-        const responseData = response.data;
-        setUpdateMessage(responseData)
+        const responseData: UpdateResponse = response.data;
+        if(responseData.success)
+        {
+          toast.success(responseData.message);
+          Cookies.set("user", JSON.stringify(responseData.user));
+          window.location.reload();
+        }
       } catch (error: any) {
         console.error("Error updating user:", error.message);
       } finally {
@@ -248,10 +242,6 @@ function Profile() {
                     onChange={handleChange}
                     className="border rounded px-3 py-2 text-sm w-1/3"
                   />
-                </div>
-                {/* Response */}
-                <div className={`${updateMessage?.success ? 'text-green-600' : 'text-red-600'}`}>
-                  <p>{updateMessage?.message}</p>
                 </div>
                 <div className="flex space-x-2">
                   <button
