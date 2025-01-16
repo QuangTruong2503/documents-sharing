@@ -83,7 +83,7 @@ function UploadDocument() {
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen py-10 px-5 bg-gray-50 shadow-md">
+    <div className="flex flex-col items-center min-h-screen py-10 px-5">
       <h1 className="text-2xl font-bold text-gray-800 mb-4 mt-10">
         Publish to the world
       </h1>

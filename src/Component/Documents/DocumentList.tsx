@@ -1,8 +1,9 @@
-import { faBookmark, faThumbsUp } from "@fortawesome/free-regular-svg-icons";
+import { faBookmark as faBookmarkRegular, faThumbsUp } from "@fortawesome/free-regular-svg-icons";
+import { faBookmark as faBookmarkSolid } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 import { NavLink } from "react-router-dom";
-
+const bookMarkSolid = "https://res.cloudinary.com/brandocloud/image/upload/v1737035020/DocShare/logo/bookmark-solid.svg";
 interface Document {
   document_id: number;
   full_name: string;
@@ -10,10 +11,14 @@ interface Document {
   thumbnail_url: string;
   like_count: number;
   is_public: boolean;
+  saved: boolean;
 }
 const DocumentCard: React.FC<{ document: Document }> = ({ document }) => (
-  <div className="border rounded-lg  p-4 bg-white flex flex-col justify-between cursor-pointer hover:shadow-lg relative">
-    <NavLink to={`/document/${document.document_id}`} className="w-full h-full absolute left-0 top-0 z-0"></NavLink>
+  <div className="border rounded-sm  p-4 bg-white flex flex-col justify-between cursor-pointer hover:shadow-lg relative">
+    <NavLink
+      to={`/document/${document.document_id}`}
+      className="w-full h-full absolute left-0 top-0 z-0"
+    ></NavLink>
     <img
       src={document.thumbnail_url}
       alt={document.title}
@@ -32,7 +37,13 @@ const DocumentCard: React.FC<{ document: Document }> = ({ document }) => (
         </span>
         <span>{document.like_count}</span>
       </div>
-      <button onClick={() => console.log('2')} className="px-2 py-0.5 rounded-full hover:bg-blue-100 text-lg z-10"><FontAwesomeIcon icon={faBookmark}/></button>
+      <button className="px-2 py-0.5 rounded-full hover:bg-blue-100 text-lg z-10 text-blue-500">
+        {document.saved ? (
+          <FontAwesomeIcon icon={faBookmarkSolid} />
+        ) : (
+          <FontAwesomeIcon icon={faBookmarkRegular} />
+        )}
+      </button>
     </div>
   </div>
 );

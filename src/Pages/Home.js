@@ -11,6 +11,7 @@ function Home() {
         "https://res.cloudinary.com/brandocloud/image/upload/v1736424844/DocShare/%C4%90%E1%BB%81-c%C6%B0%C6%A1ng-L%E1%BB%8Bch-s%E1%BB%AD-%C4%90%E1%BA%A3ng-C%E1%BB%99ng-s%E1%BA%A3n-Vi%E1%BB%87t-Nam_vjgsda.jpg",
       like_count: 0,
       is_public: true,
+      saved: true
     },
     {
       document_id: 2,
