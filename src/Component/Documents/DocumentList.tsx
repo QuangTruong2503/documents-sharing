@@ -3,7 +3,6 @@ import { faBookmark as faBookmarkSolid } from "@fortawesome/free-solid-svg-icons
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 import { NavLink } from "react-router-dom";
-const bookMarkSolid = "https://res.cloudinary.com/brandocloud/image/upload/v1737035020/DocShare/logo/bookmark-solid.svg";
 interface Document {
   document_id: number;
   full_name: string;
