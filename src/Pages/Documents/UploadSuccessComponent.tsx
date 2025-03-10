@@ -85,9 +85,7 @@ const UploadSuccessComponent = ({
         {/* Thumbnail */}
         <div className="w-full md:w-1/3 h-auto relative border">
           <img
-            src={
-              "https://res.cloudinary.com/brandocloud/image/upload/v1736729907/DocShare/Documents/549982598-%C4%90%E1%BB%81-c%C6%B0%C6%A1ng-L%E1%BB%8Bch-s%E1%BB%AD-%C4%90%E1%BA%A3ng-C%E1%BB%99ng-s%E1%BA%A3n.D-Vi%E1%BB%87t-Nam_u82jin.jpg"
-            }
+            src={document.thumbnail_url}
             alt="Document Thumbnail"
             className="w-full h-full object-cover rounded"
           />
