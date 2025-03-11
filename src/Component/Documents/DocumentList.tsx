@@ -13,7 +13,7 @@ interface Document {
   saved: boolean;
 }
 const DocumentCard: React.FC<{ document: Document }> = ({ document }) => (
-  <div className="border rounded-sm  p-4 bg-white flex flex-col justify-between cursor-pointer hover:shadow-lg relative">
+  <div className="border rounded-sm  p-4 bg-white flex flex-col justify-between cursor-pointer hover:shadow-lg relative hover:transition-all duration-200 ease-in">
     <NavLink
       to={`/document/${document.document_id}`}
       className="w-full h-full absolute left-0 top-0 z-0"

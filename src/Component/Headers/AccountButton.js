@@ -43,7 +43,7 @@ const AccountButton = () => {
     <div>
       {user !== null &&
         <div className="relative">
-        <button 
+        <button
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-colors"
         >
@@ -55,7 +55,7 @@ const AccountButton = () => {
         </button>
   
         {isOpen && (
-          <div ref={dropContentRef} className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200">
+          <div ref={dropContentRef} className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
             {/* Header với thông tin user */}
             <div className="p-4 border-b border-gray-200">
               <p className="font-medium text-gray-900">{user.fullName}</p>
