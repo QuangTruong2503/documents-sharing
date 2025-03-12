@@ -1,5 +1,5 @@
 import React from 'react'
-import DocumentList from '../Component/Documents/DocumentList.tsx'
+import DocumentListForEdit from '../Component/Documents/DocumentListForEdit.tsx';
 
 function Home() {
   const  documents = [
@@ -86,7 +86,7 @@ function Home() {
   ];
   return (
     <div>
-      <DocumentList documents={documents}/>
+      <DocumentListForEdit documents={documents}/>
     </div>
   )
 }

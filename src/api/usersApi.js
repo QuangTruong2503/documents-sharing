@@ -1,5 +1,6 @@
 // src/api/userApi.js
 import axiosInstance from './axiosInstance';
+import Cookies from 'js-cookie'
 
 const userApi = {
   //Lấy tất cả người dùng
@@ -7,7 +8,12 @@ const userApi = {
     return axiosInstance.get('/Users');
   },
   getUserById: (userID) => {
-    return axiosInstance.get(`/Users/my-profile?userID=${userID}`);
+    const authToken = Cookies.get("token");
+    return axiosInstance.get(`/Users/my-profile?userID=${userID}`, {
+      headers: {
+        "Authorization": `Bearer ${authToken}`
+      }
+    });
   },
   postLogin: (data) => {
     return axiosInstance.post('/Users/request-login', data);
