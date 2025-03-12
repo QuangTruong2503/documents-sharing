@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Cookies from 'js-cookie';
 import { NavLink } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowUp, faGear, faSignOut, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faArrowUp, faFile, faGear, faSignOut, faUser } from '@fortawesome/free-solid-svg-icons';
 import { faBookmark } from '@fortawesome/free-regular-svg-icons';
 
 const AccountButton = () => {
@@ -73,6 +73,11 @@ const AccountButton = () => {
               <NavLink to={'/upload-document'} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md">
                 <span className='me-2'><FontAwesomeIcon icon={faArrowUp}/></span>
                 <span>Tải lên</span>
+              </NavLink>
+              {/* Tài liệu đã tải */}
+              <NavLink to={'/my-documents'} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md">
+                <span className='me-2'><FontAwesomeIcon icon={faFile}/></span>
+                <span>Tài liệu của tôi</span>
               </NavLink>
               {/* Profile */}
               <NavLink  to={'/account/profile'} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md">
