@@ -58,7 +58,7 @@ function Profile() {
 
       try {
         setIsSavingImage(true); // Hiển thị trạng thái đang tải
-        const response = await userApi.updateImage(formData, user?.user_id);
+        const response = await userApi.updateImage(formData);
         const data: UpdateImage = response.data;
 
         if (data.success) {
@@ -207,7 +207,7 @@ function Profile() {
                     type="text"
                     name="username"
                     value={user.username || ""}
-                    onChange={handleChange}
+                    disabled
                     className="border rounded px-3 py-2 text-sm w-1/3"
                   />
                 </div>

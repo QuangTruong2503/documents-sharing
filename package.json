@@ -15,6 +15,7 @@
     "cra-template": "1.2.0",
     "dotenv": "^16.4.7",
     "flowbite": "^2.5.2",
+    "flowbite-react": "^0.10.2",
     "js-cookie": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
     "react": "^19.0.0",

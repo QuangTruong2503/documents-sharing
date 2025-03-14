@@ -24,16 +24,23 @@ const userApi = {
   createUser: (data) => {
     return axiosInstance.post('/Users', data);
   },
-  updateImage: (image, userID) => {
-    return axiosInstance.put(`Users/update-image?userID=${userID}`, image, {
+  updateImage: (image) => {
+    const authToken = Cookies.get("token");
+    return axiosInstance.put(`Users/update-image`, image, {
       headers: {
         "Content-Type": "multipart/form-data",
+        "Authorization": `Bearer ${authToken}`
       },
     });
   
   },
   updateUser: (data) => {
-    return axiosInstance.put(`/Users/update-user`, data);
+    const authToken = Cookies.get("token")
+    return axiosInstance.put(`/Users/update-user`, data, {
+      headers: {
+        "Authorization": `Bearer ${authToken}`
+      }
+    });
   },
   deleteUser: (id) => {
     return axiosInstance.delete(`/Users/${id}`);

@@ -77,7 +77,8 @@ function UploadDocument() {
       }
       // Fake upload request simulation
     } catch (err) {
-      setError("An error occurred during upload. Please try again.");
+      setError(err.response.data);
+      console.log(err)
       setLoading(false);
     }
   };

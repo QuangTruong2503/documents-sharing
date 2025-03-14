@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react";
 import documentsApi from "../../api/documentsApi";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear } from "@fortawesome/free-solid-svg-icons";
-import { Menu, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { Dropdown } from "flowbite-react";
+import DeleteModal from "../../Component/Modal/DeleteModal";
+
 
 interface Document {
   document_id: number;
@@ -19,6 +20,17 @@ const MyDocuments: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [openModal, setOpenModal] = useState(false);
+
+
+
+  const handleClose = () => {
+    setOpenModal(false)
+  };
+
+  const handleDelete = () => {
+    // Thực hiện logic xóa ở đây
+  };
 
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -77,71 +89,40 @@ const MyDocuments: React.FC = () => {
                     {doc.is_public ? "Public" : "Private"}
                   </span>
 
-                  {/* Dropdown Menu với Headless UI */}
-                  <Menu as="div" className="inline-block text-left">
-                    <div>
-                      <Menu.Button className="text-sm p-2 rounded-lg hover:bg-slate-300 transition-all duration-300">
-                        <FontAwesomeIcon icon={faGear} />
-                      </Menu.Button>
-                    </div>
-
-                    {/* Hiệu ứng xuất hiện */}
-                    <Transition
-                      as={Fragment}
-                      enter="transition ease-out duration-100"
-                      enterFrom="transform opacity-0 scale-95"
-                      enterTo="transform opacity-100 scale-100"
-                      leave="transition ease-in duration-75"
-                      leaveFrom="transform opacity-100 scale-100"
-                      leaveTo="transform opacity-0 scale-95"
+                    <Dropdown
+                      label={<FontAwesomeIcon icon={faGear} />}
+                      inline
+                      className="w-44 rounded-lg shadow-lg ring-1 ring-black ring-opacity-5"
+                      arrowIcon={false}
+                      placement="bottom-end"
                     >
-                      <Menu.Items anchor="right end" className="absolute right-0 mt-2 w-44 bg-white divide-y divide-gray-100 rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                        <div className="py-2 text-sm text-gray-700">    
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button
-                                className={`block w-full text-left px-4 py-2 ${
-                                  active ? "bg-gray-100" : ""
-                                }`}
-                              >
-                                Edit
-                              </button>
-                            )}
-                          </Menu.Item>
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button
-                                className={`block w-full text-left px-4 py-2 ${
-                                  active ? "bg-gray-100" : ""
-                                }`}
-                              >
-                                Delete
-                              </button>
-                            )}
-                          </Menu.Item>
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button
-                                className={`block w-full text-left px-4 py-2 ${
-                                  active ? "bg-gray-100" : ""
-                                }`}
-                              >
-                                Share
-                              </button>
-                            )}
-                          </Menu.Item>
-                        </div>
-                      </Menu.Items>
-                    </Transition>
-                  </Menu>
+                      <Dropdown.Item>
+                        <button className="block w-full text-left text-sm text-gray-700">
+                          Edit
+                        </button>
+                      </Dropdown.Item>
+                      <Dropdown.Item onClick={() => setOpenModal(true)}>
+                      <button  className="block w-full text-left text-sm text-gray-700">
+                          Xóa
+                      </button>
+                      </Dropdown.Item>
+                      <Dropdown.Item>
+                        <button className="block w-full text-left text-sm text-gray-700">
+                          Share
+                        </button>
+                      </Dropdown.Item>
+                    </Dropdown>
+                  </div>
                 </div>
               </div>
-            </div>
           ))}
         </div>
       ) : (
         <p className="text-center text-gray-500">No documents uploaded yet.</p>
       )}
+      {openModal && <DeleteModal
+        onClose={handleClose}
+        onAction={handleDelete}/>}
     </div>
   );
 };
