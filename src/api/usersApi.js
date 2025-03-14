@@ -7,9 +7,9 @@ const userApi = {
   getAllUsers: () => {
     return axiosInstance.get('/Users');
   },
-  getUserById: (userID) => {
+  getUserById: () => {
     const authToken = Cookies.get("token");
-    return axiosInstance.get(`/Users/my-profile?userID=${userID}`, {
+    return axiosInstance.get(`/Users/my-profile`, {
       headers: {
         "Authorization": `Bearer ${authToken}`
       }
@@ -20,9 +20,6 @@ const userApi = {
   },
   postRegister: (data) =>{
     return axiosInstance.post('/Users/request-register', data);
-  },
-  verifyToken: (token) =>{
-    return axiosInstance.get(`Users/verify-token/${token}`)
   },
   createUser: (data) => {
     return axiosInstance.post('/Users', data);

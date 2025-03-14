@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import LoaderButton from "../../Component/Loaders/LoaderButton";
 import Cookies from "js-cookie";
 import userApi from "../../api/usersApi";
-import { verifyToken } from "../../Helpers/VerifyToken.tsx";
 import { toast } from "react-toastify";
 import Loaders from "../../Component/Loaders/Loader.js"
 interface User {
@@ -112,26 +111,15 @@ function Profile() {
   };
   //Kiểm tra đăng nhập
   useEffect(() => {
-    const token = Cookies.get("token");
-    if (token !== undefined) {
       const fetchUserData = async () => {
         try {
-          const userData = await verifyToken(token);
-          if (userData) {
-            const response = await userApi.getUserById(userData.userID);
+          const response = await userApi.getUserById();
             setUser(response.data);
-          } else {
-            console.error("Invalid token.");
-          }
         } catch (error: any) {
           console.error("Error fetching user data:", error.message);
         }
       };
-
       fetchUserData();
-    } else {
-      console.error("No token found in cookies.");
-    }
   }, []);
   useEffect(() =>{
     console.log(user)
