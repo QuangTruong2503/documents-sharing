@@ -1,4 +1,4 @@
-import { faClose } from "@fortawesome/free-solid-svg-icons";
+import { faCircleExclamation, faClose } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 
@@ -32,38 +32,25 @@ export function DeleteModal({onClose, onAction }) {
               <FontAwesomeIcon icon={faClose}/>
             </button>
             <div className="flex justify-center mb-4">
-              <div className="text-gray-400">
-                <svg
-                  className="w-12 h-12"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  ></path>
-                </svg>
+              <div className="text-gray-400 text-5xl">
+                <FontAwesomeIcon icon={faCircleExclamation}/>
               </div>
             </div>
             <p className="text-center text-gray-700 text-lg mb-6">
-              Are you sure you want to delete this product?
+              Bạn có chắc muốn xóa dữ liệu này?
             </p>
             <div className="flex justify-center space-x-4">
               <button 
                 className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
                 onClick={handleAction}
               >
-                Yes, I'm sure
+                Có, chắc chắn
               </button>
               <button 
                 className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
                 onClick={handleClose}
               >
-                No, cancel
+                Hủy
               </button>
             </div>
           </div>

@@ -3,9 +3,9 @@ import Cookies from 'js-cookie'
 
 const documentsApi = {
     //read documents uploaded by user
-    getMyUploadedDocument:() =>{
+    getMyUploadedDocument:(pageNumber) =>{
         const authToken = Cookies.get("token")
-        return axiosInstance.get('Documents/my-uploaded-documents', {
+        return axiosInstance.get(`Documents/my-uploaded-documents?PageNumber=${pageNumber}`, {
             headers: {
                 "Authorization": `Bearer ${authToken}`
             }
@@ -27,6 +27,14 @@ const documentsApi = {
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${authToken}`,
+            }
+        });
+    },
+    deleteDocumentByID: (docID) =>{
+        const authToken = Cookies.get("token");
+        return axiosInstance.delete(`Documents/delete-document?documentID=${docID}`, {
+            headers: {
+                "Authorization": `Bearer ${authToken}`
             }
         });
     }

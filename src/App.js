@@ -37,7 +37,8 @@ function App() {
 
           {/* Document */}
           <Route path="/upload-document" Component={UploadDocument}/>
-          <Route path="/my-documents" Component={MyDocuments}/>
+          <Route path="/my-documents" element={<MyDocuments />}/>
+          <Route path={`/my-documents/page/:page`} element={<MyDocuments />}/>
         </Routes>
       </div>
       <ScrollToTopComponent />
