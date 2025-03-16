@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import documentsApi from "../../api/documentsApi";
+import documentsApi from "../../../api/documentsApi";
 import { toast } from "react-toastify";
 import { NavLink } from "react-router-dom";
 

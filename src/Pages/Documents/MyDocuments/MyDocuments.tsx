@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import documentsApi from "../../api/documentsApi";
+import documentsApi from "../../../api/documentsApi.js";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear } from "@fortawesome/free-solid-svg-icons";
 import { Dropdown } from "flowbite-react";
-import DeleteModal from "../../Component/Modal/DeleteModal";
-import Pagination from "../../Component/Pagination/Pagination.tsx"; // Import component Pagination
-import { useNavigate, useParams } from "react-router-dom";
+import DeleteModal from "../../../Component/Modal/DeleteModal.js";
+import Pagination from "../../../Component/Pagination/Pagination.tsx"; // Import component Pagination
+import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
 interface Document {
@@ -130,9 +130,9 @@ const MyDocuments: React.FC = () => {
               />
               <div className="p-4 relative">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-semibold text-lg truncate hover:text-blue-500 transition-all duration-300">
+                  <NavLink to={`/document/${doc.document_id}`} className="font-semibold text-lg truncate hover:text-blue-500 transition-all duration-300">
                     {doc.title}
-                  </h3>
+                  </NavLink>
                 </div>
                 <p className="text-sm text-gray-600 mt-1 truncate">
                   {doc.description ? doc.description : "Không có mô tả..."}

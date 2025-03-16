@@ -2,7 +2,7 @@ import { faArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useState } from "react";
 import UploadSuccessComponent from "./UploadSuccessComponent.tsx";
-import documentsApi from "../../api/documentsApi.js";
+import documentsApi from "../../../api/documentsApi.js";
 interface DocumentResponse {
   message: string;
   success: boolean;

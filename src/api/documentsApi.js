@@ -2,6 +2,16 @@ import axiosInstance from "./axiosInstance";
 import Cookies from 'js-cookie'
 
 const documentsApi = {
+    //read document by id
+    getDocumentByID: (documentID) =>{
+        const authToken = Cookies.get("token")
+        return axiosInstance.get(`Documents/document/${documentID}` ,{
+            headers: {
+                "Authorization": `Bearer ${authToken}`
+            }
+        })
+    },
+
     //read documents uploaded by user
     getMyUploadedDocument:(pageNumber) =>{
         const authToken = Cookies.get("token")

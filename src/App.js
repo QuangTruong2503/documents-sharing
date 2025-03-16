@@ -12,9 +12,9 @@ import ForgotPassword from "./Pages/Login-Register/ForgotPassword.js";
 import ScrollToTopComponent from "./Component/ScrollToTopComponent.js";
 import { ToastContainer } from "react-toastify";
 import AccountPage from "./Pages/Account/AccountPage.js";
-import UploadDocument from "./Pages/Documents/UploadDocument.tsx";
-import MyDocuments from "./Pages/Documents/MyDocuments.tsx";
-
+import UploadDocument from "./Pages/Documents/DocumentUpload/UploadDocument.tsx";
+import MyDocuments from "./Pages/Documents/MyDocuments/MyDocuments.tsx";
+import DocumentDetail from "./Pages/Documents/DocumentDetail/DocumentDetail.tsx"
 const queryClient = new QueryClient();
 
 function App() {
@@ -39,6 +39,7 @@ function App() {
           <Route path="/upload-document" Component={UploadDocument}/>
           <Route path="/my-documents" element={<MyDocuments />}/>
           <Route path={`/my-documents/page/:page`} element={<MyDocuments />}/>
+          <Route path="/document/:documentID" element={<DocumentDetail />}/>
         </Routes>
       </div>
       <ScrollToTopComponent />
