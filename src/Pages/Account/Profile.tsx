@@ -207,8 +207,8 @@ function Profile() {
                     type="text"
                     name="username"
                     value={user.username || ""}
-                    disabled
                     className="border rounded px-3 py-2 text-sm w-1/3"
+                    onChange={handleChange}
                   />
                 </div>
                 <div className="form-group flex flex-col gap-1">

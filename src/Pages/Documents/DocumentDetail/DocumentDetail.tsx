@@ -113,7 +113,7 @@ const PdfViewer: React.FC = () => {
           </p>
 
           {/* PDF Viewer */}
-          <div className="w-full h-[600px] border border-gray-300 rounded-lg">
+          <div className="w-full h-[600px] max-h-svh border border-gray-300 rounded-lg">
             <iframe
               src={'https://docs.google.com/gview?url=' + documentData.file_url + '&embedded=true'}
               className="w-full h-full rounded-lg"

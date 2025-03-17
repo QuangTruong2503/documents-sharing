@@ -124,7 +124,6 @@ const UploadSuccessComponent = ({
                 onChange={handleInputChange}
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring focus:ring-blue-300"
                 placeholder="Thêm mô tả vào đây..."
-                required
               ></textarea>
             </div>
 
