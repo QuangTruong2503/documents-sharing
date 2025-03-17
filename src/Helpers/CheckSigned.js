@@ -18,7 +18,8 @@ export const checkNotSigned = () =>{
     const userToken = Cookies.get("user")
     // Kiểm tra token
     if (!token && !userToken) {
-      // Chuyển hướng nếu đã đăng nhập
+      // Chuyển hướng nếu chưa đăng nhập
       window.location.href = '/login';
+      return;
     }
 };

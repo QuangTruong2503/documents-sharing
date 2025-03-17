@@ -47,6 +47,15 @@ const documentsApi = {
                 "Authorization": `Bearer ${authToken}`
             }
         });
+    },
+    //API tải xuống tài liệu
+    downloadDocumentByID: (documentID) =>{
+        const authToken = Cookies.get("token")
+        return axiosInstance.get(`Documents/download-document/${documentID}`, {
+            headers: {
+                "Authorization": `Bearer ${authToken}`
+            }
+        })
     }
 }
 export default documentsApi;
