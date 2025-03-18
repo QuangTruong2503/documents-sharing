@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import documentsApi from '../../../api/documentsApi';
-import { checkNotSigned } from '../../../Helpers/CheckSigned';
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import documentsApi from "../../../api/documentsApi";
+import { checkNotSigned } from "../../../Helpers/CheckSigned";
 
 // Định nghĩa interface
 interface DocumentData {
@@ -23,11 +23,10 @@ const PdfViewer: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   //Hàm tải xuống tài liệu
-  const handleDownloadDocument = async () =>{
-    checkNotSigned()
-    const response = await documentsApi.downloadDocumentByID(documentID)
-    if(response.data.success)
-    {
+  const handleDownloadDocument = async () => {
+    checkNotSigned();
+    const response = await documentsApi.downloadDocumentByID(documentID);
+    if (response.data.success) {
       const downloadURL = response.data.downloadURL;
       const link = document.createElement("a");
       link.href = downloadURL;
@@ -38,13 +37,14 @@ const PdfViewer: React.FC = () => {
 
       window.URL.revokeObjectURL(downloadURL);
     }
-    
-  }
+  };
 
   useEffect(() => {
+    window.scroll({ top: 0, behavior: "smooth" }); //Cuộn lên đầu trang
+    //Lấy dữ liệu danh sách tài liệu
     const fetchDocumentData = async () => {
       if (!documentID) {
-        setError('Document ID not found');
+        setError("Document ID not found");
         setLoading(false);
         return;
       }
@@ -54,7 +54,7 @@ const PdfViewer: React.FC = () => {
         const response = await documentsApi.getDocumentByID(documentID);
         setDocumentData(response.data);
       } catch (err) {
-        console.error('Error fetching document:', err);
+        console.error("Error fetching document:", err);
         setError(err.response.data);
       } finally {
         setLoading(false);
@@ -77,51 +77,49 @@ const PdfViewer: React.FC = () => {
   }
 
   return (
-      <div className="w-full flex flex-col md:flex-row gap-4">
-        {/* Left Sidebar with Interaction Buttons */}
-        <div className="w-full md:w-1/4 bg-white p-4 rounded-lg shadow-md flex flex-col items-center">
-          <div className="flex items-center justify-between w-full mb-4">
-            <div className="flex items-center space-x-2">
-              <span>{documentData.download_count} lượt tải</span>
-            </div>
+    <div className="w-full flex flex-col md:flex-row gap-4">
+      {/* Left Sidebar with Interaction Buttons */}
+      <div className="w-full md:w-1/4 bg-white p-4 rounded-lg shadow-md flex flex-col items-center">
+        <div className="flex items-center justify-between w-full mb-4">
+          <div className="flex items-center space-x-2">
+            <span>{documentData.download_count} lượt tải</span>
           </div>
-
-          <button
-            onClick={handleDownloadDocument}
-            className="w-full bg-blue-500 text-white py-2 rounded-lg mb-4 text-center hover:bg-blue-600"
-          >
-            Download
-          </button>
         </div>
 
-        {/* Main Content Area */}
-        <div className="w-full md:w-3/4 bg-white p-6 rounded-lg shadow-md">
-          {/* Title */}
-          <h1 className="text-3xl font-bold mb-4 text-gray-800">
-            {documentData.title}
-          </h1>
+        <button
+          onClick={handleDownloadDocument}
+          className="w-full bg-blue-500 text-white py-2 rounded-lg mb-4 text-center hover:bg-blue-600"
+        >
+          Download
+        </button>
+      </div>
 
-          {/* Description */}
-          <p className="text-gray-600 mb-4">
-            {documentData.description}
-          </p>
+      {/* Main Content Area */}
+      <div className="w-full md:w-3/4 bg-white p-6 rounded-lg shadow-md">
+        {/* Title */}
+        <h1 className="text-3xl font-bold mb-4 text-gray-800">
+          {documentData.title}
+        </h1>
 
-          {/* Author and Date */}
-          <p className="text-gray-500 text-sm mb-4">
-            Uploaded by {documentData.full_name} on{' '}
-            {new Date(documentData.uploaded_at).toLocaleDateString()}
-          </p>
+        {/* Description */}
+        <p className="text-gray-600 mb-4">{documentData.description}</p>
 
-          {/* PDF Viewer */}
-          <div className="w-full h-[600px] max-h-svh border border-gray-300 rounded-lg">
-            <iframe
+        {/* Author and Date */}
+        <p className="text-gray-500 text-sm mb-4">
+          Uploaded by {documentData.full_name} on{" "}
+          {new Date(documentData.uploaded_at).toLocaleDateString()}
+        </p>
+
+        {/* PDF Viewer */}
+        <div className="w-full h-[600px] max-h-svh border border-gray-300 rounded-lg">
+          <iframe
               src={'https://docs.google.com/gview?url=' + documentData.file_url + '&embedded=true'}
               className="w-full h-full rounded-lg"
               title="PDF Viewer"
             />
-          </div>
         </div>
       </div>
+    </div>
   );
 };
 
