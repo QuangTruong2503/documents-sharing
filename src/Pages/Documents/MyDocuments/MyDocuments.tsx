@@ -4,9 +4,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear } from "@fortawesome/free-solid-svg-icons";
 import { Dropdown } from "flowbite-react";
 import DeleteModal from "../../../Component/Modal/DeleteModal.js";
-import Pagination from "../../../Component/Pagination/Pagination.tsx"; // Import component Pagination
-import { NavLink, useNavigate, useParams } from "react-router-dom";
+import Pagination from "../../../Component/Pagination/Pagination.tsx"; // Import Pagination component
+import { NavLink, useSearchParams } from "react-router-dom"; // Sử dụng useSearchParams
 import { toast } from "react-toastify";
+import Loader from "../../../Component/Loaders/Loader.js";
+import ModalInfor from "../../../Component/Modal/ModalInfor.tsx";
 
 interface Document {
   document_id: number;
@@ -25,8 +27,8 @@ interface PaginationData {
 }
 
 const MyDocuments: React.FC = () => {
-  const { page } = useParams<{ page: string }>(); // Lấy tham số page từ URL
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams(); // Lấy và cập nhật tham số trên URL
+  const page = parseInt(searchParams.get("page") || "1", 10); // Lấy page từ URL, mặc định 1
   const [documents, setDocuments] = useState<Document[]>([]);
   const [pagination, setPagination] = useState<PaginationData>({
     currentPage: 1,
@@ -35,44 +37,38 @@ const MyDocuments: React.FC = () => {
   });
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [reloadData, setReloadData] = useState(false);
   const [openModal, setOpenModal] = useState(false);
-  const [deleteID, setDeleteID] = useState<number | null >(null)
+  const [deleteID, setDeleteID] = useState<number | null>(null);
+
+  const [openDetailModal, setOpenDetailModal] = useState(false);
+  const [detailID, setDetailID] = useState<number | null>(null)
   const handleClose = () => {
     setOpenModal(false);
   };
 
   const handleDelete = async () => {
-    setOpenModal(false); // Đóng modal trước khi thực hiện xóa
+    setOpenModal(false);
     
-    // Sử dụng toast.promise để xử lý Promise
     toast.promise(
-      documentsApi.deleteDocumentByID(deleteID), // Truyền Promise từ API
+      documentsApi.deleteDocumentByID(deleteID),
       {
-        pending: "Đang xóa tài liệu...", // Thông báo khi đang xử lý
+        pending: "Đang xóa tài liệu...",
         success: {
           render({ data }) {
-            // Khi thành công, kiểm tra response và trả về thông báo
             if (data.data.success) {
-              setReloadData(!reloadData); // Cập nhật lại dữ liệu
-              return data.data.message; // Hiển thị thông báo từ API
+              setDocuments(documents.filter((doc) => doc.document_id !== deleteID));  // Xóa tài liệu khỏi state
+              return data.data.message;
             }
             return "Xóa tài liệu thành công!";
           },
         },
-        error: {
-          render({ data }) {
-            // Khi thất bại, hiển thị thông báo lỗi
-            return  "Xóa tài liệu thất bại!";
-          },
-        },
+        error: "Xóa tài liệu thất bại!",
       },
       {
-        position: "top-right", // Vị trí thông báo
-        autoClose: 3000, // Tự động đóng sau 3 giây
+        position: "top-right",
+        autoClose: 3000,
       }
-    ).catch((err) => {
-      // Xử lý lỗi ngoài Promise nếu cần
+    ).catch(() => {
       setError("Failed to delete document");
     });
   };
@@ -81,8 +77,8 @@ const MyDocuments: React.FC = () => {
     try {
       setLoading(true);
       const response = await documentsApi.getMyUploadedDocument(pageNum);
-      setDocuments(response.data.data);
-      setPagination(response.data.pagination);
+      setDocuments(response.data?.data || []);
+      setPagination(response.data?.pagination || { currentPage: 1, totalCount: 0, totalPages: 1 });
     } catch (err) {
       setError("Failed to load documents");
     } finally {
@@ -91,30 +87,28 @@ const MyDocuments: React.FC = () => {
   };
 
   useEffect(() => {
-    const pageNum = page ? parseInt(page, 10) : 1; // Nếu không có page, mặc định là 1
-    if (!isNaN(pageNum)) {
-      fetchDocuments(pageNum);
+    if (!isNaN(page)) {
+      fetchDocuments(page);
     } else {
-      navigate("/my-documents"); // Nếu page không hợp lệ, chuyển về trang mặc định
+      setSearchParams({ page: "1" }); // Nếu page không hợp lệ, đặt lại về 1
     }
-  }, [page, navigate, reloadData]);
+    window.scroll({
+      top: 0,
+      behavior: "smooth",
+    }); //Cuộn trang lên đầu
+  }, [page, setSearchParams]);
 
   const handlePageChange = (newPage: number) => {
-    // Điều hướng đến URL mới dựa trên số trang
-    if (newPage === 1) {
-      navigate("/my-documents");
-    } else {
-      navigate(`/my-documents/page/${newPage}`);
-    }
+    setSearchParams({ page: newPage.toString() }); // Cập nhật URL khi đổi trang
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <div className="flex justify-center"><Loader /></div>;
   if (error) return <p className="text-red-500">{error}</p>;
 
   return (
     <div className="container mx-auto p-6">
       <h2 className="text-3xl font-bold mb-6 text-center">
-        Tài Liệu Bạn Đã Tải Lên
+        Tài Liệu Đã Tải Lên
       </h2>
       {documents.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -130,7 +124,10 @@ const MyDocuments: React.FC = () => {
               />
               <div className="p-4 relative">
                 <div className="flex justify-between items-center">
-                  <NavLink to={`/document/${doc.document_id}`} className="font-semibold text-lg truncate hover:text-blue-500 transition-all duration-300">
+                  <NavLink
+                    to={`/document/${doc.document_id}`}
+                    className="font-semibold text-lg truncate hover:text-blue-500 transition-all duration-300"
+                  >
                     {doc.title}
                   </NavLink>
                 </div>
@@ -155,18 +152,28 @@ const MyDocuments: React.FC = () => {
                     inline
                     className="w-44 rounded-lg shadow-lg ring-1 ring-black ring-opacity-5"
                     arrowIcon={false}
-                    placement="bottom-end"
+                    placement="auto"
                   >
+                    <Dropdown.Item onClick={() =>{
+                      setOpenDetailModal(true);
+                      setDetailID(doc.document_id)
+                    }}>
+                      <span className="block w-full text-left text-sm text-gray-700 hover:text-yellow-500">
+                        Thông tin
+                      </span>
+                    </Dropdown.Item>
                     <Dropdown.Item>
-                      <span className="block w-full text-left text-sm text-gray-700">
+                      <span className="block w-full text-left text-sm text-gray-700 hover:text-green-500">
                         Chỉnh sửa
                       </span>
                     </Dropdown.Item>
-                    <Dropdown.Item onClick={() => {
-                      setOpenModal(true)
-                      setDeleteID(doc.document_id)
-                    }}>
-                      <span className="block w-full text-left text-sm text-gray-700">
+                    <Dropdown.Item
+                      onClick={() => {
+                        setOpenModal(true);
+                        setDeleteID(doc.document_id);
+                      }}
+                    >
+                      <span className="block w-full text-left text-sm text-gray-700 hover:text-red-500">
                         Xóa
                       </span>
                     </Dropdown.Item>
@@ -177,18 +184,29 @@ const MyDocuments: React.FC = () => {
           ))}
         </div>
       ) : (
-        <p className="text-center text-gray-500">No documents uploaded yet.</p>
+        <div className="text-center text-gray-500 text-lg">
+          <p>Hiện tại bạn chưa có tài liệu nào.</p>
+          <NavLink to="/upload-document" className="text-blue-500 hover:underline">
+            Tải lên ngay bây giờ!
+          </NavLink>
+        </div>
       )}
       {documents.length > 0 && (
         <Pagination
           currentPage={pagination.currentPage}
           totalPages={pagination.totalPages}
           totalCount={pagination.totalCount}
-          onPageChange={handlePageChange}
+          onPageChange={handlePageChange} // Cập nhật trang bằng useSearchParams
         />
       )}
       {openModal && (
         <DeleteModal onClose={handleClose} onAction={handleDelete} />
+      )}
+      {openDetailModal && (
+        <ModalInfor documentID={detailID} onClose={() => {
+          setOpenDetailModal(false)
+          setDetailID(null)
+        }}/>
       )}
     </div>
   );
