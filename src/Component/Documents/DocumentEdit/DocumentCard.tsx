@@ -18,13 +18,13 @@ interface DocumentItemProps {
 
 const DocumentCard: React.FC<DocumentItemProps> = ({ document, actionButtons }) => {
   return (
-    <div className="bg-white shadow-lg rounded-lg overflow-hidden transition-all hover:shadow-gray-400 duration-200 ease-in flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-      <div className="flex py-4 px-3">
+    <div className="bg-white shadow-lg overflow-hidden transition-all hover:bg-gray-100 duration-200 ease-in flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex py-2 px-1">
         {/* Image on the left */}
         <img
           src={document.thumbnail_url}
           alt={document.title}
-          className="w-40 h-full border solid object-cover flex-shrink-0"
+          className="w-28 h-full border solid object-cover flex-shrink-0"
         />
 
         {/* Information in the middle */}
@@ -32,7 +32,7 @@ const DocumentCard: React.FC<DocumentItemProps> = ({ document, actionButtons }) 
           <div className="flex justify-between items-center">
             <NavLink
               to={`/document/${document.document_id}`}
-              className="font-semibold text-lg line-clamp-3 hover:text-blue-500 transition-all duration-300"
+              className="font-semibold text-lg line-clamp-3 hover:text-blue-600 transition-all duration-300"
             >
               {document.title}
             </NavLink>
@@ -50,7 +50,7 @@ const DocumentCard: React.FC<DocumentItemProps> = ({ document, actionButtons }) 
                 : "bg-red-100 text-red-600"
             }`}
           >
-            {document.is_public ? "Public" : "Private"}
+            {document.is_public ? "Công khai" : "Riêng tư"}
           </span>
         </div>
       </div>
