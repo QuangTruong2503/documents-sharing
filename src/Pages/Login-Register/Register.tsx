@@ -9,6 +9,7 @@ interface Register {
   password: string;
   confirmPassword: string;
 }
+
 interface RegisterResponse {
   message: string;
   success: boolean;
@@ -22,60 +23,101 @@ function RegisterPage() {
     confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const scrollToRef = useRef<HTMLDivElement>(null);
   const [isActing, setIsActing] = useState(false);
-  //Cuộn trang
+  const scrollToRef = useRef<HTMLDivElement>(null);
+
+  // Scroll effect
   useEffect(() => {
-    if (scrollToRef.current) {
-      scrollToRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-        inline: "nearest",
-      });
-    }
+    scrollToRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   }, []);
-  //Thay đổi dữ liệu
+
+  // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setRegisterData({ ...registerData, [name]: value });
+    setRegisterData((prev) => ({ ...prev, [name]: value.trim() }));
   };
-  //Hiện password
-  const toggleShowPassword = () => {
-    setShowPassword(!showPassword);
+
+  // Toggle password visibility
+  const toggleShowPassword = () => setShowPassword((prev) => !prev);
+
+  // Password strength checker
+  const checkPasswordStrength = (password: string) => {
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const isLongEnough = password.length >= 8;
+
+    return {
+      hasUpperCase,
+      hasNumber,
+      hasSpecialChar,
+      isLongEnough,
+      isValid: hasUpperCase && hasNumber && hasSpecialChar && isLongEnough,
+    };
   };
-  //Đăng ký
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+
+  // Form validation
+  const validateForm = () => {
     const { email, password, confirmPassword } = registerData;
+    const passwordStrength = checkPasswordStrength(password);
 
     if (!email || !password || !confirmPassword) {
-      alert("Please fill in all fields.");
-      return;
+      toast.error("Vui lòng điền đầy đủ thông tin");
+      return false;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Email không hợp lệ");
+      return false;
+    }
+
+    if (!passwordStrength.isValid) {
+      toast.error(
+        "Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ cái in hoa, số và ký tự đặc biệt"
+      );
+      return false;
     }
 
     if (password !== confirmPassword) {
-      alert("Xác nhận mật khẩu không trùng khớp");
-      return;
+      toast.error("Mật khẩu xác nhận không khớp");
+      return false;
     }
+
+    return true;
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
     try {
-      setIsActing(true)
+      setIsActing(true);
       const response = await userApi.postRegister(registerData);
       const data: RegisterResponse = response.data;
+
       if (data.success) {
         toast.success(data.message);
-        // Xử lý chuyển hướng hoặc các hành động khác sau khi đăng nhập thành công
-        setTimeout(() => {
-          navigate('/login');
-        }, 1000);
+        setTimeout(() => navigate("/login"), 1000);
       } else {
         toast.warning(data.message);
       }
     } catch (error: any) {
-      console.error("Error logging in:", error.response?.data || error.message);
+      toast.error(
+        error.response?.data?.message || "Đăng ký thất bại, vui lòng thử lại"
+      );
+      console.error("Registration error:", error);
     } finally {
       setIsActing(false);
     }
   };
+
+  const passwordStrength = checkPasswordStrength(registerData.password);
+
   return (
     <section ref={scrollToRef} className="bg-gray-50 dark:bg-gray-900">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto">
@@ -152,38 +194,47 @@ function RegisterPage() {
                   required
                 />
               </div>
-              <div className="flex items-start">
-                <div className="flex items-center h-5 gap-2">
-                  <input
-                    id="showPass"
-                    type="checkbox"
-                    checked={showPassword}
-                    onChange={toggleShowPassword}
-                    className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-500"
-                  />
-                  <label
-                    htmlFor="showPass"
-                    className="text-sm text-gray-500 dark:text-gray-300 cursor-pointer"
-                  >
-                    Hiện mật khẩu
-                  </label>
-                </div>
+              {/* Password strength indicators */}
+              {registerData.password && (
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className={passwordStrength.isLongEnough ? "text-green-500" : "text-red-500"}>
+                      ✓ Tối thiểu 8 ký tự
+                    </p>
+                    <p className={passwordStrength.hasUpperCase ? "text-green-500" : "text-red-500"}>
+                      ✓ Chữ cái in hoa
+                    </p>
+                    <p className={passwordStrength.hasNumber ? "text-green-500" : "text-red-500"}>
+                      ✓ Số
+                    </p>
+                    <p className={passwordStrength.hasSpecialChar ? "text-green-500" : "text-red-500"}>
+                      ✓ Ký tự đặc biệt (!@#$%^&*)
+                    </p>
+                  </div>
+                )}
+              <div className="flex items-center gap-2">
+                <input
+                  id="showPass"
+                  type="checkbox"
+                  checked={showPassword}
+                  onChange={toggleShowPassword}
+                  className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-500"
+                />
+                <label
+                  htmlFor="showPass"
+                  className="text-sm text-gray-500 dark:text-gray-300 cursor-pointer"
+                >
+                  Hiện mật khẩu
+                </label>
               </div>
-              {isActing ? (
-                <button
-                type="button"
-                  className="w-full  bg-white border-2 border-solid border-blue-500 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
-                >
-                  <LoaderButton />
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
-                >
-                  Tạo mới tài khoản
-                </button>
-              )}
+              <button
+                type="submit"
+                disabled={isActing}
+                className={`w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 ${
+                  isActing ? "opacity-75 cursor-not-allowed" : ""
+                }`}
+              >
+                {isActing ? <LoaderButton /> : "Tạo mới tài khoản"}
+              </button>
               <p className="text-sm font-light text-gray-500 dark:text-gray-400">
                 Đã có tài khoản?{" "}
                 <NavLink

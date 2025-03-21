@@ -45,6 +45,7 @@ function LoginPage() {
   const fetchLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsActing(true);
+    loginData.email = loginData.email.trim();
     try {
       const response = await userApi.postLogin(loginData);
       const data: LoginResponse = response.data;

@@ -35,6 +35,7 @@ const VerifyEmail = () => {
             src="https://res.cloudinary.com/brandocloud/image/upload/v1742535076/DocShare/images/verify-email-success_l9nsyg.jpg"
             alt="success"
             className="w-full h-full mx-auto"
+            loading="eager"
           />
         )}
         {isSuccess !== null && !isSuccess && (
@@ -42,6 +43,7 @@ const VerifyEmail = () => {
             src="https://res.cloudinary.com/brandocloud/image/upload/v1742535075/DocShare/images/verify-failed_isb1cq.jpg"
             alt="error"
             className="w-full h-full mx-auto"
+            loading="eager"
           />
         )}
         {message ? (

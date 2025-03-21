@@ -7,6 +7,7 @@ import userApi from "../../api/usersApi";
 import { toast } from "react-toastify";
 import Loaders from "../../Component/Loaders/Loader.js";
 import verificationsApi from "../../api/verificationsApi.js";
+import { formatDateToVN } from "../../Helpers/formatDateToVN.js";
 
 // Interfaces
 interface User {
@@ -131,7 +132,7 @@ const OverviewTab = React.memo(({ user, onImageChange, isSavingImage }: Overview
         </div>
         <div className="flex flex-col">
           <span className="text-gray-600">Ngày tham gia</span>
-          <strong>{new Date(user.created_at).toLocaleDateString()}</strong>
+          <strong>{formatDateToVN(user.created_at)}</strong>
         </div>
       </div>
       <hr className="my-4 border-gray-300" />
@@ -339,11 +340,11 @@ function Profile() {
   // Handle form submission
   const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!user) return;
+    if (!userUpdate) return;
 
     try {
       setIsSaving(true);
-      const response = await userApi.updateUser(user);
+      const response = await userApi.updateUser(userUpdate);
       const responseData: UpdateResponse = response.data;
       if (responseData.success) {
         toast.success(responseData.message);
@@ -358,7 +359,7 @@ function Profile() {
     } finally {
       setIsSaving(false);
     }
-  }, [user, isReload]);
+  }, [userUpdate, isReload]);
 
   // Handle input change with debounce
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
