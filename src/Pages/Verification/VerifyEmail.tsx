@@ -8,7 +8,6 @@ const VerifyEmail = () => {
   const { token } = useParams(); // Get token from URL params
   const [message, setMessage] = useState<string>("");
   const [isSuccess, setIsSuccess] = useState<boolean | null>(null);
-
   useEffect(() => {
     const verifyEmail = async () => {
       try {
@@ -33,14 +32,14 @@ const VerifyEmail = () => {
         </h1>
         {isSuccess !== null && isSuccess && (
           <img
-            src="https://img.freepik.com/free-vector/college-admission-concept-illustration_114360-10529.jpg?t=st=1742393936~exp=1742397536~hmac=85600e90740ba5af5b39d6ec87f2d1edbc777fdcb26a8cdb1227c9c412666ddb&w=826"
+            src="https://res.cloudinary.com/brandocloud/image/upload/v1742535076/DocShare/images/verify-email-success_l9nsyg.jpg"
             alt="success"
             className="w-full h-full mx-auto"
           />
         )}
         {isSuccess !== null && !isSuccess && (
           <img
-            src="https://img.freepik.com/free-vector/computer-user-blocking-envelope-character_1284-63447.jpg?t=st=1742394119~exp=1742397719~hmac=2cc289b61ba233a2a978bea86ac3743fdb4b9de347da2cef3b7bbb6c2ddb7c99&w=826"
+            src="https://res.cloudinary.com/brandocloud/image/upload/v1742535075/DocShare/images/verify-failed_isb1cq.jpg"
             alt="error"
             className="w-full h-full mx-auto"
           />
@@ -61,7 +60,7 @@ const VerifyEmail = () => {
         )}
         {isSuccess && (
           <a
-            href="/account/profile"
+            href="/"
             className="mt-4 inline-block text-blue-500 hover:underline"
           >
             Quay lại trang đăng nhập

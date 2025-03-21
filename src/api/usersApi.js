@@ -16,10 +16,13 @@ const userApi = {
     });
   },
   postLogin: (data) => {
-    return axiosInstance.post('/Users/request-login', data);
+    return axiosInstance.post('/Users/public/request-login', data);
+  },
+  postLogout: (token) => {
+    return axiosInstance.post('/Users/public/request-logout', token);
   },
   postRegister: (data) =>{
-    return axiosInstance.post('/Users/request-register', data);
+    return axiosInstance.post('/Users/public/request-register', data);
   },
   createUser: (data) => {
     return axiosInstance.post('/Users', data);

@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowUp, faFile, faSignOut, faUser } from '@fortawesome/free-solid-svg-icons';
 import { faBookmark } from '@fortawesome/free-regular-svg-icons';
+import userApi from '../../api/usersApi';
 
 const AccountButton = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,7 +14,8 @@ const AccountButton = () => {
   const [user, setUser] = useState(null);
 
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await userApi.postLogout(Cookies.get('token'));
     Cookies.remove('user');
     Cookies.remove('token');
     window.location.href = "/";

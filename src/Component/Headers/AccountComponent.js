@@ -30,7 +30,8 @@ function AccountComponent({ onClose }) {
         )}
       </div>
       {/* Dành cho mobile */}
-      <div>
+      {user === undefined && (
+        <div>
         <div className="md:hidden flex flex-col space-y-2 mt-4">
           <NavLink
             to={"/register"}
@@ -50,6 +51,7 @@ function AccountComponent({ onClose }) {
           </NavLink>
         </div>
       </div>
+      )}
     </div>
   );
 }
