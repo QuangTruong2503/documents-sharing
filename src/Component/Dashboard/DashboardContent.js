@@ -25,14 +25,14 @@ function ManageDashboard({
           <li
             className={`mb-2 ${
               checkIfHrefContains(item.url)
-                ? "bg-gray-200 text-blue-600 font-semibold"
+                ? "bg-gray-200 text-blue-600 font-semibold rounded"
                 : ""
             }`}
             key={index}
           >
             <NavLink
-              to={`${item.url}`}
-              className="flex items-center text-gray-800 hover:text-blue-500 p-2 rounded transition"
+              to={item.url}
+              className="flex items-center  hover:text-blue-500 p-3 rounded-lg transition"
             >
               <span>{item.name}</span>
             </NavLink>
@@ -41,13 +41,9 @@ function ManageDashboard({
       </div>
 
       {/* Sidebar cho thiết bị di động */}
-      {/* <div
-        className="block lg:hidden"
-        id="accordionDashboard"
-      >
+      <div className="block lg:hidden" id="accordionDashboard">
         {data.map((item, index) => (
           <li
-            data-bs-dismiss="offcanvas"
             className={`mb-2 ${
               checkIfHrefContains(item.url)
                 ? "bg-gray-200 text-blue-600 font-semibold"
@@ -57,13 +53,13 @@ function ManageDashboard({
           >
             <NavLink
               to={item.url}
-              className="flex items-center text-gray-800 hover:text-blue-500 p-2 rounded transition"
+              className="flex items-center text-gray-800 hover:text-blue-500 p-3 rounded-lg transition"
             >
               <span>{item.name}</span>
             </NavLink>
           </li>
         ))}
-      </div> */}
+      </div>
     </ul>
   );
 }

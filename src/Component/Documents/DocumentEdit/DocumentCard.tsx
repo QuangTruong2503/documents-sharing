@@ -18,7 +18,7 @@ interface DocumentItemProps {
 
 const DocumentCard: React.FC<DocumentItemProps> = ({ document, actionButtons }) => {
   return (
-    <div className="bg-white shadow-lg overflow-hidden transition-all hover:bg-gray-100 duration-200 ease-in flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="bg-white shadow-lg border-b border-gray-300 overflow-hidden transition-all hover:bg-gray-100 duration-200 ease-in flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div className="flex py-2 px-1">
         {/* Image on the left */}
         <img
