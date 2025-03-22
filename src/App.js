@@ -18,6 +18,7 @@ import DocumentDetail from "./Pages/Documents/DocumentDetail/DocumentDetail.tsx"
 import MyCollections from "./Pages/Collections/MyCollections.tsx";
 import NotFound from "./Pages/NotFound.tsx";
 import VerifyEmail from "./Pages/Verification/VerifyEmail.tsx";
+import ChangePassword from "./Pages/Login-Register/ChangePassword.js";
 const queryClient = new QueryClient();
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
           <Route path="/login" Component={LoginPage} />
           <Route path="/register" Component={Register} />
           <Route path="/forgot-password" Component={ForgotPassword} />
+          <Route path="/reset-password/:token" Component={ChangePassword}/>
 
           {/* Account */}
           <Route path="/account/*" Component={AccountPage} />

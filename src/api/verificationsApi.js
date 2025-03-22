@@ -27,6 +27,30 @@ const verificationsApi = {
                 "Content-Type": "application/json"
             },
         });
+    },
+    //tạo mã xác thực reset password
+    generateResetPasswordToken: (email) => {
+        return axiosInstance.post(`Verification/public/generate-reset-password-token`, email , {
+            headers: {
+                "Content-Type": "application/json"
+            },
+        });
+    },
+    //xác thực mã reset password
+    verifyResetPasswordToken: (token) => {
+        return axiosInstance.post(`Verification/public/verify-reset-password-token`, token , {
+            headers: {
+                "Content-Type": "application/json"
+            },
+        });
+    },
+    //đổi mật khẩu sau khi xác thực mã reset password
+    changePassword: (data) => {
+        return axiosInstance.post(`Verification/public/change-password`, data , {
+            headers: {
+                "Content-Type": "application/json"
+            },
+        });
     }
 };
 
