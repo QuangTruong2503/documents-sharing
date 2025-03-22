@@ -4,7 +4,7 @@ function Home() {
 
   return (
     <div className="">
-      <PageTitle title="Home" description="Nền tảng lưu trữ và chia sẻ tài liệu miễn phí." />
+      <PageTitle title="Trang chủ" description="Nền tảng lưu trữ và chia sẻ tài liệu miễn phí." />
     </div>
   );
 }
