@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import verificationsApi from "../../api/verificationsApi";
 import Loader from "../../Component/Loaders/Loader";
+import PageTitle from "../../Component/PageTitle";
 
 const VerifyEmail = () => {
   const { token } = useParams(); // Get token from URL params
@@ -25,7 +26,9 @@ const VerifyEmail = () => {
   }, [token]);
 
   return (
-    <div className="min-h-screen flex justify-center bg-white">
+    <>
+      <PageTitle title="Xác thực email" description="Xác thực Email của bạn" />
+      <div className="min-h-screen flex justify-center bg-white">
       <div className="p-8 max-w-md w-full h-fit text-center">
         <h1 className="text-2xl font-bold mb-4 text-gray-800">
           Xác thực Email
@@ -70,6 +73,7 @@ const VerifyEmail = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

@@ -8,6 +8,7 @@ import ModalInfor from "../../../Component/Modal/ModalInfor.tsx";
 import Pagination from "../../../Component/Pagination/Pagination.tsx";
 import DocumentList from "../../../Component/Documents/DocumentEdit/DocumentList.tsx";
 import ActionButtons from "../../../Component/Documents/DocumentEdit/ActionButtons.tsx";
+import PageTitle from "../../../Component/PageTitle.js";
 
 interface Document {
   document_id: number;
@@ -112,7 +113,9 @@ const MyDocuments: React.FC = () => {
   );
 
   return (
-    <div className="md:container mx-auto py-6">
+    <>
+    <PageTitle title="Tài liệu của bạn" description="Danh sách tài liệu bạn đã tải lên" />
+      <div className="md:container mx-auto py-6">
       <h2 className="text-3xl font-bold mb-6 text-center">Tài Liệu Đã Tải Lên</h2>
       {documents.length > 0 ? (
         <>
@@ -143,6 +146,7 @@ const MyDocuments: React.FC = () => {
         />
       )}
     </div>
+    </>
   );
 };
 

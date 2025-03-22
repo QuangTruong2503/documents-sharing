@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPen, faShare, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { NavLink } from 'react-router-dom';
+import PageTitle from '../../Component/PageTitle.js';
 
 interface Collection {
   collection_id: number;
@@ -93,6 +94,8 @@ const MyCollections: React.FC = () => {
   };
 
   return (
+   <>
+    <PageTitle title="Bộ sưu tập tài liệu" description="Quản lý bộ sưu tập của bạn tại đây." />
     <div className="container mx-auto p-4 max-w-screen-sm">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Bộ Sưu Tập</h1>
@@ -291,6 +294,7 @@ const MyCollections: React.FC = () => {
         </div>
       )}
     </div>
+   </>
   );
 };
 

@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import {CheckSigned} from "../../Helpers/CheckSigned";
 import LoaderButton from "../../Component/Loaders/LoaderButton.js";
+import PageTitle from "../../Component/PageTitle.js";
 interface Login {
   email: string;
   password: string;
@@ -72,7 +73,9 @@ function LoginPage() {
   }, []);
 
   return (
-    <section className="bg-gray-50 dark:bg-gray-900 p-4 mx-auto" id="scrollID">
+    <>
+    <PageTitle title="Đăng nhập" description={"Đăng nhập vao hệ thống chia sẻ tài liệu"}/>
+      <section className="bg-gray-50 dark:bg-gray-900 p-4 mx-auto" id="scrollID">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto">
         <a
           href="/"
@@ -177,6 +180,7 @@ function LoginPage() {
         </div>
       </div>
     </section>
+    </>
   );
 }
 export default LoginPage;

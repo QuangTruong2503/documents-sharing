@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import userApi from "../../api/usersApi";
 import { toast } from "react-toastify";
 import LoaderButton from "../../Component/Loaders/LoaderButton";
+import PageTitle from "../../Component/PageTitle";
 
 interface Register {
   email: string;
@@ -119,7 +120,9 @@ function RegisterPage() {
   const passwordStrength = checkPasswordStrength(registerData.password);
 
   return (
-    <section ref={scrollToRef} className="bg-gray-50 dark:bg-gray-900">
+    <>
+      <PageTitle  title="Đăng ký" description="Đăng ký tài khoản mới để sử dụng hệ thống" />
+      <section ref={scrollToRef} className="bg-gray-50 dark:bg-gray-900">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto">
         <a
           href="/"
@@ -249,6 +252,7 @@ function RegisterPage() {
         </div>
       </div>
     </section>
+    </>
   );
 }
 

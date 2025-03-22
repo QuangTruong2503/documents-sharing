@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useState } from "react";
 import UploadSuccessComponent from "./UploadSuccessComponent.tsx";
 import documentsApi from "../../../api/documentsApi.js";
+import PageTitle from "../../../Component/PageTitle.js";
 interface DocumentResponse {
   message: string;
   success: boolean;
@@ -84,7 +85,9 @@ function UploadDocument() {
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen py-10 px-5">
+    <>
+      <PageTitle  title="Upload Document" description="Upload your documents here" />
+      <div className="flex flex-col items-center min-h-screen py-10 px-5">
       <h1 className="text-2xl font-bold text-gray-800 mb-4 mt-10">
         Publish to the world
       </h1>
@@ -172,6 +175,7 @@ function UploadDocument() {
         </a>
       </p>
     </div>
+    </>
   );
 }
 

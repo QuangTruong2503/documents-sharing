@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import  verificationsApi from "../../api/verificationsApi.js"// Đường dẫn tới file API của bạn
+import PageTitle from "../../Component/PageTitle.js";
 
 function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -48,7 +49,9 @@ function ForgotPassword() {
   };
 
   return (
-    <section className="bg-gray-50 dark:bg-gray-900">
+    <>
+      <PageTitle title="Quên mật khẩu" description="Nhập email của bạn để nhận hướng dẫn khôi phục mật khẩu." />
+      <section className="bg-gray-50 dark:bg-gray-900">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto">
         <a
           href="/s"
@@ -135,6 +138,7 @@ function ForgotPassword() {
         </div>
       </div>
     </section>
+    </>
   );
 }
 

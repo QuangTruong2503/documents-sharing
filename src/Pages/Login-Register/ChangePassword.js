@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import verificationsApi from "../../api/verificationsApi"; // Đường dẫn tới file API của bạn
+import PageTitle from "../../Component/PageTitle";
 
 function ResetPassword() {
   const [newPassword, setNewPassword] = useState("");
@@ -83,16 +84,21 @@ function ResetPassword() {
   // Nếu token đang được kiểm tra
   if (isLoading && !isTokenValid) {
     return (
-      <section className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
+      <>
+        <PageTitle title="Đang xác thực token" description="Vui lòng đợi trong giây lát..." />
+        <section className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
         <p className="text-gray-900 dark:text-white">Đang kiểm tra token...</p>
       </section>
+      </>
     );
   }
 
   // Nếu token không hợp lệ
   if (!isTokenValid) {
     return (
-      <section className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
+      <>
+        <PageTitle title="Token không hợp lệ" description="Token không hợp lệ hoặc đã hết hạn." />
+        <section className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
             {error || "Token không hợp lệ hoặc đã hết hạn"}
@@ -108,11 +114,14 @@ function ResetPassword() {
           </a>
         </div>
       </section>
+      </>
     );
   }
 
   return (
-    <section className="bg-gray-50 dark:bg-gray-900">
+    <>
+      <PageTitle title="Đổi mật khẩu" description="Nhập mật khẩu mới để đổi mật khẩu của bạn." />
+      <section className="bg-gray-50 dark:bg-gray-900">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto min-h-screen">
         <a
           href="/"
@@ -203,6 +212,7 @@ function ResetPassword() {
         </div>
       </div>
     </section>
+    </>
   );
 }
 

@@ -1,10 +1,13 @@
 // pages/NotFound.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
+import PageTitle from '../Component/PageTitle';
 
 const NotFound: React.FC = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center ">
+    <>
+      <PageTitle title="404 Not Found" description="Trang không tồn tại" />
+      <div className="min-h-screen flex items-center justify-center ">
       <div className="text-center items-center flex flex-col">
         <img alt='Not Found' src={`https://res.cloudinary.com/brandocloud/image/upload/v1742615401/DocShare/images/l4mluc06tc4b3yk8jfiz.svg`}></img>
         <h2 className="text-3xl font-semibold text-gray-700 mt-4">Trang không tìm thấy</h2>
@@ -19,6 +22,7 @@ const NotFound: React.FC = () => {
         </Link>
       </div>
     </div>
+    </>
   );
 };
 
