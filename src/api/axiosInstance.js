@@ -1,6 +1,7 @@
 // src/api/axiosInstance.js
 import axios from 'axios';
 import config from '../config';
+import Cookies from 'js-cookie';
 const axiosInstance = axios.create({
   baseURL: config.apiUrl, // Thay bằng URL API của bạn
   headers: {
@@ -12,7 +13,7 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     // Thêm token vào headers nếu cần
-    const token = localStorage.getItem('token');
+    const token = Cookies.get('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
