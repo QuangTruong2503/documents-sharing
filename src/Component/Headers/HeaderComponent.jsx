@@ -12,7 +12,6 @@ import config from "../../config/config";
 // AccountButton Component
 const AccountButton = () => {
   const [user, setUser] = useState(null);
-
   const updateUserFromCookies = () => {
     const userStr = Cookies.get("user");
     if (userStr) {
@@ -156,7 +155,7 @@ const AccountComponent = ({ onClose }) => {
 const VerificationComponent = () => {
   const [isVerified, setIsVerified] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
-
+  const token = Cookies.get("token");
   useEffect(() => {
     const checkVerification = async () => {
       try {
@@ -168,8 +167,12 @@ const VerificationComponent = () => {
         setIsLoading(false);
       }
     };
-    checkVerification();
-  }, []);
+    if (token) {
+      checkVerification();
+    } else {
+      setIsLoading(false);
+    }
+  }, [token]);
 
   if (isLoading || isVerified) {
     return null;
