@@ -10,7 +10,7 @@ import Register from "./Pages/Login-Register/Register.tsx";
 import FooterComponent from "./Component/FooterComponent.js";
 import ForgotPassword from "./Pages/Login-Register/ForgotPassword.js";
 import ScrollToTopComponent from "./Component/ScrollToTopComponent.js";
-import { Bounce, ToastContainer, Zoom } from "react-toastify";
+import { ToastContainer, Zoom } from "react-toastify";
 import AccountPage from "./Pages/Account/AccountPage.js";
 import UploadDocument from "./Pages/Documents/DocumentUpload/UploadDocument.tsx";
 import MyDocuments from "./Pages/Documents/MyDocuments/MyDocuments.tsx";
