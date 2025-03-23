@@ -7,7 +7,7 @@ import { faArrowUp, faFile, faSignOut, faUser } from '@fortawesome/free-solid-sv
 import { faBookmark } from '@fortawesome/free-regular-svg-icons';
 import verificationsApi from "../../api/verificationsApi.js";
 import userApi from '../../api/usersApi';
-import config from "../../config";
+import config from "../../config/config";
 
 // AccountButton Component
 const AccountButton = () => {

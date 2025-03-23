@@ -1,6 +1,6 @@
 // src/api/axiosInstance.js
 import axios from 'axios';
-import config from '../config';
+import config from '../config/config';
 import Cookies from 'js-cookie';
 const axiosInstance = axios.create({
   baseURL: config.apiUrl, // Thay bằng URL API của bạn

@@ -8,6 +8,7 @@ import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import {CheckSigned} from "../../Helpers/CheckSigned";
 import LoaderButton from "../../Component/Loaders/LoaderButton.js";
 import PageTitle from "../../Component/PageTitle.js";
+import GoogleLoginComponent from "./GoogleLoginComponent.js";
 interface Login {
   email: string;
   password: string;
@@ -77,9 +78,12 @@ function LoginPage() {
     <PageTitle title="Đăng nhập" description={"Đăng nhập vao hệ thống chia sẻ tài liệu"}/>
       <section className="bg-gray-50 dark:bg-gray-900 p-4 mx-auto" id="scrollID">
       <div className="flex flex-col items-center justify-center px-2 py-4 mx-auto">
+
+        <div className="flex gap-2 items-center mb-6 text-2xl font-semibold text-gray-900">
+        <h2>Chào mừng đến với</h2>
         <a
           href="/"
-          className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white"
+          className="flex items-center"
         >
           <img
             className="w-8 h-8 mr-2"
@@ -88,11 +92,19 @@ function LoginPage() {
           />
           DocShare
         </a>
+        </div>
         <div className="w-full bg-white rounded-lg shadow dark:border sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
           <div className="p-6 space-y-4 sm:p-8">
-            <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
-              Đăng nhập tài khoản
-            </h1>
+            <div className="text-center">
+            <small className="font-bold w-full leading-tight tracking-tight text-gray-900">
+              Đăng nhập với
+            </small>
+            </div>
+            {/* Đăng nhập khác */}
+            <div>
+              <GoogleLoginComponent />
+            </div>
+            <hr />
             <form className="space-y-4" onSubmit={fetchLogin}>
               <div>
                 <label
