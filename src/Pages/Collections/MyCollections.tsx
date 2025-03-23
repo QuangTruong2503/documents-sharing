@@ -14,6 +14,7 @@ interface Collection {
   description: string;
   is_public: boolean;
   created_at: string;
+  documentCount: number;
 }
 
 const MyCollections: React.FC = () => {
@@ -62,36 +63,50 @@ const MyCollections: React.FC = () => {
   };
 
   // Delete collection
-  const handleDeleteCollection = async () => {
-    if (!selectedCollection) return;
-    try {
-      const response = await collectionsApi.deleteCollection(selectedCollection.collection_id);
-      toast.success(response.data);
-      setReload(!reload);
-    } catch (err) {
-      console.error(err.message);
-      toast.error('Xóa thất bại');
-    } finally {
-      setIsDeleteModalOpen(false);
-      setSelectedCollection(null);
+const handleDeleteCollection = async () => {
+  if (!selectedCollection) return;
+  setIsDeleteModalOpen(false);
+  await toast.promise(
+    collectionsApi.deleteCollection(selectedCollection.collection_id),
+    {
+      pending: 'Đang xóa bộ sưu tập...',
+      success: {
+        render({ data }) {
+          setReload(!reload);
+          return data.data; // Hiển thị thông báo từ API
+        },
+      },
+      error: {
+        render({ data }) {
+          console.error((data as { message: string }).message);
+          return 'Xóa thất bại';
+        },
+      },
     }
-  };
+  );
+  setSelectedCollection(null);
+};
 
-  // Edit collection
-  const handleEditCollection = async () => {
-    if (!selectedCollection) return;
-    try {
-      await collectionsApi.updateCollection(selectedCollection.collection_id, editCollection);
-      toast.success('Đã cập nhật bộ sưu tập');
-      setReload(!reload);
-    } catch (err) {
-      console.error(err.message);
-      toast.error('Cập nhật thất bại');
-    } finally {
-      setIsEditModalOpen(false);
-      setSelectedCollection(null);
+// Edit collection
+const handleEditCollection = async () => {
+  if (!selectedCollection) return;
+  setIsEditModalOpen(false);
+  await toast.promise(
+    collectionsApi.updateCollection(selectedCollection.collection_id, editCollection),
+    {
+      pending: 'Đang cập nhật bộ sưu tập...',
+      success: 'Đã cập nhật bộ sưu tập',
+      error: {
+        render({ data }) {
+          console.error((data as { message: string }).message);
+          return 'Cập nhật thất bại';
+        },
+      },
     }
-  };
+  );
+  setReload(!reload);
+  setSelectedCollection(null);
+};
 
   return (
    <>
@@ -123,7 +138,7 @@ const MyCollections: React.FC = () => {
                 <p className="text-gray-600 line-clamp-1 text-sm">{collection.description? collection.description : "Không có mô tả..."}</p>
                 <div className="mt-2 text-sm text-gray-500">
                   <p>{collection.is_public ? 'Công khai' : 'Riêng tư'}</p>
-                  <p>Created: {new Date(collection.created_at).toLocaleDateString()}</p>
+                  <p>Gồm {collection.documentCount} tài liệu</p>
                 </div>
               </div>
               <div className="flex gap-1 items-center">

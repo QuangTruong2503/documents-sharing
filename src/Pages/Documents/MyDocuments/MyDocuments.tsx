@@ -42,6 +42,10 @@ const MyDocuments: React.FC = () => {
   const [openDetailModal, setOpenDetailModal] = useState(false);
   const [detailID, setDetailID] = useState<number | null>(null);
 
+  // Filter states
+  const [sortBy, setSortBy] = useState<string>("date");
+  const [isPublic, setIsPublic] = useState<boolean | null>(null);
+
   const handleClose = () => setOpenModal(false);
 
   const handleDelete = async () => {
@@ -64,38 +68,43 @@ const MyDocuments: React.FC = () => {
         },
         { position: "top-right", autoClose: 3000 }
       )
-      .catch(() => setError("Failed to delete document"));
+      .catch(() => console.error("Failed to delete document"));
   };
 
-  const fetchDocuments = async (pageNum: number) => {
-    try {
-      setLoading(true);
-      const response = await documentsApi.getMyUploadedDocument(pageNum);
-      setDocuments(response.data?.data || []);
-      setPagination(
-        response.data?.pagination || { currentPage: 1, totalCount: 0, totalPages: 1 }
-      );
-    } catch (err) {
-      setError("Failed to load documents");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    window.scroll({ top: 0, behavior: "smooth" }); //Cuộn lên đầu trang
+    window.scroll({ top: 0, behavior: "smooth" });
+    const fetchDocuments = async (pageNum: number) => {
+      try {
+        setLoading(true);
+        const params = {
+          pageNumber: pageNum,
+          sortBy,
+          ...(isPublic !== null && { isPublic }),
+        };
+        const response = await documentsApi.getMyUploadedDocument(params);
+        setDocuments(response.data?.data || []);
+        setPagination(
+          response.data?.pagination || { currentPage: 1, totalCount: 0, totalPages: 1 }
+        );
+      } catch (err) {
+        setError("Failed to load documents");
+      } finally {
+        setLoading(false);
+      }
+    };
     if (!isNaN(page)) {
       fetchDocuments(page);
     } else {
       setSearchParams({ page: "1" });
     }
-  }, [page, setSearchParams]);
+  }, [page, sortBy, isPublic, setSearchParams]);
 
   const handlePageChange = (newPage: number) => {
     setSearchParams({ page: newPage.toString() });
   };
 
-  if (loading) return <div className="flex justify-center"><Loader /></div>;
+  if (loading) return <div className="flex justify-center items-center min-h-screen"><Loader /></div>;
   if (error) return <p className="text-red-500">{error}</p>;
 
   const renderActionButtons = (doc: Document) => (
@@ -104,7 +113,7 @@ const MyDocuments: React.FC = () => {
         setOpenDetailModal(true);
         setDetailID(doc.document_id);
       }}
-      onEdit={() => console.log("Edit document", doc.document_id)} // Thay bằng logic chỉnh sửa
+      onEdit={() => console.log("Edit document", doc.document_id)}
       onDelete={() => {
         setOpenModal(true);
         setDeleteID(doc.document_id);
@@ -114,38 +123,67 @@ const MyDocuments: React.FC = () => {
 
   return (
     <>
-    <PageTitle title="Tài liệu của bạn" description="Danh sách tài liệu bạn đã tải lên" />
+      <PageTitle title="Tài liệu của bạn" description="Danh sách tài liệu bạn đã tải lên" />
       <div className="md:container mx-auto py-6">
-      <h2 className="text-3xl font-bold mb-6 text-center">Tài Liệu Đã Tải Lên</h2>
-      {documents.length > 0 ? (
-        <>
-          <DocumentList documents={documents} actionButtons={renderActionButtons} />
-          <Pagination
-            currentPage={pagination.currentPage}
-            totalPages={pagination.totalPages}
-            totalCount={pagination.totalCount}
-            onPageChange={handlePageChange}
-          />
-        </>
-      ) : (
-        <div className="text-center text-gray-500 text-lg">
-          <p>Hiện tại bạn chưa có tài liệu nào.</p>
-          <NavLink to="/upload-document" className="text-blue-500 hover:underline">
-            Tải lên ngay bây giờ!
-          </NavLink>
+        <h2 className="text-3xl font-bold mb-6 text-center">Tài Liệu Đã Tải Lên</h2>
+        
+        {/* Filter Controls */}
+        <div className="mb-6 flex flex-wrap gap-4 justify-center">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="p-2 border rounded"
+          >
+            <option value="date">Ngày tải lên</option>
+            <option value="title">Tiêu đề</option>
+            <option value="downloads">Lượt tải</option>
+          </select>
+
+          <select
+            value={isPublic === null ? "all" : isPublic.toString()}
+            onChange={(e) => {
+              const value = e.target.value;
+              setIsPublic(value === "all" ? null : value === "true");
+            }}
+            className="p-2 border rounded"
+          >
+            <option value="all">Tất cả</option>
+            <option value="true">Công khai</option>
+            <option value="false">Riêng tư</option>
+          </select>
         </div>
-      )}
-      {openModal && <DeleteModal onClose={handleClose} onAction={handleDelete} />}
-      {openDetailModal && (
-        <ModalInfor
-          documentID={detailID}
-          onClose={() => {
-            setOpenDetailModal(false);
-            setDetailID(null);
-          }}
-        />
-      )}
-    </div>
+
+        {documents.length > 0 ? (
+          <>
+            <DocumentList documents={documents} actionButtons={renderActionButtons} />
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              totalCount={pagination.totalCount}
+              onPageChange={handlePageChange}
+            />
+          </>
+        ) : (
+          <div className="text-center text-gray-500 text-lg">
+            <p>Hiện tại không có tài liệu ở trang này.</p>
+            {page === 1 && (
+              <NavLink to="/upload-document" className="text-blue-500 hover:underline">
+                Tải lên ngay bây giờ!
+              </NavLink>
+            )}
+          </div>
+        )}
+        {openModal && <DeleteModal onClose={handleClose} onAction={handleDelete} />}
+        {openDetailModal && (
+          <ModalInfor
+            documentID={detailID}
+            onClose={() => {
+              setOpenDetailModal(false);
+              setDetailID(null);
+            }}
+          />
+        )}
+      </div>
     </>
   );
 };

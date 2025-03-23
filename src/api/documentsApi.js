@@ -12,15 +12,21 @@ const documentsApi = {
         })
     },
 
-    //read documents uploaded by user
-    getMyUploadedDocument:(pageNumber) =>{
-        const authToken = Cookies.get("token")
-        return axiosInstance.get(`Documents/my-uploaded-documents?PageNumber=${pageNumber}`, {
-            headers: {
-                "Authorization": `Bearer ${authToken}`
-            }
-        });
-    },
+    // read documents uploaded by user
+getMyUploadedDocument: (params) => {
+    const authToken = Cookies.get("token");
+    const queryParams = new URLSearchParams({
+        pageNumber: params.pageNumber || 1,
+        sortBy: params.sortBy || "date",  // Default sort by date
+        ...(params.isPublic !== null && params.isPublic !== undefined && { isPublic: params.isPublic })
+    }).toString();
+
+    return axiosInstance.get(`Documents/my-uploaded-documents?${queryParams}`, {
+        headers: {
+            "Authorization": `Bearer ${authToken}`
+        }
+    });
+},
     //upload document
     postDocument: (file) =>{
         const authToken = Cookies.get("token");
@@ -33,7 +39,7 @@ const documentsApi = {
     },
     putDocumentUpdateTitle: (data) =>{
         const authToken = Cookies.get("token");
-        return axiosInstance.put('Documents/update-title-description', data, {
+        return axiosInstance.put('Documents/update-document-after-upload', data, {
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${authToken}`,

@@ -53,9 +53,9 @@ const AccountButton = () => {
   }, []);
 
   // Xử lý logout
-  const handleLogout = async () => {
+  const handleLogout = () => {
     try {
-      await userApi.postLogout(Cookies.get('token'));
+      userApi.postLogout(Cookies.get('token'));
       Cookies.remove('user');
       Cookies.remove('token');
       window.location.href = '/';

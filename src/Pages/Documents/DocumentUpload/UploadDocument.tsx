@@ -147,10 +147,11 @@ function UploadDocument() {
           </button>
         </div>
       )}
-
+      {/* Sau khi tải dữ liệu thành công */}
       {uploadSuccess && documentResponse && (
         <UploadSuccessComponent document={documentResponse} />
       )}
+
       {uploadSuccess && documentResponse && (
         <button
           type="button"
