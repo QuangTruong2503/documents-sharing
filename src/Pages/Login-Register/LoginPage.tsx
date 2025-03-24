@@ -8,7 +8,7 @@ import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { CheckSigned } from "../../Helpers/CheckSigned";
 import LoaderButton from "../../Component/Loaders/LoaderButton.js";
 import PageTitle from "../../Component/PageTitle.js";
-import GoogleLoginComponent from "./GoogleLoginComponent.js";
+import GoogleLoginComponent from "./GoogleLoginComponent.tsx";
 interface Login {
   email: string;
   password: string;
