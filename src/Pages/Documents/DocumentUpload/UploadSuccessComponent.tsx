@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import documentsApi from "../../../api/documentsApi";
 import { toast } from "react-toastify";
 import { NavLink } from "react-router-dom";
@@ -53,7 +53,7 @@ const UploadSuccessComponent = ({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [categories, setCategories] = useState<Category[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Handle input changes for the form
   const handleInputChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -74,9 +74,15 @@ const UploadSuccessComponent = ({
   };
 
   // Handle search input change
-  const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
+  
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+  
     if (query.trim() === "") {
       setCategories([]);
       setIsDropdownOpen(false);
@@ -86,16 +92,19 @@ const UploadSuccessComponent = ({
       }));
       return;
     }
-
-    try {
-      const response = await axiosInstance.get(
-        `Categories/public/search-category?search=${query}`
-      );
-      setCategories(response.data); // Assuming response.data matches the Category[] format
-      setIsDropdownOpen(true);
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-    }
+  
+    // Set new timeout
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await axiosInstance.get(
+          `Categories/public/search-category?search=${query}`
+        );
+        setCategories(response.data);
+        setIsDropdownOpen(true);
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+      }
+    }, 600);
   };
 
   // Handle category selection
