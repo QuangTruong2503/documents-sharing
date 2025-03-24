@@ -66,7 +66,7 @@ const MyDocuments: React.FC = () => {
           },
           error: "Xóa tài liệu thất bại!",
         },
-        { position: "top-right", autoClose: 3000 }
+        { autoClose: 3000 }
       )
       .catch(() => console.error("Failed to delete document"));
   };

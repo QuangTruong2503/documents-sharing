@@ -122,7 +122,7 @@ function RegisterPage() {
   return (
     <>
       <PageTitle  title="Đăng ký" description="Đăng ký tài khoản mới để sử dụng hệ thống" />
-      <section ref={scrollToRef} className="bg-gray-50 dark:bg-gray-900">
+      <section ref={scrollToRef} className="">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto">
         <a
           href="/"
@@ -135,7 +135,7 @@ function RegisterPage() {
           />
           DocShare
         </a>
-        <div className="w-full bg-white rounded-lg shadow dark:border sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
+        <div className="w-full bg-gray-50 rounded-lg shadow-lg shadow-slate-300 sm:max-w-md xl:p-0">
           <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
             <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
               Tạo tài khoản
@@ -154,7 +154,7 @@ function RegisterPage() {
                   id="email"
                   value={registerData.email}
                   onChange={handleInputChange}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                  className=" border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                   placeholder="name@company.com"
                   required
                   autoComplete="off"
@@ -174,7 +174,7 @@ function RegisterPage() {
                   value={registerData.password}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                  className=" border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                   required
                   autoComplete="new-password"
                 />
@@ -193,7 +193,7 @@ function RegisterPage() {
                   value={registerData.confirmPassword}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                  className=" border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                   required
                 />
               </div>
@@ -220,7 +220,7 @@ function RegisterPage() {
                   type="checkbox"
                   checked={showPassword}
                   onChange={toggleShowPassword}
-                  className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-500"
+                  className="w-4 h-4 border border-gray-300 rounded  focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-500"
                 />
                 <label
                   htmlFor="showPass"

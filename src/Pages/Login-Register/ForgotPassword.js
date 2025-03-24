@@ -28,7 +28,7 @@ function ForgotPassword() {
 
       // Nếu thành công, bắt đầu đếm ngược 2 phút (120 giây)
       setSuccess(true);
-      setCountdown(120);
+      setCountdown(60);
       
       // Tạo interval để giảm countdown mỗi giây
       const timer = setInterval(() => {
@@ -51,10 +51,10 @@ function ForgotPassword() {
   return (
     <>
       <PageTitle title="Quên mật khẩu" description="Nhập email của bạn để nhận hướng dẫn khôi phục mật khẩu." />
-      <section className="bg-gray-50 dark:bg-gray-900">
+      <section>
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto">
         <a
-          href="/s"
+          href="/"
           className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white"
         >
           <img
@@ -64,9 +64,9 @@ function ForgotPassword() {
           />
           DocShare
         </a>
-        <div className="w-full p-6 bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md dark:bg-gray-800 dark:border-gray-700 sm:p-8">
+        <div className="w-full p-6 bg-gray-50 rounded-lg shadow-lg shadow-gray-300 dark:border md:mt-0 sm:max-w-md dark:bg-gray-800 dark:border-gray-700 sm:p-8">
           <h1 className="mb-1 text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
-            Bạn quên mật khẩu?
+            Đặt lại mật khẩu
           </h1>
           <p className="font-light text-gray-500 dark:text-gray-400">
             Đừng lo lắng! Chỉ cần nhập email của bạn và chúng tôi sẽ gửi cho bạn Email để đặt lại mật khẩu
@@ -86,7 +86,7 @@ function ForgotPassword() {
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                className=" border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                 placeholder="name@company.com"
                 required
               />
@@ -106,7 +106,7 @@ function ForgotPassword() {
                 <input
                   id="terms"
                   type="checkbox"
-                  className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-primary-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-primary-600 dark:ring-offset-gray-800"
+                  className="w-4 h-4 border border-gray-300 rounded  focus:ring-3 focus:ring-primary-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-primary-600 dark:ring-offset-gray-800"
                   required
                 />
               </div>

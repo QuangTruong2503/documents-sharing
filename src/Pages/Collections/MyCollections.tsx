@@ -116,7 +116,7 @@ const handleEditCollection = async () => {
         <h1 className="text-2xl font-bold">Bộ Sưu Tập</h1>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          className=" text-blue-500 font-bold py-2 px-4 rounded"
         >
           Tạo bộ sưu tập
         </button>

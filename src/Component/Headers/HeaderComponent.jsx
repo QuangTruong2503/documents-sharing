@@ -47,58 +47,113 @@ const AccountButton = () => {
   if (!user) return null;
 
   return (
-    <Dropdown
-      label={
-        <div className="flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-colors">
-          <img
-            src={user.avatarUrl}
-            alt="User avatar"
-            className="w-full h-full object-cover rounded-full"
-            onError={(e) => (e.target.src = "/default-avatar.png")}
-          />
-        </div>
-      }
-      arrowIcon={false}
-      inline
-      placement="bottom-end"
-      className="w-64 rounded-lg shadow-lg border border-gray-200 z-50"
-    >
-      <Dropdown.Header className="border-b border-gray-200">
-        <span className="block font-medium text-gray-900">{user.fullName}</span>
-        <span className="block text-sm text-gray-500 truncate">{user.email}</span>
-      </Dropdown.Header>
-      <Dropdown.Item as={NavLink} to="/my-collections">
-        <span className="me-2">
-          <FontAwesomeIcon icon={faBookmark} />
-        </span>
-        Bộ sưu tập
-      </Dropdown.Item>
-      <Dropdown.Item as={NavLink} to="/upload-document">
-        <span className="me-2">
-          <FontAwesomeIcon icon={faArrowUp} />
-        </span>
-        Tải lên
-      </Dropdown.Item>
-      <Dropdown.Item as={NavLink} to="/my-documents">
-        <span className="me-2">
-          <FontAwesomeIcon icon={faFile} />
-        </span>
-        Tài liệu của tôi
-      </Dropdown.Item>
-      <Dropdown.Item as={NavLink} to="/account/profile">
-        <span className="me-2">
-          <FontAwesomeIcon icon={faUser} />
-        </span>
-        Thông tin cá nhân
-      </Dropdown.Item>
-      <Dropdown.Divider />
-      <Dropdown.Item onClick={handleLogout} className="text-red-600 hover:!bg-red-50">
-        <span className="me-2">
-          <FontAwesomeIcon icon={faSignOut} />
-        </span>
-        Đăng xuất
-      </Dropdown.Item>
-    </Dropdown>
+    <div className="relative">
+      {/* Dropdown: Chỉ hiển thị từ sm trở lên */}
+      <div className="hidden sm:block">
+        <Dropdown
+          label={
+            <div className="flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-colors">
+              <img
+                src={user.avatarUrl}
+                alt="User avatar"
+                className="w-full h-full object-cover rounded-full"
+                onError={(e) => (e.target.src = "/default-avatar.png")}
+              />
+            </div>
+          }
+          arrowIcon={false}
+          inline
+          placement="bottom-end"
+          className="w-64 rounded-lg shadow-lg border border-gray-200 z-50"
+        >
+          <Dropdown.Header className="border-b border-gray-200">
+            <span className="block font-medium text-gray-900">{user.fullName}</span>
+            <span className="block text-sm text-gray-500 truncate">{user.email}</span>
+          </Dropdown.Header>
+          <Dropdown.Item as={NavLink} to="/my-collections">
+            <span className="me-2">
+              <FontAwesomeIcon icon={faBookmark} />
+            </span>
+            Bộ sưu tập
+          </Dropdown.Item>
+          <Dropdown.Item as={NavLink} to="/upload-document">
+            <span className="me-2">
+              <FontAwesomeIcon icon={faArrowUp} />
+            </span>
+            Tải lên
+          </Dropdown.Item>
+          <Dropdown.Item as={NavLink} to="/my-documents">
+            <span className="me-2">
+              <FontAwesomeIcon icon={faFile} />
+            </span>
+            Tài liệu của tôi
+          </Dropdown.Item>
+          <Dropdown.Item as={NavLink} to="/account/profile">
+            <span className="me-2">
+              <FontAwesomeIcon icon={faUser} />
+            </span>
+            Thông tin cá nhân
+          </Dropdown.Item>
+          <Dropdown.Divider />
+          <Dropdown.Item onClick={handleLogout} className="text-red-600 hover:!bg-red-50">
+            <span className="me-2">
+              <FontAwesomeIcon icon={faSignOut} />
+            </span>
+            Đăng xuất
+          </Dropdown.Item>
+        </Dropdown>
+      </div>
+
+      {/* Các nút liệt kê: Chỉ hiển thị dưới sm */}
+      <div className="sm:hidden flex flex-col space-y-2">
+        <hr />
+        <NavLink
+          to="/my-collections"
+          className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+        >
+          <span className="me-2">
+            <FontAwesomeIcon icon={faBookmark} />
+          </span>
+          Bộ sưu tập
+        </NavLink>
+        <NavLink
+          to="/upload-document"
+          className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+        >
+          <span className="me-2">
+            <FontAwesomeIcon icon={faArrowUp} />
+          </span>
+          Tải lên
+        </NavLink>
+        <NavLink
+          to="/my-documents"
+          className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+        >
+          <span className="me-2">
+            <FontAwesomeIcon icon={faFile} />
+          </span>
+          Tài liệu của tôi
+        </NavLink>
+        <NavLink
+          to="/account/profile"
+          className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+        >
+          <span className="me-2">
+            <FontAwesomeIcon icon={faUser} />
+          </span>
+          Thông tin cá nhân
+        </NavLink>
+        <button
+          onClick={handleLogout}
+          className="flex items-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-left"
+        >
+          <span className="me-2">
+            <FontAwesomeIcon icon={faSignOut} />
+          </span>
+          Đăng xuất
+        </button>
+      </div>
+    </div>
   );
 };
 
@@ -113,7 +168,7 @@ const AccountComponent = ({ onClose }) => {
     <div>
       {user === undefined ? (
         <>
-          <div className="flex gap-2">
+          <div className="hidden md:flex gap-2">
             <NavLink
               to="/register"
               className="text-blue-700 bg-white border-solid border-2 border-blue-600 hover:bg-blue-100 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2"
