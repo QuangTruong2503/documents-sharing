@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 const PageTitle = ({ title, description }) => {
   useEffect(() => {
-    document.title = `${title} | DocShare`;
+    document.title = `${title} - DocShare`;
 
     let metaDescription = document.querySelector('meta[name="description"]');
     if (!metaDescription) {
