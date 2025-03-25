@@ -1,15 +1,15 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import documentsApi from "../../../api/documentsApi";
+import tagsAPI from "../../../api/tagsAPI";
 import { toast } from "react-toastify";
 import { NavLink } from "react-router-dom";
-import axiosInstance from "../../../api/axiosInstance"; // Assuming this is your axios setup
 
 interface DocumentUpload {
   document_id: number;
   title: string;
   description: string;
   is_public: boolean;
-  category_id?: number; // Add category_id to the interface
+  tags: Tag[];
 }
 
 interface DocumentResponse {
@@ -26,104 +26,121 @@ interface UpdateResponse {
   document_id: number;
 }
 
-interface Category {
-  category_id: number;
+interface Tag {
   name: string;
-  description: string;
-  parent_id: number | null;
 }
 
-const UploadSuccessComponent = ({
-  document,
-}: {
-  document: DocumentResponse;
-}) => {
-  const [documentForm, setDocumentForm] = useState<DocumentUpload>({
+const MAX_TAGS = 3;
+
+const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) => {
+  const [documentForm, setDocumentForm] = useState<DocumentUpload>(() => ({
     document_id: document.document_id,
     title: document.title || "",
     description: "",
     is_public: true,
-    category_id: 0, // Initialize category_id
-  });
+    tags: [],
+  }));
+  
   const [updateResponse, setUpdateResponse] = useState<UpdateResponse>({
     message: "",
     success: false,
     document_id: 0,
   });
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  
+  const [tagInput, setTagInput] = useState("");
+  const [suggestedTags, setSuggestedTags] = useState<Tag[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  // Handle input changes for the form
-  const handleInputChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value, type } = event.target as HTMLInputElement;
-    if (type === "checkbox") {
-      const checked = !(event.target as HTMLInputElement).checked;
-      setDocumentForm((prevForm) => ({
-        ...prevForm,
-        [name]: checked,
-      }));
-    } else {
-      setDocumentForm((prevForm) => ({
-        ...prevForm,
-        [name]: value,
-      }));
-    }
-  };
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Handle search input change
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-  
-    // Clear previous timeout
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
+  // Memoize handlers để tránh tạo lại functions không cần thiết
+  const debouncedTagSearch = useCallback(async (query: string) => {
+    try {
+      const response = await tagsAPI.getBySearch(query);
+      setSuggestedTags(response.data);
+      setIsDropdownOpen(true);
+    } catch (err) {
+      console.error("Error fetching tags:", err);
     }
-  
-    if (query.trim() === "") {
-      setCategories([]);
-      setIsDropdownOpen(false);
-      setDocumentForm((prevForm) => ({
-        ...prevForm,
-        category_id: undefined,
+  }, []);
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const { name, value, type, checked } = e.target as HTMLInputElement;
+      setDocumentForm((prev) => ({
+        ...prev,
+        [name]: type === "checkbox" ? !checked : value,
       }));
+    },
+    []
+  );
+
+  const handleTagInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const query = e.target.value;
+      setTagInput(query);
+
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+
+      if (!query.trim()) {
+        setSuggestedTags([]);
+        setIsDropdownOpen(false);
+        return;
+      }
+
+      searchTimeoutRef.current = setTimeout(() => debouncedTagSearch(query), 300);
+    },
+    [debouncedTagSearch]
+  );
+
+  const addTag = useCallback((tagName: string) => {
+    const trimmedTag = tagName.trim();
+    if (!trimmedTag) return;
+
+    setDocumentForm((prev) => {
+      const currentTags = prev.tags || [];
+      if (currentTags.length >= MAX_TAGS) {
+        toast.warning(`Tối đa chỉ được thêm ${MAX_TAGS} tags!`);
+        return prev;
+      }
+      if (currentTags.some(tag => tag.name === trimmedTag)) return prev;
+
+      return {
+        ...prev,
+        tags: [...currentTags, { name: trimmedTag }],
+      };
+    });
+    setTagInput("");
+    setIsDropdownOpen(false);
+  }, []);
+
+  const handleTagKeyPress = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter" && tagInput.trim()) {
+        e.preventDefault();
+        addTag(tagInput);
+      }
+    },
+    [tagInput, addTag]
+  );
+
+  const handleTagRemove = useCallback((tagToRemove: string) => {
+    setDocumentForm((prev) => ({
+      ...prev,
+      tags: prev.tags.filter((tag) => tag.name !== tagToRemove),
+    }));
+  }, []);
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!documentForm.title.trim()) {
+      toast.error("Tiêu đề không được để trống!");
       return;
     }
-  
-    // Set new timeout
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const response = await axiosInstance.get(
-          `Categories/public/search-category?search=${query}`
-        );
-        setCategories(response.data);
-        setIsDropdownOpen(true);
-      } catch (err) {
-        console.error("Error fetching categories:", err);
-      }
-    }, 600);
-  };
 
-  // Handle category selection
-  const handleCategorySelect = (category: Category) => {
-    setDocumentForm((prevForm) => ({
-      ...prevForm,
-      category_id: category.category_id,
-    }));
-    setSearchQuery(category.name); // Display selected category name in input
-    setIsDropdownOpen(false); // Close dropdown after selection
-  };
-
-  const handleDelete = () => {
-    console.log("Document deleted:", documentForm.document_id);
-    // Logic to delete the document
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
     try {
       const response = await documentsApi.putDocumentUpdateTitle(documentForm);
       const data: UpdateResponse = response.data;
@@ -132,37 +149,44 @@ const UploadSuccessComponent = ({
         setUpdateResponse(data);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Submit error:", err);
+      toast.error("Có lỗi xảy ra khi cập nhật!");
     }
-  };
-
-  useEffect(() => {
-    console.log(documentForm);
   }, [documentForm]);
 
+  // Cleanup timeout khi component unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+  useEffect(() => {
+    console.log("documentForm changed:", documentForm);
+  }, [documentForm]);
+
+  const shareUrl = `${window.location.origin}/document/${updateResponse.document_id}`;
+
   return (
-    <div className="w-full max-w-3xl bg-white p-6 rounded-md shadow-md mx-auto">
-      <div className="flex flex-col md:flex-row items-start gap-6">
-        {/* Thumbnail */}
-        <div className="w-full md:w-1/3 h-auto relative border">
+    <div className="w-full max-w-3xl mx-auto bg-white p-6 rounded-md shadow-md">
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="w-full h-fit md:w-1/3 relative border">
           <img
             src={document.thumbnail_url}
-            alt="Document Thumbnail"
-            className="w-full h-full object-cover rounded"
+            alt={`${document.title} thumbnail`}
+            className="w-fit h-fit object-fill rounded"
+            loading="lazy"
           />
           <span className="absolute top-2 right-2 bg-gray-800 text-white text-xs px-2 py-1 rounded">
             PDF
           </span>
         </div>
 
-        {/* Form */}
-        {!updateResponse.success && (
-          <form className="flex-grow" onSubmit={handleSubmit}>
-            {/* Title */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Tiêu đề
-              </label>
+        {!updateResponse.success ? (
+          <form onSubmit={handleSubmit} className="flex-grow space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Tiêu đề</label>
               <input
                 type="text"
                 name="title"
@@ -173,11 +197,8 @@ const UploadSuccessComponent = ({
               />
             </div>
 
-            {/* Description */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Mô tả
-              </label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Mô tả</label>
               <textarea
                 name="description"
                 rows={4}
@@ -185,38 +206,55 @@ const UploadSuccessComponent = ({
                 onChange={handleInputChange}
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring focus:ring-blue-300"
                 placeholder="Thêm mô tả vào đây..."
-              ></textarea>
+              />
             </div>
 
-            {/* Category Search */}
-            <div className="mb-4 relative">
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700">
-                Danh mục<small className="text-gray-500"> (Để trống nếu không cần thiết)</small>
+                Tags <small className="text-gray-500">(tối đa {MAX_TAGS} tags)</small>
               </label>
               <input
+                ref={inputRef}
                 type="text"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                placeholder="Tìm kiếm danh mục..."
+                value={tagInput}
+                onChange={handleTagInputChange}
+                onKeyPress={handleTagKeyPress}
+                placeholder="Nhập tag và nhấn Enter..."
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring focus:ring-blue-300"
               />
-              {isDropdownOpen && categories.length > 0 && (
+              {isDropdownOpen && suggestedTags.length > 0 && (
                 <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto mt-1">
-                  {categories.map((category) => (
+                  {suggestedTags.map((tag) => (
                     <li
-                      key={category.category_id}
-                      onClick={() => handleCategorySelect(category)}
+                      key={tag.name}
+                      onClick={() => addTag(tag.name)}
                       className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                     >
-                      {category.name} - {category.description}
+                      {tag.name}
                     </li>
                   ))}
                 </ul>
               )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {documentForm.tags.map((tag) => (
+                  <span
+                    key={tag.name}
+                    className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded"
+                  >
+                    {tag.name}
+                    <button
+                      type="button"
+                      onClick={() => handleTagRemove(tag.name)}
+                      className="ml-1 text-red-600 hover:text-red-800"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
             </div>
 
-            {/* Privacy Checkbox */}
-            <div className="mb-4">
+            <div>
               <label className="inline-flex items-center">
                 <input
                   type="checkbox"
@@ -231,9 +269,9 @@ const UploadSuccessComponent = ({
               </label>
             </div>
 
-            <div className="flex justify-end gap-4 mt-6">
+            <div className="flex justify-end gap-4">
               <button
-                onClick={handleDelete}
+                type="button"
                 className="px-4 py-2 bg-red-600 text-white rounded shadow-sm hover:bg-red-700 focus:outline-none"
               >
                 Xóa
@@ -246,19 +284,13 @@ const UploadSuccessComponent = ({
               </button>
             </div>
           </form>
-        )}
-
-        {/* Share */}
-        {updateResponse.success && (
+        ) : (
           <div className="w-full">
-            <label className="block text-sm font-medium text-gray-700">
-              Chia sẻ
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Chia sẻ</label>
             <div className="flex gap-2 items-center">
               <input
                 type="text"
-                name="linkDoc"
-                value={`${window.location.origin}/document/${updateResponse.document_id}`}
+                value={shareUrl}
                 readOnly
                 className="mt-1 w-full md:w-4/5 px-3 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring focus:ring-blue-300"
               />
