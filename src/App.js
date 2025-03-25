@@ -19,6 +19,7 @@ import MyCollections from "./Pages/Collections/MyCollections.tsx";
 import NotFound from "./Pages/NotFound.tsx";
 import VerifyEmail from "./Pages/Verification/VerifyEmail.tsx";
 import ChangePassword from "./Pages/Login-Register/ChangePassword.js";
+import Search from "./Pages/Search/Search.tsx";
 
 const queryClient = new QueryClient();
 
@@ -97,6 +98,7 @@ function App() {
                   <Route path="/my-documents" element={<MyDocuments />} />
                   <Route path="/my-documents/page/:page" element={<MyDocuments />} />
                   <Route path="/document/:documentID" element={<DocumentDetail />} />
+                  <Route path="/search/:search" element={<Search />}/>
                   {/* Collections */}
                   <Route path="/my-collections" element={<MyCollections />} />
                 </Routes>

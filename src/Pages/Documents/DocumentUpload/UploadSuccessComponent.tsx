@@ -70,7 +70,7 @@ const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) =>
       const { name, value, type, checked } = e.target as HTMLInputElement;
       setDocumentForm((prev) => ({
         ...prev,
-        [name]: type === "checkbox" ? !checked : value,
+        [name]: type === "checkbox" ? !checked : value, 
       }));
     },
     []

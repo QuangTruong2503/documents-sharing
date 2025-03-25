@@ -9,6 +9,7 @@ import Loaders from "../../Component/Loaders/Loader.js";
 import verificationsApi from "../../api/verificationsApi.js";
 import { formatDateToVN } from "../../Helpers/formatDateToVN.js";
 import PageTitle from "../../Component/PageTitle.js";
+import { NavLink } from "react-router-dom";
 
 // Interfaces
 interface User {
@@ -103,9 +104,6 @@ const OverviewTab = React.memo(
 
     return (
       <div>
-        <h4 className="mt-3 mb-4 text-sm md:text-2xl font-semibold">
-          Tổng quan
-        </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="flex flex-col">
             <span className="text-gray-600">Tên đăng nhập</span>
@@ -149,6 +147,10 @@ const OverviewTab = React.memo(
           <div className="flex flex-col">
             <span className="text-gray-600">Ngày tham gia</span>
             <strong>{formatDateToVN(user.created_at)}</strong>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-gray-600">Mật khẩu</span>
+            <NavLink to={'/forgot-password'} className="text-blue-600 font-semibold">Đổi mật khẩu</NavLink>
           </div>
         </div>
         <hr className="my-4 border-gray-300" />

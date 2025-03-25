@@ -5,12 +5,17 @@ const documentsApi = {
   //read document by id
   getDocumentByID: (documentID) => {
     const authToken = Cookies.get("token");
-    return axiosInstance.get(`Documents/document/${documentID}`, {
+    return axiosInstance.get(`Documents/public/document/${documentID}`, {
       headers: {
         Authorization: `Bearer ${authToken}`,
       },
     });
   },
+  //Lấy dữ liệu theo tim kiếm
+  getSearchDocuments: (search) =>{
+    return axiosInstance.get(`Documents/public/search-documents?search=${search}`);
+  },
+
   // read documents uploaded by user
   getMyUploadedDocument: (params) => {
     const authToken = Cookies.get("token");

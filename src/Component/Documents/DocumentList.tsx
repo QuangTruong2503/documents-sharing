@@ -1,5 +1,4 @@
-import { faBookmark as faBookmarkRegular, faThumbsUp } from "@fortawesome/free-regular-svg-icons";
-import { faBookmark as faBookmarkSolid } from "@fortawesome/free-solid-svg-icons";
+import {faThumbsUp } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 import { NavLink } from "react-router-dom";
@@ -8,9 +7,7 @@ interface Document {
   full_name: string;
   title: string;
   thumbnail_url: string;
-  like_count: number;
   is_public: boolean;
-  saved: boolean;
 }
 const DocumentCard: React.FC<{ document: Document }> = ({ document }) => (
   <div className="border rounded-sm  p-4 bg-white flex flex-col justify-between cursor-pointer hover:shadow-lg relative hover:transition-all duration-200 ease-in">
@@ -34,15 +31,14 @@ const DocumentCard: React.FC<{ document: Document }> = ({ document }) => (
         <span>
           <FontAwesomeIcon icon={faThumbsUp} />
         </span>
-        <span>{document.like_count}</span>
       </div>
-      <button className="px-2 py-0.5 rounded-full hover:bg-blue-100 text-lg z-10 text-blue-500">
+      {/* <button className="px-2 py-0.5 rounded-full hover:bg-blue-100 text-lg z-10 text-blue-500">
         {document.saved ? (
           <FontAwesomeIcon icon={faBookmarkSolid} />
         ) : (
           <FontAwesomeIcon icon={faBookmarkRegular} />
         )}
-      </button>
+      </button> */}
     </div>
   </div>
 );
