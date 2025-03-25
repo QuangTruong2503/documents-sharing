@@ -4,10 +4,11 @@ import { useSearchParams, NavLink } from "react-router-dom";
 import { toast } from "react-toastify";
 import Loader from "../../../Component/Loaders/Loader.js";
 import DeleteModal from "../../../Component/Modal/DeleteModal.js";
-import ModalInfor from "../../../Component/Modal/ModalInfor.tsx";
+import ModalInfor from "../../../Component/Modal/ModalDocumentInfor.tsx";
 import Pagination from "../../../Component/Pagination/Pagination.tsx";
 import DocumentList from "../../../Component/Documents/DocumentEdit/DocumentList.tsx";
 import ActionButtons from "../../../Component/Documents/DocumentEdit/ActionButtons.tsx";
+import EditModal from "../../../Component/Modal/EditDocumentModal.tsx"; // Adjust path as needed
 import PageTitle from "../../../Component/PageTitle.js";
 
 interface Document {
@@ -41,6 +42,8 @@ const MyDocuments: React.FC = () => {
   const [deleteID, setDeleteID] = useState<number | null>(null);
   const [openDetailModal, setOpenDetailModal] = useState(false);
   const [detailID, setDetailID] = useState<number | null>(null);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [editID, setEditID] = useState<number | null>(null);
 
   // Filter states
   const [sortBy, setSortBy] = useState<string>("date");
@@ -58,7 +61,9 @@ const MyDocuments: React.FC = () => {
           success: {
             render({ data }) {
               if (data.data.success) {
-                setDocuments(documents.filter((doc) => doc.document_id !== deleteID));
+                setDocuments(
+                  documents.filter((doc) => doc.document_id !== deleteID)
+                );
                 return data.data.message;
               }
               return "Xóa tài liệu thành công!";
@@ -70,7 +75,13 @@ const MyDocuments: React.FC = () => {
       )
       .catch(() => console.error("Failed to delete document"));
   };
-
+  const handleDocumentUpdate = (updatedDoc: Document) => {
+    setDocuments(
+      documents.map((doc) =>
+        doc.document_id === updatedDoc.document_id ? updatedDoc : doc
+      )
+    );
+  };
 
   useEffect(() => {
     window.scroll({ top: 0, behavior: "smooth" });
@@ -85,10 +96,14 @@ const MyDocuments: React.FC = () => {
         const response = await documentsApi.getMyUploadedDocument(params);
         setDocuments(response.data?.data || []);
         setPagination(
-          response.data?.pagination || { currentPage: 1, totalCount: 0, totalPages: 1 }
+          response.data?.pagination || {
+            currentPage: 1,
+            totalCount: 0,
+            totalPages: 1,
+          }
         );
       } catch (err) {
-        setError("Failed to load documents");
+        setError("Tải dữ liệu thất bại!");
       } finally {
         setLoading(false);
       }
@@ -104,8 +119,17 @@ const MyDocuments: React.FC = () => {
     setSearchParams({ page: newPage.toString() });
   };
 
-  if (loading) return <div className="flex justify-center items-center min-h-screen"><Loader /></div>;
-  if (error) return <p className="text-red-500">{error}</p>;
+  if (loading || error)
+    return (
+      <div className="text-center flex items-center justify-center flex-col gap-2">
+        <Loader />
+        {error ? (
+          <p className="text-red-500">{error}</p>
+        ) : (
+          "Đang tải dữ liệu..."
+        )}
+      </div>
+    );
 
   const renderActionButtons = (doc: Document) => (
     <ActionButtons
@@ -113,7 +137,10 @@ const MyDocuments: React.FC = () => {
         setOpenDetailModal(true);
         setDetailID(doc.document_id);
       }}
-      onEdit={() => console.log("Edit document", doc.document_id)}
+      onEdit={() => {
+        setOpenEditModal(true);
+        setEditID(doc.document_id);
+      }}
       onDelete={() => {
         setOpenModal(true);
         setDeleteID(doc.document_id);
@@ -123,10 +150,15 @@ const MyDocuments: React.FC = () => {
 
   return (
     <>
-      <PageTitle title="Tài liệu của bạn" description="Danh sách tài liệu bạn đã tải lên" />
+      <PageTitle
+        title="Tài liệu của bạn"
+        description="Danh sách tài liệu bạn đã tải lên"
+      />
       <div className="md:container mx-auto py-6">
-        <h2 className="text-3xl font-bold mb-6 text-center">Tài Liệu Đã Tải Lên</h2>
-        
+        <h2 className="text-3xl font-bold mb-6 text-center">
+          Tài Liệu Đã Tải Lên
+        </h2>
+
         {/* Filter Controls */}
         <div className="mb-6 flex flex-wrap gap-4 justify-center">
           <select
@@ -155,7 +187,10 @@ const MyDocuments: React.FC = () => {
 
         {documents.length > 0 ? (
           <>
-            <DocumentList documents={documents} actionButtons={renderActionButtons} />
+            <DocumentList
+              documents={documents}
+              actionButtons={renderActionButtons}
+            />
             <Pagination
               currentPage={pagination.currentPage}
               totalPages={pagination.totalPages}
@@ -167,13 +202,18 @@ const MyDocuments: React.FC = () => {
           <div className="text-center text-gray-500 text-lg">
             <p>Hiện tại không có tài liệu ở trang này.</p>
             {page === 1 && (
-              <NavLink to="/upload-document" className="text-blue-500 hover:underline">
+              <NavLink
+                to="/upload-document"
+                className="text-blue-500 hover:underline"
+              >
                 Tải lên ngay bây giờ!
               </NavLink>
             )}
           </div>
         )}
-        {openModal && <DeleteModal onClose={handleClose} onAction={handleDelete} />}
+        {openModal && (
+          <DeleteModal onClose={handleClose} onAction={handleDelete} />
+        )}
         {openDetailModal && (
           <ModalInfor
             documentID={detailID}
@@ -181,6 +221,16 @@ const MyDocuments: React.FC = () => {
               setOpenDetailModal(false);
               setDetailID(null);
             }}
+          />
+        )}
+        {openEditModal && (
+          <EditModal
+            documentID={editID}
+            onClose={() => {
+              setOpenEditModal(false);
+              setEditID(null);
+            }}
+            onUpdate={handleDocumentUpdate}
           />
         )}
       </div>
