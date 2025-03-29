@@ -49,7 +49,8 @@ const MyCollections: React.FC = () => {
   }, [reload]);
 
   // Add new collection
-  const handleAddCollection = async () => {
+  const handleAddCollection = async (e) => {
+    e.preventDefault();
     try {
       const response = await collectionsApi.postCreateCollection(newCollection);
       toast.success(response.data);
@@ -72,7 +73,6 @@ const handleDeleteCollection = async () => {
       pending: 'Đang xóa bộ sưu tập...',
       success: {
         render({ data }) {
-          setReload(!reload);
           return data.data; // Hiển thị thông báo từ API
         },
       },
@@ -84,6 +84,7 @@ const handleDeleteCollection = async () => {
       },
     }
   );
+  setReload(!reload);
   setSelectedCollection(null);
 };
 
@@ -121,7 +122,7 @@ const handleEditCollection = async () => {
           Tạo bộ sưu tập
         </button>
       </div>
-      {collections.length === 0 && (
+      {collections.length < 1 && (
         <p className="text-gray-500">Hiện chưa có bộ sưu tập.</p>
       )}
 
@@ -182,7 +183,7 @@ const handleEditCollection = async () => {
       {/* Add Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-xl w-96">
+          <form className="bg-white p-6 rounded-lg shadow-xl w-96" onSubmit={handleAddCollection}>
             <h2 className="text-xl font-bold mb-4">Tạo Mới Bộ Sưu Tập</h2>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Name</label>
@@ -222,13 +223,13 @@ const handleEditCollection = async () => {
                 Cancel
               </button>
               <button
-                onClick={handleAddCollection}
+                type='submit'
                 className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
               >
-                Save
+                Tạo mới
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
 

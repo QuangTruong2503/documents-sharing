@@ -12,8 +12,8 @@ const documentsApi = {
     });
   },
   //Lấy dữ liệu theo tim kiếm
-  getSearchDocuments: (search) =>{
-    return axiosInstance.get(`Documents/public/search-documents?search=${search}`);
+  getSearchDocuments: (search, pageNumber, pageSize) =>{
+    return axiosInstance.get(`Documents/public/search-documents?search=${search}&PageNumber=${pageNumber}&PageSize=${pageSize}`);
   },
 
   // read documents uploaded by user
