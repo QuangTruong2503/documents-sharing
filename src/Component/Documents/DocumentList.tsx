@@ -21,7 +21,7 @@ interface DocumentListProps {
 }
 
 const DocumentCard: React.FC<{ document: Document }> = ({ document }) => (
-  <div className="relative overflow-hidden py-2 px-4 bg-gray-50 border border-gray-200 hover:border-gray-400 transition-colors duration-300 cursor-pointer group h-full">
+  <div className="relative overflow-hidden py-2 px-4 bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-300 cursor-pointer group h-full">
     <NavLink
       to={`/document/${document.document_id}`}
       className="absolute inset-0 z-10"

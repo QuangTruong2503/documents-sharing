@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { Dropdown, Accordion } from "flowbite-react";
+import { Accordion } from "flowbite-react";
 import categoriesAPI from "../api/categoriesAPI";
+import { NavLink } from "react-router-dom";
 
 export interface Category {
-  category_id: number;
+  category_id: string;
   name: string;
   description: string;
-  parent_id: number | null;
+  parent_id: string | null;
 }
 
 const CategoriesComponent: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -21,40 +23,51 @@ const CategoriesComponent: React.FC = () => {
   }, []);
 
   const parentCategories = categories.filter((cat) => cat.parent_id === null);
-  const getChildren = (parentId: number) =>
+  const getChildren = (parentId: string) =>
     categories.filter((cat) => cat.parent_id === parentId);
 
   return (
     <>
-      {/* Desktop - Dropdown */}
+      {/* Desktop - Hover Dropdown */}
       <div className="hidden font-semibold text-gray-500 sm:flex flex-row justify-center items-center gap-6 px-6 py-3 bg-white border-t border-gray-200">
-        {parentCategories.map((parent) => {
+        {parentCategories.map((parent, index) => {
           const children = getChildren(parent.category_id);
           return children.length > 0 ? (
-            <Dropdown
-              key={parent.category_id}
-              label={parent.name}
-              inline
-              className="z-20"
+            <div
+              key={index}
+              className="relative"
+              onMouseEnter={() => setOpenDropdown(index)}
+              onMouseLeave={() => setOpenDropdown(null)}
             >
-              <ul
-                className={`grid ${
-                  children.length > 10 ? "grid-cols-3" : "grid-cols-2"
-                } py-3 px-6 gap-y-4 gap-x-6`}
+              <button
+                className={`text-gray-800 font-semibold whitespace-nowrap ${
+                  index === openDropdown ? "text-cyan-500" : ""
+                }`}
               >
-                {children.map((child) => (
-                  <li>
-                        <a
-                        href="/"
-                        key={child.category_id}
-                        className="hover:text-cyan-500 cursor-pointer"
-                    >
-                        {child.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </Dropdown>
+                {parent.name}
+              </button>
+              {openDropdown === index && (
+                <div className="absolute top-full left-0 min-w-[300px] z-20">
+                  <span className="opacity-0 p-2"></span>
+                  <ul
+                    className={`grid ${
+                      children.length > 10 ? "grid-cols-3" : "grid-cols-2"
+                    } py-3 px-6 gap-y-4 gap-x-6 bg-white shadow-lg border rounded-md`}
+                  >
+                    {children.map((child) => (
+                      <li key={child.category_id}>
+                        <NavLink
+                          to={`/category/${child.category_id}`}
+                          className="hover:text-cyan-500 cursor-pointer block"
+                        >
+                          {child.name}
+                        </NavLink>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           ) : (
             <span
               key={parent.category_id}

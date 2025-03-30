@@ -15,7 +15,10 @@ const documentsApi = {
   getSearchDocuments: (search, pageNumber, pageSize) =>{
     return axiosInstance.get(`Documents/public/search-documents?search=${search}&PageNumber=${pageNumber}&PageSize=${pageSize}`);
   },
-
+  //Lấy dữ liệu theo tim kiếm
+  getDocumentsByCategory: (categoryID, pageNumber, pageSize) =>{
+    return axiosInstance.get(`Documents/public/documents-by-category?categoryID=${categoryID}&PageNumber=${pageNumber}&PageSize=${pageSize}`);
+  },
   // read documents uploaded by user
   getMyUploadedDocument: (params) => {
     const authToken = Cookies.get("token");
