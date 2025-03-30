@@ -27,7 +27,7 @@ const queryClient = new QueryClient();
 const MainLayout = ({ children }) => (
   <>
     <HeaderComponent />
-    <div className="max-w-screen-xl mx-auto p-4 min-h-screen">
+    <div className="md:max-w-screen-xl mx-auto md:p-4 min-h-screen">
       {children}
     </div>
     <ScrollToTopComponent />

@@ -21,29 +21,37 @@ interface DocumentListProps {
 }
 
 const DocumentCard: React.FC<{ document: Document }> = ({ document }) => (
-  <div className="relative rounded-xl overflow-hidden bg-white shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer group">
+  <div className="relative overflow-hidden py-2 px-4 bg-gray-50 border border-gray-200 hover:border-gray-400 transition-colors duration-300 cursor-pointer group h-full">
     <NavLink
       to={`/document/${document.document_id}`}
       className="absolute inset-0 z-10"
     />
 
-    <div className="relative h-48 overflow-hidden">
+    <div className="relative h-48 overflow-hidden flex justify-center">
       <img
         src={document.thumbnail_url}
         alt={document.title}
-        className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
+        className="w-3/4 h-full object-fill border border-gray-200 shadow-sm"
       />
-      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition duration-300" />
+      <div className="absolute inset-0 bg-black bg-opacity-0" />
     </div>
 
-    <div className="p-4 flex flex-col gap-2">
-      <h3 className="text-md font-semibold text-gray-800 line-clamp-2">
-        {document.title}
-      </h3>
-      <p className="text-sm text-gray-500 line-clamp-1">
-        Thêm bởi: <span className="font-medium">{document.full_name}</span>
-      </p>
-      <div className="flex justify-between items-center text-sm text-gray-500 mt-1">
+    {/* 📌 Flex container để giữ "Thích" ở đáy */}
+    <div className="p-4 flex flex-col justify-between gap-2 h-[calc(100%-12rem)]"> 
+      {/* 12rem ≈ chiều cao phần ảnh + padding, có thể điều chỉnh tùy nhu cầu */}
+
+      {/* Nội dung trên */}
+      <div className="flex flex-col gap-2">
+        <h3 className="text-md font-semibold text-gray-800 line-clamp-2">
+          {document.title}
+        </h3>
+        <p className="text-sm text-gray-500 line-clamp-1">
+          Thêm bởi: <span className="font-medium">{document.full_name}</span>
+        </p>
+      </div>
+
+      {/* Nút thích ở chân */}
+      <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
         <div className="flex items-center gap-1">
           <FontAwesomeIcon icon={faThumbsUp} />
           <span>Thích</span>
@@ -53,6 +61,8 @@ const DocumentCard: React.FC<{ document: Document }> = ({ document }) => (
   </div>
 );
 
+
+
 const DocumentList: React.FC<DocumentListProps> = ({
   documents,
   currentPage,
@@ -60,8 +70,8 @@ const DocumentList: React.FC<DocumentListProps> = ({
   totalCount,
   onPageChange,
 }) => (
-  <div className="w-full flex flex-col gap-8">
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 p-4">
+  <div className="w-full flex flex-col">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-2 gap-y-4 py-4">
       {documents.map((doc) => (
         <DocumentCard key={doc.document_id} document={doc} />
       ))}

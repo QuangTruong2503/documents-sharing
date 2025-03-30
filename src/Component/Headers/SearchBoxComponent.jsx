@@ -24,7 +24,7 @@ function SearchBoxComponent() {
     <div>
       {" "}
       {/* Search Box */}
-      <form className="m-4 w-full" onSubmit={handleSearch}>
+      <form className="w-full" onSubmit={handleSearch}>
         <div className="relative">
           <input
             type="search"
