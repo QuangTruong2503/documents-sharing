@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Accordion } from "flowbite-react";
 import categoriesAPI from "../api/categoriesAPI";
 import { NavLink } from "react-router-dom";
@@ -14,51 +14,69 @@ const CategoriesComponent: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  // Memoized fetch function
+  const fetchCategories = useCallback(async () => {
+    try {
       const response = await categoriesAPI.getAll();
       setCategories(response?.data || []);
-    };
-    fetchData();
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    }
   }, []);
 
-  const parentCategories = categories.filter((cat) => cat.parent_id === null);
-  const getChildren = (parentId: string) =>
-    categories.filter((cat) => cat.parent_id === parentId);
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
+  const parentCategories = categories.filter((cat) => !cat.parent_id);
+  const getChildren = useCallback(
+    (parentId: string) => categories.filter((cat) => cat.parent_id === parentId),
+    [categories]
+  );
   return (
     <>
       {/* Desktop - Hover Dropdown */}
-      <div className="hidden font-semibold text-gray-500 sm:flex flex-row justify-center items-center gap-6 px-6 py-3 bg-white border-t border-gray-200">
+      <nav className="hidden sm:flex justify-center items-center gap-8 px-8 py-4 bg-white border-t border-gray-100 shadow-sm">
         {parentCategories.map((parent, index) => {
           const children = getChildren(parent.category_id);
-          return children.length > 0 ? (
+          return (
             <div
-              key={index}
-              className="relative"
+              key={parent.category_id}
+              className="relative group"
               onMouseEnter={() => setOpenDropdown(index)}
               onMouseLeave={() => setOpenDropdown(null)}
             >
-              <button
-                className={`text-gray-800 font-semibold whitespace-nowrap ${
-                  index === openDropdown ? "text-cyan-500" : ""
-                }`}
+              <NavLink
+                to={`/category/${parent.category_id}`}
+                className={({ isActive }) =>
+                  `font-medium text-gray-700 transition-colors duration-200 whitespace-nowrap ${
+                    isActive || index === openDropdown
+                      ? "text-blue-600"
+                      : "hover:text-blue-500"
+                  }`
+                }
               >
                 {parent.name}
-              </button>
-              {openDropdown === index && (
-                <div className="absolute top-full left-0 min-w-[300px] z-20">
-                  <span className="opacity-0 p-2"></span>
+              </NavLink>
+              {children.length > 0 && openDropdown === index && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 min-w-[240px] z-20">
+                  <span className="opacity-0 p-1"></span>
                   <ul
-                    className={`grid ${
-                      children.length > 10 ? "grid-cols-3" : "grid-cols-2"
-                    } py-3 px-6 gap-y-4 gap-x-6 bg-white shadow-lg border rounded-md`}
+                    className={`
+                      py-3 px-4 bg-white rounded-lg shadow-xl border border-gray-100
+                      grid ${children.length > 10 ? "grid-cols-2" : "grid-cols-1"}
+                      gap-3 max-h-[70vh] overflow-y-auto
+                    `}
                   >
                     {children.map((child) => (
                       <li key={child.category_id}>
                         <NavLink
                           to={`/category/${child.category_id}`}
-                          className="hover:text-cyan-500 cursor-pointer block"
+                          className={({ isActive }) =>
+                            `block text-sm text-gray-600 transition-colors duration-200 ${
+                              isActive ? "text-blue-600" : "hover:text-blue-500"
+                            }`
+                          }
                         >
                           {child.name}
                         </NavLink>
@@ -68,40 +86,48 @@ const CategoriesComponent: React.FC = () => {
                 </div>
               )}
             </div>
-          ) : (
-            <span
-              key={parent.category_id}
-              className="text-gray-800 font-semibold whitespace-nowrap"
-            >
-              {parent.name}
-            </span>
           );
         })}
-      </div>
+      </nav>
 
       {/* Mobile - Accordion */}
-      <div className="block sm:hidden">
-        <Accordion collapseAll>
+      <div className="sm:hidden px-4 py-2">
+        <Accordion collapseAll className="border-none">
           {parentCategories.map((parent) => {
             const children = getChildren(parent.category_id);
             return (
               <Accordion.Panel key={parent.category_id}>
-                <Accordion.Title>{parent.name}</Accordion.Title>
-                <Accordion.Content>
+                <Accordion.Title className="text-gray-700 hover:text-blue-500 focus:ring-2 focus:ring-blue-200 bg-gray-50">
+                  <NavLink
+                    to={`/category/${parent.category_id}`}
+                    className={({ isActive }) =>
+                      `${isActive ? "text-blue-600" : ""}`
+                    }
+                  >
+                    {parent.name}
+                  </NavLink>
+                </Accordion.Title>
+                <Accordion.Content className="bg-white">
                   {children.length > 0 ? (
-                    <ul className="space-y-1 ps-2 text-sm text-gray-700">
+                    <ul className="space-y-3 py-2 text-sm text-gray-600">
                       {children.map((child) => (
-                        <li
-                          key={child.category_id}
-                          className="hover:text-cyan-500 cursor-pointer"
-                        >
-                          {child.name}
+                        <li key={child.category_id}>
+                          <NavLink
+                            to={`/category/${child.category_id}`}
+                            className={({ isActive }) =>
+                              `block transition-colors duration-200 ${
+                                isActive ? "text-blue-600" : "hover:text-blue-500"
+                              }`
+                            }
+                          >
+                            {child.name}
+                          </NavLink>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-gray-600">
-                      Không có danh mục con.
+                    <p className="text-sm text-gray-500 py-2">
+                      No subcategories available
                     </p>
                   )}
                 </Accordion.Content>
@@ -114,4 +140,4 @@ const CategoriesComponent: React.FC = () => {
   );
 };
 
-export default CategoriesComponent;
+export default React.memo(CategoriesComponent);

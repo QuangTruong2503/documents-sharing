@@ -9,6 +9,7 @@ import { CheckSigned } from "../../Helpers/CheckSigned";
 import LoaderButton from "../../Component/Loaders/LoaderButton.js";
 import PageTitle from "../../Component/PageTitle.js";
 import GoogleLoginComponent from "./GoogleLoginComponent.tsx";
+
 interface Login {
   email: string;
   password: string;
@@ -24,6 +25,7 @@ interface User {
   FullName: string;
   AvatarUrl: string;
 }
+
 function LoginPage() {
   const [loginData, setLoginData] = useState<Login>({
     email: "",
@@ -41,7 +43,6 @@ function LoginPage() {
     }));
   };
 
-  // Toggle show/hide password
   const toggleShowPassword = () => {
     setShowPassword((prevState) => !prevState);
   };
@@ -57,10 +58,6 @@ function LoginPage() {
         toast.success(data.message);
         Cookies.set("token", data.token, { expires: 1 });
         Cookies.set("user", JSON.stringify(data.user), { expires: 1 });
-        // Xử lý chuyển hướng hoặc các hành động khác sau khi đăng nhập thành công
-        // setTimeout(() => {
-        //   window.location.href = "/";
-        // }, 1000);
         navigate("/");
       } else {
         toast.warning(data.message);
@@ -77,60 +74,56 @@ function LoginPage() {
   }, []);
 
   return (
-    <div className="bg-white">
-  <PageTitle
-    title="Đăng nhập"
-    description={"Đăng nhập vào hệ thống chia sẻ tài liệu"}
-  />
-  <section className="p-4 mx-auto" id="scrollID">
-    <div className="flex flex-col items-center justify-center px-2 py-4 mx-auto">
-      <div className="flex gap-2 items-center mb-6 text-2xl font-semibold text-gray-900">
-        <h2>Chào mừng đến với</h2>
-        <a href="/" className="flex items-center">
-          <img
-            className="w-8 h-8 mr-2"
-            src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/logo.svg"
-            alt="logo"
-          />
-          DocShare
-        </a>
-      </div>
-      {/* Điều chỉnh kích thước ô đăng nhập */}
-      <div className="w-full max-w-md bg-gray-50 rounded-lg shadow-lg shadow-gray-400 xl:p-0">
-        <div className="p-6 space-y-4 sm:p-8">
-          <div className="text-center">
-            <small className="font-bold w-full leading-tight tracking-tight text-gray-900">
-              Đăng nhập với
-            </small>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <PageTitle
+        title="Đăng nhập"
+        description="Đăng nhập vào hệ thống chia sẻ tài liệu"
+      />
+      
+      <div className="max-w-md w-full space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <div className="flex justify-center items-center gap-2">
+            <img
+              className="h-10 w-10"
+              src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/logo.svg"
+              alt="logo"
+            />
+            <h1 className="text-3xl font-bold text-gray-900">DocShare</h1>
           </div>
-          {/* Đăng nhập khác */}
-          <div className="grid grid-cols-1 gap-2 mb-2">
-            <GoogleLoginComponent />
-          </div>
-          <hr />
-          <form className="space-y-4" onSubmit={fetchLogin}>
+          <p className="mt-2 text-sm text-gray-600">
+            Chào mừng bạn trở lại! Vui lòng đăng nhập
+          </p>
+        </div>
+
+        {/* Form Container */}
+        <div className="bg-white py-8 px-6 shadow-2xl rounded-xl border border-gray-100">
+          <form className="space-y-6" onSubmit={fetchLogin}>
+            {/* Email Input */}
             <div>
               <label
                 htmlFor="email"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                className="block text-sm font-medium text-gray-700"
               >
-                Tài khoản hoặc Email
+                Email
               </label>
               <input
                 type="text"
                 name="email"
                 id="email"
-                className="border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                className="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 placeholder="name@gmail.com"
                 required
                 value={loginData.email}
                 onChange={handleChange}
               />
             </div>
+
+            {/* Password Input */}
             <div className="relative">
               <label
                 htmlFor="password"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                className="block text-sm font-medium text-gray-700"
               >
                 Mật khẩu
               </label>
@@ -138,8 +131,8 @@ function LoginPage() {
                 type={showPassword ? "text" : "password"}
                 name="password"
                 id="password"
+                className="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 placeholder="••••••••"
-                className="border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 pr-10 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                 required
                 value={loginData.password}
                 onChange={handleChange}
@@ -147,55 +140,64 @@ function LoginPage() {
               <button
                 type="button"
                 onClick={toggleShowPassword}
-                className="absolute right-2 top-10 text-gray-500 dark:text-gray-400"
+                className="absolute right-3 top-10 text-gray-500 hover:text-gray-700"
               >
-                {showPassword ? (
-                  <FontAwesomeIcon icon={faEyeSlash} />
-                ) : (
-                  <FontAwesomeIcon icon={faEye} />
-                )}
+                <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
               </button>
             </div>
-            <div className="flex items-end justify-end">
+
+            {/* Forgot Password */}
+            <div className="flex justify-end">
               <NavLink
-                to={`/forgot-password`}
-                className="hover:underline text-sm font-medium text-primary-600 dark:text-primary-500"
+                to="/forgot-password"
+                className="text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200"
               >
                 Quên mật khẩu?
               </NavLink>
             </div>
-            {/* Đăng nhập */}
-            {isActing ? (
-              <button
-                type="button"
-                className="w-full bg-white border-2 border-solid border-blue-500 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
-              >
-                <LoaderButton />
-              </button>
-            ) : (
-              <button
-                type="submit"
-                className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
-              >
-                ĐĂNG NHẬP
-              </button>
-            )}
 
-            <p className="text-sm font-light text-gray-500 dark:text-gray-400">
-              Bạn chưa có tài khoản?{" "}
-              <NavLink
-                to="/register"
-                className="font-medium text-blue-600 hover:underline dark:text-primary-500"
-              >
-                Đăng ký
-              </NavLink>
-            </p>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isActing}
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400 transition-all duration-200"
+            >
+              {isActing ? <LoaderButton /> : "ĐĂNG NHẬP"}
+            </button>
           </form>
+
+          {/* Google Login */}
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500 my-2">
+                  Hoặc đăng nhập với
+                </span>
+              </div>
+            </div>
+            {/* Login other */}
+            <div className="grid grid-cols-1 gap-2 my-3">
+              <GoogleLoginComponent />
+            </div>
+          </div>
+
+          {/* Register Link */}
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Chưa có tài khoản?{" "}
+            <NavLink
+              to="/register"
+              className="font-medium text-blue-600 hover:text-blue-800 transition-colors duration-200"
+            >
+              Đăng ký ngay
+            </NavLink>
+          </p>
         </div>
       </div>
     </div>
-  </section>
-</div>
   );
 }
+
 export default LoginPage;

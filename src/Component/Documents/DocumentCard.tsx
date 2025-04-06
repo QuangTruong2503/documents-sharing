@@ -1,52 +1,84 @@
 import { faThumbsUp } from '@fortawesome/free-regular-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import React from 'react'
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+
 interface Document {
-    document_id: number;
-    full_name: string;
-    title: string;
-    thumbnail_url: string;
-  }
-  const DocumentCard: React.FC<{ document: Document }> = ({ document }) => (
-    <div className="relative overflow-hidden py-2 px-4 bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-300 cursor-pointer group h-full">
+  document_id: number;
+  full_name: string;
+  title: string;
+  thumbnail_url: string;
+}
+
+const DocumentCard: React.FC<{ document: Document }> = ({ document }) => {
+  const [isLiked, setIsLiked] = useState(false);
+
+  const handleLikeClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent NavLink from triggering
+    setIsLiked(!isLiked);
+  };
+
+  return (
+    <div className="relative overflow-hidden bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer group h-full flex flex-col">
       <NavLink
         to={`/document/${document.document_id}`}
         className="absolute inset-0 z-10"
       />
-  
-      <div className="relative h-48 overflow-hidden flex justify-center">
+
+      {/* Thumbnail */}
+      <div className="relative h-48 flex justify-center overflow-hidden">
         <img
           src={document.thumbnail_url}
           alt={document.title}
-          className="w-3/4 h-full object-fill border border-gray-200 shadow-sm"
+          className=" w-3/4 h-full object-fill border border-gray-200 shadow-sm transition-transform duration-300 group-hover:scale-105"
+          loading="lazy"
         />
-        <div className="absolute inset-0 bg-black bg-opacity-0" />
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300" />
       </div>
-  
-      {/* 📌 Flex container để giữ "Thích" ở đáy */}
-      <div className="p-4 flex flex-col justify-between gap-2 h-[calc(100%-12rem)]"> 
-        {/* 12rem ≈ chiều cao phần ảnh + padding, có thể điều chỉnh tùy nhu cầu */}
-  
-        {/* Nội dung trên */}
-        <div className="flex flex-col gap-2">
-          <h3 className="text-md min-h-12 font-semibold text-gray-800 line-clamp-2">
+
+      {/* Content */}
+      <div className="p-4 flex flex-col justify-between flex-1">
+        <div className="space-y-2">
+          <h3 className="text-md font-semibold text-gray-800 line-clamp-2 min-h-12">
             {document.title}
           </h3>
-          <p className="text-sm text-gray-500 line-clamp-1">
-            Thêm bởi: <span className="font-medium">{document.full_name}</span>
+          <p className="text-sm text-gray-600 line-clamp-1">
+            Thêm bởi: <span className="font-medium text-gray-700">{document.full_name}</span>
           </p>
         </div>
-  
-        {/* Nút thích ở chân */}
-        <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
-          <div className="flex items-center gap-1">
-            <FontAwesomeIcon icon={faThumbsUp} />
-            <span>Thích</span>
-          </div>
+
+        {/* Like Button */}
+        <div className="mt-3 flex justify-between items-center text-sm">
+          <button
+            onClick={handleLikeClick}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors duration-200 ${
+              isLiked
+                ? 'text-blue-600 bg-blue-50'
+                : 'text-gray-500 hover:text-blue-500 hover:bg-gray-100'
+            }`}
+          >
+            <FontAwesomeIcon
+              icon={faThumbsUp}
+              className={`w-4 h-4 ${isLiked ? 'animate-bounce-once' : ''}`}
+            />
+            <span>{isLiked ? 'Đã thích' : 'Thích'}</span>
+          </button>
         </div>
       </div>
+
+      {/* Animation Styles */}
+      <style >{`
+        @keyframes bounce-once {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.2); }
+          100% { transform: scale(1); }
+        }
+        .animate-bounce-once {
+          animation: bounce-once 0.3s ease-in-out;
+        }
+      `}</style>
     </div>
   );
+};
 
-export default DocumentCard
+export default DocumentCard;

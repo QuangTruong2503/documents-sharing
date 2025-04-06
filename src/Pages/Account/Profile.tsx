@@ -150,7 +150,7 @@ const OverviewTab = React.memo(
           </div>
           <div className="flex flex-col">
             <span className="text-gray-600">Mật khẩu</span>
-            <NavLink to={'/forgot-password'} className="text-blue-600 font-semibold">Đổi mật khẩu</NavLink>
+            <NavLink to={'/forgot-password'} className="text-blue-600 font-semibold w-fit">Đổi mật khẩu</NavLink>
           </div>
         </div>
         <hr className="my-4 border-gray-300" />
