@@ -19,6 +19,14 @@ const documentsApi = {
   getDocumentsByCategory: (categoryID, pageNumber, pageSize) =>{
     return axiosInstance.get(`Documents/public/documents-by-category?categoryID=${categoryID}&PageNumber=${pageNumber}&PageSize=${pageSize}`);
   },
+  //Lấy dữ liệu theo lịch sử truy cập
+  getDocumentsByHistory: (documentHistory) =>{
+    return axiosInstance.post(`Documents/public/history-documents`, documentHistory, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  },
   // read documents uploaded by user
   getMyUploadedDocument: (params) => {
     const authToken = Cookies.get("token");

@@ -14,11 +14,10 @@ function SearchBoxComponent() {
     // Xử lý tìm kiếm khi submit form
     const handleSearch = (e) => {
       e.preventDefault();
-      if (!searchQuery.trim()) {
-        alert("Vui lòng nhập từ khóa tìm kiếm!");
+      if (searchQuery.trim()) {
+        navigate(`/search/${encodeURIComponent(searchQuery.trim())}`); // Mã hóa URL
         return;
       }
-      navigate(`/search/${encodeURIComponent(searchQuery.trim())}`); // Mã hóa URL
     };
   return (
     <div>
@@ -31,7 +30,9 @@ function SearchBoxComponent() {
             value={searchQuery}
             onChange={handleSearchChange}
             className="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-            placeholder="Search documents..."
+            placeholder="Tìm kiếm tài liệu..."
+            required
+            autoComplete="off"
           />
           <button
             type="submit"

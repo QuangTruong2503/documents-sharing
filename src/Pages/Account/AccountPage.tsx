@@ -16,11 +16,7 @@ function AccountPage() {
     {
       name: "Thông tin tài khoản",
       url: "/account/profile",
-    },
-    {
-      name: "Đổi mật khẩu",
-      url: "/account/password",
-    },
+    }
   ];
 
   return (

@@ -60,15 +60,75 @@ function Categories() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+    window.scroll({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRetry = () => {
+    fetchDocuments();
   };
 
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-6">
-      {loading && <p>Đang tải tài liệu...</p>}
-      {error && <p className="text-red-500">{error}</p>}
-      {!loading && !error && documents.length === 0 && (
-        <p className="text-gray-600">Không tìm thấy tài liệu trong chuyên mục này.</p>
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+          <p className="mt-4 text-gray-600">Đang tải tài liệu...</p>
+        </div>
       )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="text-center py-12 bg-white rounded-lg shadow-sm p-6">
+          <svg
+            className="mx-auto h-12 w-12 text-red-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <p className="mt-4 text-lg text-gray-700">{error}</p>
+          <button
+            onClick={handleRetry}
+            className="mt-6 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Thử lại
+          </button>
+        </div>
+      )}
+
+      {/* No Results State */}
+      {!loading && !error && documents.length === 0 && (
+        <div className="text-center py-12 bg-white rounded-lg shadow-sm p-6">
+          <svg
+            className="mx-auto h-12 w-12 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <h3 className="mt-4 text-lg font-medium text-gray-900">
+            Không tìm thấy tài liệu
+          </h3>
+          <p className="mt-2 text-gray-600">
+            Không có tài liệu nào trong chuyên mục này.
+          </p>
+        </div>
+      )}
+
+      {/* Results State with DocumentList */}
       {!loading && !error && documents.length > 0 && (
         <DocumentList
           documents={documents}
@@ -77,6 +137,29 @@ function Categories() {
           totalCount={totalCount}
           onPageChange={handlePageChange}
         />
+      )}
+
+      {/* Pagination */}
+      {!loading && !error && documents.length > 0 && totalPages > 1 && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md disabled:bg-gray-200"
+          >
+            Trước
+          </button>
+          <span className="mx-4 text-lg text-gray-700">
+            Trang {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md disabled:bg-gray-200"
+          >
+            Sau
+          </button>
+        </div>
       )}
     </div>
   );

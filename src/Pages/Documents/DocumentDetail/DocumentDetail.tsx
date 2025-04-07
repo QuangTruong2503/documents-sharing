@@ -13,6 +13,7 @@ import {
   faFlag,
 } from "@fortawesome/free-solid-svg-icons";
 import PageTitle from "../../../Component/PageTitle";
+import Cookies from "js-cookie";
 
 interface DocumentData {
   document_id: number;
@@ -35,7 +36,29 @@ const PdfViewer: React.FC = () => {
   const [dislikePercentage, setDislikePercentage] = useState(38);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
 
-  // Fetch document data
+  // Hàm lưu lịch sử truy cập vào Cookies
+  const saveHistoryToCookies = (docID: string) => {
+    const history = Cookies.get("documentHistory")
+      ? JSON.parse(Cookies.get("documentHistory")!)
+      : [];
+    
+    // Loại bỏ documentID trùng lặp nếu đã tồn tại
+    const updatedHistory = history.filter((id: string) => id !== docID);
+    
+    // Thêm documentID mới vào đầu mảng
+    updatedHistory.unshift(docID);
+    
+    // Giới hạn tối đa 5 documentID
+    if (updatedHistory.length > 5) {
+      updatedHistory.pop(); // Xóa phần tử cuối nếu vượt quá 5
+    }
+    
+    // Lưu lại vào Cookies với thời hạn hết hạn (ví dụ: 7 ngày)
+    Cookies.set("documentHistory", JSON.stringify(updatedHistory), { expires: 7 });
+    console.log("Document history saved to cookies:", updatedHistory);
+  };
+
+  // Fetch document data và lưu lịch sử
   useEffect(() => {
     window.scroll({ top: 0, behavior: "smooth" });
 
@@ -51,6 +74,8 @@ const PdfViewer: React.FC = () => {
         const response = await documentsApi.getDocumentByID(documentID);
         if (response.data) {
           setDocumentData(response.data);
+          // Lưu documentID vào Cookies sau khi tải dữ liệu thành công
+          saveHistoryToCookies(documentID);
         } else {
           setError("No document data returned");
         }

@@ -19,7 +19,7 @@ const DocumentCard: React.FC<{ document: Document }> = ({ document }) => {
   };
 
   return (
-    <div className="relative overflow-hidden bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer group h-full flex flex-col">
+    <div className="relative overflow-hidden bg-white shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer group h-full flex flex-col">
       <NavLink
         to={`/document/${document.document_id}`}
         className="absolute inset-0 z-10"

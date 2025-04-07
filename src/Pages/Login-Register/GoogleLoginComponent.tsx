@@ -61,7 +61,7 @@ function LoginButton() {
   return (
     <>
       <button
-        className={`bg-white flex items-center justify-center gap-4 rounded py-3 shadow-md shadow-gray-300 border border-gray-400 transition-all ease-in-out duration-200 hover:-translate-y-0.5 ${
+        className={`bg-white flex items-center justify-center gap-4 rounded py-3 shadow-md shadow-gray-300 border border-gray-400 transition-all ease-in-out duration-200 hover:bg-gray-100 ${
           isActing ? "opacity-50 cursor-not-allowed" : ""
         }`}
         onClick={() => login()}
