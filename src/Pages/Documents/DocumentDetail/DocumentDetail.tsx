@@ -90,28 +90,39 @@ const PdfViewer: React.FC = () => {
     fetchDocumentData();
   }, [documentID]);
 
-  // Handle download
   const handleDownloadDocument = async () => {
     setIsDownloading(true);
     try {
       checkNotSigned();
-      const response = await documentsApi.downloadDocumentByID(documentID);
-      if (response.data.success) {
-        const downloadURL = response.data.downloadURL;
-        const link = document.createElement("a");
-        link.href = downloadURL;
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(downloadURL);
-      }
-    } catch (error) {
+      const response = await documentsApi.downloadDocumentByID(documentID)
+  
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+  
+      const fileName = documentData?.title || "document.pdf"; // Tên file mặc định
+  
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      // Cập nhật số lượt tải tài liệu sau khi tải thành công
+      setDocumentData((prev) => {
+        if (prev) {
+          return { ...prev, download_count: prev.download_count + 1 };
+        }
+        return prev;
+      });
+    } catch (error: any) {
       console.error("Error downloading document:", error);
     } finally {
       setIsDownloading(false);
+      
     }
   };
+  
 
   // Placeholder handlers
   const handleSave = () => alert("Chức năng Save chưa được triển khai!");

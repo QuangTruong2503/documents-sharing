@@ -6,7 +6,7 @@ const DocumentCardSkeleton = () => {
       
       {/* Skeleton for Thumbnail */}
       <div className="relative h-48 flex justify-center overflow-hidden">
-        <div className="w-3/4 h-full bg-gray-200 animate-pulse rounded-md"></div>
+        <div className="w-3/4 h-full bg-gray-200 animate-pulse "></div>
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300" />
       </div>
 

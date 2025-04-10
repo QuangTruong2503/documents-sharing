@@ -5,7 +5,7 @@ const documentsApi = {
   //read document by id
   getDocumentByID: (documentID) => {
     const authToken = Cookies.get("token");
-    return axiosInstance.get(`Documents/public/document/${documentID}`, {
+    return axiosInstance.get(`public/document/${documentID}`, {
       headers: {
         Authorization: `Bearer ${authToken}`,
       },
@@ -13,15 +13,15 @@ const documentsApi = {
   },
   //Lấy dữ liệu theo tim kiếm
   getSearchDocuments: (search, pageNumber, pageSize) =>{
-    return axiosInstance.get(`Documents/public/search-documents?search=${search}&PageNumber=${pageNumber}&PageSize=${pageSize}`);
+    return axiosInstance.get(`public/search-documents?search=${search}&PageNumber=${pageNumber}&PageSize=${pageSize}`);
   },
   //Lấy dữ liệu theo tim kiếm
   getDocumentsByCategory: (categoryID, pageNumber, pageSize) =>{
-    return axiosInstance.get(`Documents/public/documents-by-category?categoryID=${categoryID}&PageNumber=${pageNumber}&PageSize=${pageSize}`);
+    return axiosInstance.get(`public/documents-by-category?categoryID=${categoryID}&PageNumber=${pageNumber}&PageSize=${pageSize}`);
   },
   //Lấy dữ liệu theo lịch sử truy cập
   getDocumentsByHistory: (documentHistory) =>{
-    return axiosInstance.post(`Documents/public/history-documents`, documentHistory, {
+    return axiosInstance.post(`public/history-documents`, documentHistory, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -90,7 +90,9 @@ const documentsApi = {
     return axiosInstance.get(`Documents/download-document/${documentID}`, {
       headers: {
         Authorization: `Bearer ${authToken}`,
+        
       },
+      responseType: "blob", // Set response type to blob for file download
     });
   },
 };
