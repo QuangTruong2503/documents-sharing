@@ -89,7 +89,7 @@ const DocumentCarousel: React.FC<DocumentCarouselProps> = ({ categoryID, title }
   }
 
   if (error) {
-    return <div className="w-full text-center py-8 text-red-500">{error}</div>;
+    return <div className="w-full text-center py-8 text-red-500"></div>;
   }
   if (documents.length === 0) {
     return <div className="w-full text-center py-8"></div>;
