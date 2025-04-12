@@ -13,6 +13,8 @@ interface Document {
 
 interface ResponseData {
   documents: Document[];
+  category_name: string;
+  category_description: string;
   pagination: {
     currentPage: number;
     totalCount: number;
@@ -24,6 +26,8 @@ function Categories() {
   const { id } = useParams<{ id: string }>();
 
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [categoryName, setCategoryName] = useState<string>('');
+  const [categoryDescription, setCategoryDescription] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +44,8 @@ function Categories() {
     try {
       const response = await documentsApi.getDocumentsByCategory(id, currentPage, 10);
       const data: ResponseData = response.data;
-
+      setCategoryName(data.category_name);
+      setCategoryDescription(data.category_description);
       setDocuments(data.documents);
       setCurrentPage(data.pagination.currentPage);
       setTotalPages(data.pagination.totalPages);
@@ -123,20 +128,26 @@ function Categories() {
             Không tìm thấy tài liệu
           </h3>
           <p className="mt-2 text-gray-600">
-            Không có tài liệu nào trong chuyên mục này.
+            Không có tài liệu nào trong chuyên mục '{categoryName}'.
           </p>
         </div>
       )}
 
       {/* Results State with DocumentList */}
       {!loading && !error && documents.length > 0 && (
-        <DocumentList
+        <>
+          <div className='mb-4'>
+            <h2 className="text-2xl font-bold text-gray-800">{categoryName}</h2>
+            <p className="text-gray-600">{categoryDescription}</p>
+          </div>
+          <DocumentList
           documents={documents}
           currentPage={currentPage}
           totalPages={totalPages}
           totalCount={totalCount}
           onPageChange={handlePageChange}
         />
+        </>
       )}
 
       {/* Pagination */}

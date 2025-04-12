@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import documentsApi from "../../../api/documentsApi";
+import DocumentSummaryByAI  from "../../../Component/Chat/DocumentSummaryByAI.tsx";
 import { checkNotSigned } from "../../../Helpers/CheckSigned";
 import { formatDateToVN } from "../../../Helpers/formatDateToVN";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -35,6 +36,7 @@ const PdfViewer: React.FC = () => {
   const [likePercentage, setLikePercentage] = useState(62);
   const [dislikePercentage, setDislikePercentage] = useState(38);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [showAISummaryModal, setShowAISummaryModal] = useState(false);
 
   // Hàm lưu lịch sử truy cập vào Cookies
   const saveHistoryToCookies = (docID: string) => {
@@ -152,15 +154,25 @@ const PdfViewer: React.FC = () => {
 
   return (
     <>
-      <PageTitle title={documentData.title} description={documentData.description} />
+      <PageTitle
+        title={documentData.title}
+        description={documentData.description}
+      />
       <div className="w-full flex flex-col md:flex-row gap-4">
         {/* Left Sidebar */}
         <div className="w-full md:w-1/4 bg-white p-4 rounded-lg shadow-md flex flex-col items-start">
-          <h1 className="text-2xl font-bold mb-2 text-gray-800">{documentData.title}</h1>
-          <p className="text-gray-600 mb-4 text-sm line-clamp-4">{documentData.description}</p>
+          <h1 className="text-2xl font-bold mb-2 text-gray-800">
+            {documentData.title}
+          </h1>
+          <p className="text-gray-600 mb-4 text-sm line-clamp-4">
+            {documentData.description}
+          </p>
           <p className="text-gray-500 text-sm mb-4">
             Được tải bởi{" "}
-            <a href="/public-profile" className="font-semibold text-gray-600 underline">
+            <a
+              href="/public-profile"
+              className="font-semibold text-gray-600 underline"
+            >
               {documentData.full_name}
             </a>{" "}
             vào {formatDateToVN(documentData.uploaded_at)}
@@ -170,41 +182,85 @@ const PdfViewer: React.FC = () => {
           </div>
           <div className="w-full grid lg:grid-cols-3 grid-cols-2 gap-2">
             <button
+              onClick={() => setShowAISummaryModal(true)}
+              className="flex flex-col items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+            >
+              <svg
+                width="16"
+                height="16"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                role="img"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M10.171 2.828A3.333 3.333 0 0 0 13 0a3.334 3.334 0 0 0 2.828 2.828A3.333 3.333 0 0 0 13 5.657a3.333 3.333 0 0 0-2.829-2.829ZM.636 9.364A7.5 7.5 0 0 0 7 3a7.5 7.5 0 0 0 6.364 6.364A7.5 7.5 0 0 0 7 15.728 7.5 7.5 0 0 0 .636 9.364Z"
+                  fill="currentColor"
+                ></path>
+              </svg>
+              <span className="text-sm text-gray-600">Tóm tắt AI</span>
+            </button>
+
+            <button
               onClick={handleDownloadDocument}
               disabled={isDownloading}
               className={`flex flex-col items-center p-2 rounded-lg ${
-                isDownloading ? "bg-gray-300 cursor-not-allowed" : "bg-gray-100 hover:bg-gray-200"
+                isDownloading
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-gray-100 hover:bg-gray-200"
               }`}
             >
-              <FontAwesomeIcon icon={faDownload} className="text-gray-600 mb-1" />
-              <span className="text-sm text-gray-600">{isDownloading ? "..." : "Download"}</span>
+              <FontAwesomeIcon
+                icon={faDownload}
+                className="text-gray-600 mb-1"
+              />
+              <span className="text-sm text-gray-600">
+                {isDownloading ? "..." : "Download"}
+              </span>
             </button>
             <button
               onClick={handleLike}
               className="flex flex-col items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
             >
-              <FontAwesomeIcon icon={faThumbsUp} className="text-gray-600 mb-1" />
+              <FontAwesomeIcon
+                icon={faThumbsUp}
+                className="text-gray-600 mb-1"
+              />
               <span className="text-sm text-gray-600">{likePercentage}%</span>
             </button>
             <button
               onClick={handleDislike}
               className="flex flex-col items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
             >
-              <FontAwesomeIcon icon={faThumbsDown} className="text-gray-600 mb-1" />
-              <span className="text-sm text-gray-600">{dislikePercentage}%</span>
+              <FontAwesomeIcon
+                icon={faThumbsDown}
+                className="text-gray-600 mb-1"
+              />
+              <span className="text-sm text-gray-600">
+                {dislikePercentage}%
+              </span>
             </button>
             <button
               onClick={handleSave}
               className="flex flex-col items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
             >
-              <FontAwesomeIcon icon={faBookmark} className="text-gray-600 mb-1" />
+              <FontAwesomeIcon
+                icon={faBookmark}
+                className="text-gray-600 mb-1"
+              />
               <span className="text-sm text-gray-600">Save</span>
             </button>
             <button
               onClick={handleShare}
               className="flex flex-col items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
             >
-              <FontAwesomeIcon icon={faShareAlt} className="text-gray-600 mb-1" />
+              <FontAwesomeIcon
+                icon={faShareAlt}
+                className="text-gray-600 mb-1"
+              />
               <span className="text-sm text-gray-600">Share</span>
             </button>
             <button
@@ -228,6 +284,12 @@ const PdfViewer: React.FC = () => {
           </div>
         </div>
       </div>
+      {showAISummaryModal && documentData?.document_id && (
+        <DocumentSummaryByAI
+          documentId={documentData.document_id}
+          onClose={() => setShowAISummaryModal(false)}
+        />
+      )}
     </>
   );
 };

@@ -2,10 +2,10 @@ import axiosInstance from "./axiosInstance";
 
 const categoriesAPI = {
     getAll: () => {
-        return axiosInstance.get("Categories/public/get-all-categories");
+        return axiosInstance.get("public/get-all-categories");
     },
     getBySearch: (search) => {
-        return axiosInstance.get(`Categories/public/search-category?search=${search}`);
+        return axiosInstance.get(`public/search-category?search=${search}`);
     },
 
 }

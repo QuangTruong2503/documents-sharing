@@ -21,11 +21,14 @@ import VerifyEmail from "./Pages/Verification/VerifyEmail.tsx";
 import ChangePassword from "./Pages/Login-Register/ChangePassword.js";
 import Search from "./Pages/Search/Search.tsx";
 import Categories from "./Pages/Categories.tsx";
+import ChatBoxAI from "./Component/Chat/ChatBoxAI.tsx";
+import { useState } from "react";
 
 const queryClient = new QueryClient();
 
 // Layout cho các trang có Header và Footer
 const MainLayout = ({ children }) => (
+  
   <>
     <HeaderComponent />
     <div className="md:max-w-screen-xl mx-auto md:p-4 min-h-screen">
@@ -44,6 +47,8 @@ const AuthLayout = ({ children }) => (
 );
 
 function App() {
+  const [chatOpen, setChatOpen] = useState(false);
+  
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
@@ -104,6 +109,11 @@ function App() {
                   {/* Collections */}
                   <Route path="/my-collections" element={<MyCollections />} />
                 </Routes>
+                {/* ChatBoxAI */}
+                <ChatBoxAI
+                  isOpenExternal={chatOpen}
+                  onCloseExternal={() => setChatOpen(false)}
+                />
               </MainLayout>
             }
           />
