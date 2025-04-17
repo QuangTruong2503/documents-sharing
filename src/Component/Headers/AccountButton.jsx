@@ -7,9 +7,12 @@ import Cookies from 'js-cookie';
 import { Dropdown} from "flowbite-react"
 import { NavLink } from "react-router-dom";
 import { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
+import FullPageLoader from '../Loaders/FullPageLoader';
 // AccountButton Component
 const AccountButton = () => {
     const [user, setUser] = useState(null);
+    const [isLogout, setIsLogout] = useState(false);
     const updateUserFromCookies = () => {
       const userStr = Cookies.get("user");
       if (userStr) {
@@ -32,6 +35,7 @@ const AccountButton = () => {
     }, []);
   
     const handleLogout = async () => {
+      setIsLogout(true);
       try {
         await userApi.postLogout(Cookies.get("token"));
         Cookies.remove("user");
@@ -39,6 +43,10 @@ const AccountButton = () => {
         window.location.href = "/";
       } catch (error) {
         console.error("Logout error:", error);
+        toast.error("Lỗi đăng xuất, vui lòng thử lại sau.");
+      }
+      finally{
+        setIsLogout(false);
       }
     };
   
@@ -151,6 +159,9 @@ const AccountButton = () => {
             Đăng xuất
           </button>
         </div>
+        {isLogout && (
+          <FullPageLoader text={"Tiến hành đăng xuất..."}/>
+        )}
       </div>
     );
   };

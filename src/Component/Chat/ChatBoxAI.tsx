@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import config from "../../config/config";
 import Marked from "marked-react";
+import geminiGenerate from "../../api/geminiGenerate";
+
 interface Message {
   role: "user" | "ai";
   content: string;
@@ -12,12 +14,15 @@ const ChatBoxAI: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false); // Thêm trạng thái loading
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Scroll to bottom on new message
+  // Scroll to bottom on new message or when chat is opened
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "instant" });
+    }
+  }, [messages, isOpen]); // Cuộn khi tin nhắn mới hoặc khi mở hội thoại
 
   // Load from sessionStorage
   useEffect(() => {
@@ -29,37 +34,62 @@ const ChatBoxAI: React.FC = () => {
   useEffect(() => {
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(messages));
   }, [messages]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
       const parsed = saved ? JSON.parse(saved) : [];
-  
+
       // Chỉ cập nhật nếu nội dung khác
       if (JSON.stringify(parsed) !== JSON.stringify(messages)) {
         setMessages(parsed);
       }
     }, 1500); // check mỗi 1.5 giây
-  
+
     return () => clearInterval(interval); // cleanup
   }, [messages]);
-  
+
   const handleSend = async () => {
     if (!input.trim()) return;
 
+    // Add the user's message to the messages state
     const newMessages: Message[] = [
       ...messages,
       { role: "user", content: input },
     ];
     setMessages(newMessages);
     setInput("");
+    setLoading(true); // Đặt loading là true khi bắt đầu gửi yêu cầu
 
-    // Simulate AI response (replace with real API as needed)
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        { role: "ai", content: `🤖 Echo: "${input}"` },
-      ]);
-    }, 1000);
+    // Create the prompt with chat history
+    const chatHistory = messages
+      .map((msg) => `${msg.role === "user" ? "User" : "AI"}: ${msg.content}`)
+      .join("\n");
+
+    const prompt = `${chatHistory}\nUser: ${input}\nAI:`;
+
+    try {
+      // Call the API to get the AI's response
+      const response = await geminiGenerate.postGeminiChat({ message: prompt });
+
+      // Assuming the response is structured as { message: "AI's response" }
+      const aiMessage: Message = {
+        role: "ai",
+        content: response.data.message || "AI didn't respond properly.",
+      };
+
+      // Add the AI's message to the messages state
+      setMessages((prev) => [...prev, aiMessage]);
+      setLoading(false); // Set loading to false after getting response
+    } catch (error) {
+      console.error("Error calling AI API:", error);
+      const aiMessage: Message = {
+        role: "ai",
+        content: "There was an error while communicating with the AI.",
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+      setLoading(false); // Set loading to false even if there is an error
+    }
   };
 
   const toggleChat = () => setIsOpen(!isOpen);
@@ -70,7 +100,7 @@ const ChatBoxAI: React.FC = () => {
       {!isOpen && (
         <button
           onClick={toggleChat}
-          className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-full shadow-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 flex items-center gap-2"
+          className="bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 px-3 rounded-full shadow-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 flex items-center gap-2"
         >
           <svg
             className="w-6 h-6"
@@ -93,8 +123,7 @@ const ChatBoxAI: React.FC = () => {
       {/* Chat Window */}
       {isOpen && (
         <div
-          className={`
-      w-[90vw] h-[60vh] 
+          className={`w-[90vw] h-[60vh] 
       md:w-[600px] sm:h-[600px] 
       bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden 
       transition-all duration-300 animate-in slide-in-from-bottom-10
@@ -104,7 +133,7 @@ const ChatBoxAI: React.FC = () => {
           <div className="flex justify-between items-center p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <h3 className="text-lg font-medium">AI Assistant</h3>
+              <h3 className="text-lg font-medium">Trợ Lý AI</h3>
             </div>
             <button
               onClick={toggleChat}
@@ -137,9 +166,16 @@ const ChatBoxAI: React.FC = () => {
                     : "bg-gray-200 text-gray-800"
                 }`}
               >
-                <Marked >{msg.content}</Marked>
+                <Marked>{msg.content}</Marked>
               </div>
             ))}
+
+            {/* Display loading indicator when AI is responding */}
+            {loading && (
+              <div className="w-fit max-w-[80%] p-3 rounded-xl prose prose-sm bg-gray-200 text-gray-800 font-light">
+                <p>Đang phản hồi...</p>
+              </div>
+            )}
 
             <div ref={messagesEndRef} />
           </div>

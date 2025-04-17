@@ -83,14 +83,14 @@ function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="flex justify-center items-center gap-2">
+          <a href="/" className="flex justify-center items-center gap-2">
             <img
               className="h-10 w-10"
               src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/logo.svg"
               alt="logo"
             />
             <h1 className="text-3xl font-bold text-gray-900">DocShare</h1>
-          </div>
+          </a>
           <p className="mt-2 text-sm text-gray-600">
             Chào mừng bạn trở lại! Vui lòng đăng nhập
           </p>

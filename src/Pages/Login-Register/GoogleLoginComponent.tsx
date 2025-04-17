@@ -4,8 +4,8 @@ import config from "../../config/config";
 import userApi from "../../api/usersApi";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
-import Loader from "../../Component/Loaders/Loader";
 import { useNavigate } from "react-router-dom";
+import FullPageLoader from "../../Component/Loaders/FullPageLoader";
 
 interface LoginResponse {
   message: string;
@@ -61,7 +61,7 @@ function LoginButton() {
   return (
     <>
       <button
-        className={`bg-white flex items-center justify-center gap-4 rounded py-3 shadow-md shadow-gray-300 border border-gray-400 transition-all ease-in-out duration-200 hover:bg-gray-100 ${
+        className={`bg-white flex items-center justify-center gap-4 rounded-lg py-3 shadow-md shadow-gray-300 border border-gray-400 transition-all ease-in-out duration-200 hover:bg-gray-100 ${
           isActing ? "opacity-50 cursor-not-allowed" : ""
         }`}
         onClick={() => login()}
@@ -79,9 +79,7 @@ function LoginButton() {
 
       {/* Giao diện loading toàn trang */}
       {isLoading && (
-        <div className="fixed inset-0 bg-gray-100 bg-opacity-75 flex items-center justify-center z-50">
-          <Loader />
-        </div>
+        <FullPageLoader text={"Đang đăng nhập với tài khoản Google..."}/>
       )}
     </>
   );
