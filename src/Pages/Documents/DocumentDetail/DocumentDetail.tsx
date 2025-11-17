@@ -14,7 +14,7 @@ import {
   faFlag,
 } from "@fortawesome/free-solid-svg-icons";
 import PageTitle from "../../../Component/PageTitle";
-import Cookies from "js-cookie";
+import Cookies from 'js-cookie';
 
 interface DocumentData {
   document_id: number;
@@ -83,7 +83,8 @@ const PdfViewer: React.FC = () => {
         }
       } catch (err) {
         console.error("Error fetching document:", err);
-        setError(err.response?.data?.message || "Error fetching document");
+        const errorMessage = err instanceof Error && 'response' in err ? (err as any).response?.data?.message : "Error fetching document";
+        setError(errorMessage || "Error fetching document");
       } finally {
         setLoading(false);
       }
