@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import documentsApi from "../../../api/documentsApi";
-import DocumentSummaryByAI  from "../../../Component/Chat/DocumentSummaryByAI.tsx";
+import DocumentSummaryByAI from "../../../Component/Chat/DocumentSummaryByAI.tsx";
 import { checkNotSigned } from "../../../Helpers/CheckSigned";
 import { formatDateToVN } from "../../../Helpers/formatDateToVN";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -14,7 +14,7 @@ import {
   faFlag,
 } from "@fortawesome/free-solid-svg-icons";
 import PageTitle from "../../../Component/PageTitle";
-import Cookies from 'js-cookie';
+import Cookies from "js-cookie";
 
 interface DocumentData {
   document_id: number;
@@ -26,6 +26,9 @@ interface DocumentData {
   download_count: number;
   uploaded_at: string;
   full_name: string;
+  like_count: number;
+  dislike_count: number;
+  myReaction: number | null;
 }
 
 const PdfViewer: React.FC = () => {
@@ -33,8 +36,6 @@ const PdfViewer: React.FC = () => {
   const [documentData, setDocumentData] = useState<DocumentData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [likePercentage, setLikePercentage] = useState(62);
-  const [dislikePercentage, setDislikePercentage] = useState(38);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [showAISummaryModal, setShowAISummaryModal] = useState(false);
 
@@ -43,20 +44,22 @@ const PdfViewer: React.FC = () => {
     const history = Cookies.get("documentHistory")
       ? JSON.parse(Cookies.get("documentHistory")!)
       : [];
-    
+
     // Loại bỏ documentID trùng lặp nếu đã tồn tại
     const updatedHistory = history.filter((id: string) => id !== docID);
-    
+
     // Thêm documentID mới vào đầu mảng
     updatedHistory.unshift(docID);
-    
+
     // Giới hạn tối đa 5 documentID
     if (updatedHistory.length > 5) {
       updatedHistory.pop(); // Xóa phần tử cuối nếu vượt quá 5
     }
-    
+
     // Lưu lại vào Cookies với thời hạn hết hạn (ví dụ: 7 ngày)
-    Cookies.set("documentHistory", JSON.stringify(updatedHistory), { expires: 7 });
+    Cookies.set("documentHistory", JSON.stringify(updatedHistory), {
+      expires: 7,
+    });
     console.log("Document history saved to cookies:", updatedHistory);
   };
 
@@ -83,7 +86,10 @@ const PdfViewer: React.FC = () => {
         }
       } catch (err) {
         console.error("Error fetching document:", err);
-        const errorMessage = err instanceof Error && 'response' in err ? (err as any).response?.data?.message : "Error fetching document";
+        const errorMessage =
+          err instanceof Error && "response" in err
+            ? (err as any).response?.data?.message
+            : "Error fetching document";
         setError(errorMessage || "Error fetching document");
       } finally {
         setLoading(false);
@@ -97,16 +103,18 @@ const PdfViewer: React.FC = () => {
     setIsDownloading(true);
     try {
       checkNotSigned();
-      const response = await documentsApi.downloadDocumentByID(documentID)
-  
-      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const response = await documentsApi.downloadDocumentByID(documentID);
+
+      const blob = new Blob([response.data], {
+        type: response.headers["content-type"],
+      });
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
-  
+
       const fileName = documentData?.title || "document.pdf"; // Tên file mặc định
-  
-      link.setAttribute('download', fileName);
+
+      link.setAttribute("download", fileName);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -122,20 +130,23 @@ const PdfViewer: React.FC = () => {
       console.error("Error downloading document:", error);
     } finally {
       setIsDownloading(false);
-      
     }
   };
-  
 
   // Placeholder handlers
   const handleSave = () => alert("Chức năng Save chưa được triển khai!");
-  const handleLike = () => {
-    alert("Chức năng Like chưa được triển khai!");
-    setLikePercentage((prev) => prev + 1);
-  };
+  const handleLike = async () => {
+    checkNotSigned();
+    const response = await documentsApi.updateDocumentLikeStatus(documentID, 1);
+    setDocumentData((prev) => ({
+      ...prev!,
+      myReaction: response.data.reaction,
+      like_count: response.data.likeCount,
+      dislike_count: response.data.dislikeCount,
+    }));
+  }
   const handleDislike = () => {
     alert("Chức năng Dislike chưa được triển khai!");
-    setDislikePercentage((prev) => prev);
   };
   const handleShare = () => alert("Chức năng Share chưa được triển khai!");
   const handleReport = () => alert("Chức năng Report chưa được triển khai!");
@@ -208,11 +219,10 @@ const PdfViewer: React.FC = () => {
             <button
               onClick={handleDownloadDocument}
               disabled={isDownloading}
-              className={`flex flex-col items-center p-2 rounded-lg ${
-                isDownloading
+              className={`flex flex-col items-center p-2 rounded-lg ${isDownloading
                   ? "bg-gray-300 cursor-not-allowed"
                   : "bg-gray-100 hover:bg-gray-200"
-              }`}
+                }`}
             >
               <FontAwesomeIcon
                 icon={faDownload}
@@ -222,28 +232,59 @@ const PdfViewer: React.FC = () => {
                 {isDownloading ? "..." : "Download"}
               </span>
             </button>
+             {/* nút Like */} 
             <button
               onClick={handleLike}
-              className="flex flex-col items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
-            >
+              className={`flex flex-col items-center p-2 rounded-lg
+                ${documentData.myReaction === 1
+                              ? "bg-blue-100"
+                              : "bg-gray-100 hover:bg-gray-200"
+                            }
+              `}
+                        >
               <FontAwesomeIcon
                 icon={faThumbsUp}
-                className="text-gray-600 mb-1"
+                className={`mb-1 ${documentData.myReaction === 1
+                    ? "text-blue-600"
+                    : "text-gray-600"
+                  }`}
               />
-              <span className="text-sm text-gray-600">{likePercentage}%</span>
+              <span
+                className={`text-sm ${documentData.myReaction === 1
+                    ? "text-blue-600 font-semibold"
+                    : "text-gray-600"
+                  }`}
+              >
+                {documentData.like_count}
+              </span>
             </button>
+
             <button
               onClick={handleDislike}
-              className="flex flex-col items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+              className={`flex flex-col items-center p-2 rounded-lg
+                ${documentData.myReaction === -1
+                              ? "bg-blue-100"
+                              : "bg-gray-100 hover:bg-gray-200"
+                            }
+              `}
             >
               <FontAwesomeIcon
                 icon={faThumbsDown}
-                className="text-gray-600 mb-1"
+                className={`mb-1 ${documentData.myReaction === -1
+                    ? "text-blue-600"
+                    : "text-gray-600"
+                  }`}
               />
-              <span className="text-sm text-gray-600">
-                {dislikePercentage}%
+              <span
+                className={`text-sm ${documentData.myReaction === -1
+                    ? "text-blue-600 font-semibold"
+                    : "text-gray-600"
+                  }`}
+              >
+                {documentData.dislike_count}
               </span>
             </button>
+
             <button
               onClick={handleSave}
               className="flex flex-col items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200"

@@ -95,5 +95,14 @@ const documentsApi = {
       responseType: "blob", // Set response type to blob for file download
     });
   },
+  // API cập nhật trạng thái lượt thích tài liệu
+  updateDocumentLikeStatus: (documentID, reaction) => {
+    const authToken = Cookies.get("token");
+    return axiosInstance.post(`Likes/reaction?documentId=${documentID}&reaction=${reaction}`, {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
+  },
 };
 export default documentsApi;
