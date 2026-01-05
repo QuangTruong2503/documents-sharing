@@ -18,8 +18,8 @@ const userApi = {
   postLogin: (data) => {
     return axiosInstance.post('/Users/public/request-login', data);
   },
-  loginGoogle: (token) => {
-    return axiosInstance.post('/Users/public/request-login-google', token);
+  loginGoogle: (token, userDevice) => {
+    return axiosInstance.post('/Users/public/request-login-google', { token, userDevice });
   },
   postLogout: (token) => {
     return axiosInstance.post('/Users/request-logout', token);

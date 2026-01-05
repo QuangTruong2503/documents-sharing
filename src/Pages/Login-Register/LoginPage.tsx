@@ -14,6 +14,7 @@ import { UAParser } from "ua-parser-js";
 interface Login {
   email: string;
   password: string;
+  userDevice: string;
 }
 interface LoginResponse {
   message: string;
@@ -31,6 +32,7 @@ function LoginPage() {
   const [loginData, setLoginData] = useState<Login>({
     email: "",
     password: "",
+    userDevice: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isActing, setIsActing] = useState(false);
@@ -61,27 +63,38 @@ function LoginPage() {
     setShowPassword((prevState) => !prevState);
   };
 
-  const fetchLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsActing(true);
-    loginData.email = loginData.email.trim();
-    try {
-      const response = await userApi.postLogin(loginData);
-      const data: LoginResponse = response.data;
-      if (data.success) {
-        toast.success(data.message);
-        Cookies.set("token", data.token, { expires: 1 });
-        Cookies.set("user", JSON.stringify(data.user), { expires: 1 });
-        navigate("/");
-      } else {
-        toast.warning(data.message);
-      }
-    } catch (error: any) {
-      console.error("Error logging in:", error.response?.data || error.message);
-    } finally {
-      setIsActing(false);
+const fetchLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsActing(true);
+
+  try {
+    const device = handleGetDeviceInfo();
+
+    const payload: Login = {
+      email: loginData.email.trim(),
+      password: loginData.password,
+      userDevice: device,
+    };
+
+    const response = await userApi.postLogin(payload);
+    const data: LoginResponse = response.data;
+
+    if (data.success) {
+      toast.success(data.message);
+      Cookies.set("token", data.token, { expires: 3 });
+      Cookies.set("user", JSON.stringify(data.user), { expires: 3 });
+      navigate("/");
+    } else {
+      toast.warning(data.message);
     }
-  };
+  } catch (error: any) {
+    console.error("Error logging in:", error.response?.data || error.message);
+    toast.error("Đăng nhập thất bại");
+  } finally {
+    setIsActing(false);
+  }
+};
+
 
   useEffect(() => {
     CheckSigned();
@@ -197,7 +210,6 @@ function LoginPage() {
             <div className="grid grid-cols-1 gap-2 my-3">
               <GoogleLoginComponent />
             </div>
-            <button type="button" onClick={handleGetDeviceInfo}>Click</button>
           </div>
 
           {/* Register Link */}

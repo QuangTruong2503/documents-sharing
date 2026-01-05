@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
 import FullPageLoader from "../../Component/Loaders/FullPageLoader";
+import { UAParser } from "ua-parser-js";
 
 interface LoginResponse {
   message: string;
@@ -21,69 +22,82 @@ interface User {
 }
 
 function LoginButton() {
-  const [isActing, setIsActing] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false); // Thêm state cho loading
+  const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
-  const handleLoginSuccess = async (response) => {
-    const token = response.access_token;
-    setIsActing(true);
-    setIsLoading(true); // Kích hoạt loading
+
+  const handleGetDeviceInfo = () => {
+    const parser = new UAParser();
+    const result = parser.getResult();
+
+    return `${result.device.model || "PC"} | ${
+      result.os.name
+    } ${result.os.version} | ${result.browser.name}`;
+  };
+
+  const handleLoginSuccess = async (googleResponse: any) => {
+    if (!googleResponse?.access_token) {
+      toast.error("Không lấy được token Google");
+      return;
+    }
+
+    const token = googleResponse.access_token;
+    const userDevice = handleGetDeviceInfo();
+    setLoading(true);
+
     try {
-      const response = await userApi.loginGoogle(token);
-      const data: LoginResponse = response.data;
+      const apiResponse = await userApi.loginGoogle(token, userDevice);
+      const data: LoginResponse = apiResponse.data;
+
       if (data.success) {
         toast.success(data.message);
-        Cookies.set("token", data.token, { expires: 1 });
-        Cookies.set("user", JSON.stringify(data.user), { expires: 1 });
+        Cookies.set("token", data.token, { expires: 3 });
+        Cookies.set("user", JSON.stringify(data.user), { expires: 3 });
         navigate("/");
       } else {
         toast.warning(data.message);
       }
     } catch (error: any) {
-      console.error("Error logging in:", error.response?.data || error.message);
+      console.error("Google login error:", error);
+      toast.error("Đăng nhập Google thất bại");
     } finally {
-      setIsActing(false);
-      setIsLoading(false); // Không cần set false ở đây vì trang sẽ redirect
+      setLoading(false);
     }
-  };
-
-  const handleLoginFailure = (error) => {
-    console.log("Đăng nhập thất bại:", error);
-    setIsActing(false);
-    setIsLoading(false); // Tắt loading nếu thất bại
   };
 
   const login = useGoogleLogin({
     onSuccess: handleLoginSuccess,
-    onError: handleLoginFailure,
+    onError: () => {
+      toast.error("Đăng nhập Google thất bại");
+      setLoading(false);
+    },
+    prompt: "select_account",
   });
 
   return (
     <>
       <button
-        className={`bg-white flex items-center justify-center gap-4 rounded-lg py-3 shadow-md shadow-gray-300 border border-gray-400 transition-all ease-in-out duration-200 hover:bg-gray-100 ${
-          isActing ? "opacity-50 cursor-not-allowed" : ""
-        }`}
         onClick={() => login()}
-        disabled={isActing}
+        disabled={loading}
+        className={`bg-white flex items-center justify-center gap-4 rounded-lg py-3
+          shadow-md border transition-all duration-200
+          ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-100"}`}
       >
         <img
-          src={"https://img.icons8.com/color/512/google-logo.png"}
+          src="https://img.icons8.com/color/512/google-logo.png"
           width={20}
           height={20}
-          alt="Google Icon"
-          loading="lazy"
+          alt="Google"
         />
         <span className="font-semibold text-blue-500">Google</span>
       </button>
 
-      {/* Giao diện loading toàn trang */}
-      {isLoading && (
-        <FullPageLoader text={"Đang đăng nhập với tài khoản Google..."}/>
+      {loading && (
+        <FullPageLoader text="Đang đăng nhập với tài khoản Google..." />
       )}
     </>
   );
 }
+
 
 function GoogleLoginComponent() {
   const clientId = config.googleClientId;
