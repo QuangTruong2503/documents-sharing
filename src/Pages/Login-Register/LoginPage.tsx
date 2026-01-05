@@ -9,6 +9,7 @@ import { CheckSigned } from "../../Helpers/CheckSigned";
 import LoaderButton from "../../Component/Loaders/LoaderButton.js";
 import PageTitle from "../../Component/PageTitle.js";
 import GoogleLoginComponent from "./GoogleLoginComponent.tsx";
+import { UAParser } from "ua-parser-js";
 
 interface Login {
   email: string;
@@ -34,6 +35,19 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isActing, setIsActing] = useState(false);
   const navigate = useNavigate();
+  
+  // Lấy dữ liệu thiết bị đăng nhập
+  const handleGetDeviceInfo = () => {
+    const parser = new UAParser();
+    const result = parser.getResult();
+    const deviceInfo = {
+      os: result.os.name + " " + result.os.version,
+      browser: result.browser.name + " " + result.browser.version,
+      device: result.device.model || "PC",
+    };
+    console.log("Device Info:", deviceInfo.device + " - " + deviceInfo.os);
+    return deviceInfo.device + " - " + deviceInfo.os;
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -177,11 +191,13 @@ function LoginPage() {
                   Hoặc đăng nhập với
                 </span>
               </div>
+              
             </div>
             {/* Login other */}
             <div className="grid grid-cols-1 gap-2 my-3">
               <GoogleLoginComponent />
             </div>
+            <button type="button" onClick={handleGetDeviceInfo}>Click</button>
           </div>
 
           {/* Register Link */}

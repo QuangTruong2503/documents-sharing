@@ -24,7 +24,8 @@
     "react-dom": "^19.0.0",
     "react-scripts": "5.0.1",
     "react-toastify": "^11.0.2",
-    "swiper": "^11.2.6"
+    "swiper": "^11.2.6",
+    "ua-parser-js": "^2.0.7"
   },
   "scripts": {
     "start": "react-scripts start",
