@@ -38,15 +38,16 @@ const AccountButton = () => {
       setIsLogout(true);
       try {
         await userApi.postLogout(Cookies.get("token"));
-        Cookies.remove("user");
-        Cookies.remove("token");
-        window.location.href = "/";
-      } catch (error) {
+      } 
+      catch (error) {
         console.error("Logout error:", error);
-        toast.error("Lỗi đăng xuất, vui lòng thử lại sau.");
       }
       finally{
         setIsLogout(false);
+        Cookies.remove("user");
+        Cookies.remove("token");
+        window.location.href = "/";
+        toast.success("Đăng xuất thành công!");
       }
     };
   

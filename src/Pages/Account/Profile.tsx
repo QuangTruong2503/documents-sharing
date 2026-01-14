@@ -40,7 +40,13 @@ interface UpdateResponse {
 }
 
 // Tab Component
-const TabButton = ({ label, isActive, onClick }) => (
+interface TabButtonProps {
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
+}
+
+const TabButton = ({ label, isActive, onClick }: TabButtonProps) => (
   <button
     className={`px-4 py-2 transition-colors duration-300 ease-in-out ${
       isActive
