@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Accordion } from "flowbite-react";
-import categoriesAPI from "../api/categoriesAPI";
+import categoriesAPI from "../../api/categoriesAPI";
 import { NavLink } from "react-router-dom";
 
 export interface Category {

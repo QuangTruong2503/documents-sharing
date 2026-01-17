@@ -3,7 +3,7 @@ import config from "../../config/config";
 import AccountComponent from "./AccountComponent.jsx";
 import VerificationComponent from "./VerificationComponent.jsx";
 import SearchBoxComponent from "./SearchBoxComponent.jsx";
-import CategoriesComponent from "../CategoriesComponent.tsx";
+import CategoriesComponent from "../Categories/CategoriesComponent.tsx";
 import { Drawer } from "flowbite-react";
 
 function HeaderComponent() {

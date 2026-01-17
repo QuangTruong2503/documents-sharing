@@ -3,6 +3,8 @@ import documentsApi from "../../../api/documentsApi";
 import tagsAPI from "../../../api/tagsAPI";
 import { toast } from "react-toastify";
 import { NavLink } from "react-router-dom";
+import categoriesAPI from "../../../api/categoriesAPI";
+import CategorySelector from "../../../Component/Categories/CategoriesSelector.tsx";
 
 interface DocumentUpload {
   document_id: number;
@@ -10,6 +12,7 @@ interface DocumentUpload {
   description: string;
   is_public: boolean;
   tags: Tag[];
+  categories: string[];
 }
 
 interface DocumentResponse {
@@ -25,45 +28,68 @@ interface UpdateResponse {
   success: boolean;
   document_id: number;
 }
+interface Category {
+  category_id: string;
+  name: string;
+  description?: string;
+  parent_id?: string | null;
+  children: Category[];
+}
 
 interface Tag {
   name: string;
 }
 
 const MAX_TAGS = 3;
+const MAX_CATEGORIES = 3;
 
-const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) => {
+const UploadSuccessComponent = ({
+  document,
+}: {
+  document: DocumentResponse;
+}) => {
   const [documentForm, setDocumentForm] = useState<DocumentUpload>({
     document_id: document.document_id,
     title: document.title || "",
     description: "",
     is_public: true,
     tags: [],
+    categories: [],
   });
-  const [updateResponse, setUpdateResponse] = useState<UpdateResponse | null>(null);
+  const [updateResponse, setUpdateResponse] = useState<UpdateResponse | null>(
+    null
+  );
   const [tagInput, setTagInput] = useState("");
   const [suggestedTags, setSuggestedTags] = useState<Tag[]>([]);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
 
-  const debouncedTagSearch = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setSuggestedTags([]);
-      return;
-    }
-    try {
-      const response = await tagsAPI.getBySearch(query);
-      setSuggestedTags(response.data.filter((tag: Tag) => 
-        !documentForm.tags.some(t => t.name === tag.name)
-      ));
-    } catch (err) {
-      console.error("Error fetching tags:", err);
-    }
-  }, [documentForm.tags]);
+  const debouncedTagSearch = useCallback(
+    async (query: string) => {
+      if (!query.trim()) {
+        setSuggestedTags([]);
+        return;
+      }
+      try {
+        const response = await tagsAPI.getBySearch(query);
+        setSuggestedTags(
+          response.data.filter(
+            (tag: Tag) => !documentForm.tags.some((t) => t.name === tag.name)
+          )
+        );
+      } catch (err) {
+        console.error("Error fetching tags:", err);
+      }
+    },
+    [documentForm.tags]
+  );
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    setDocumentForm(prev => ({
+    setDocumentForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? !checked : value,
     }));
@@ -78,10 +104,14 @@ const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) =>
 
   const addTag = (tagName: string) => {
     const trimmedTag = tagName.trim();
-    if (!trimmedTag || documentForm.tags.length >= MAX_TAGS || 
-        documentForm.tags.some(t => t.name === trimmedTag)) return;
+    if (
+      !trimmedTag ||
+      documentForm.tags.length >= MAX_TAGS ||
+      documentForm.tags.some((t) => t.name === trimmedTag)
+    )
+      return;
 
-    setDocumentForm(prev => ({
+    setDocumentForm((prev) => ({
       ...prev,
       tags: [...prev.tags, { name: trimmedTag }],
     }));
@@ -97,11 +127,40 @@ const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) =>
   };
 
   const removeTag = (tagName: string) => {
-    setDocumentForm(prev => ({
+    setDocumentForm((prev) => ({
       ...prev,
-      tags: prev.tags.filter(t => t.name !== tagName),
+      tags: prev.tags.filter((t) => t.name !== tagName),
     }));
   };
+  //chọn category (Tree)
+  const toggleCategory = (categoryId: string) => {
+    setDocumentForm((prev) => {
+      const exists = prev.categories.includes(categoryId);
+
+      if (!exists && prev.categories.length >= MAX_CATEGORIES) {
+        toast.warning(`Chỉ được chọn tối đa ${MAX_CATEGORIES} danh mục`);
+        return prev;
+      }
+
+      return {
+        ...prev,
+        categories: exists
+          ? prev.categories.filter((id) => id !== categoryId)
+          : [...prev.categories, categoryId],
+      };
+    });
+  };
+  const getCategoryName = (id: string) => {
+    const find = (nodes: Category[]): Category | undefined => {
+      for (const node of nodes) {
+        if (node.category_id === id) return node;
+        const found = node.children && find(node.children);
+        if (found) return found;
+      }
+    };
+    return find(categories)?.name || id;
+  };
+
   //Cập nhật thông tin tài liệu sau khi upload thành công
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,7 +184,9 @@ const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) =>
   const handleDelete = async () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa tài liệu này?")) {
       try {
-        const response = await documentsApi.deleteDocumentByID(document.document_id);
+        const response = await documentsApi.deleteDocumentByID(
+          document.document_id
+        );
         const data: UpdateResponse = response.data;
         if (data.success) {
           toast.success("Tài liệu đã được xóa thành công");
@@ -135,15 +196,25 @@ const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) =>
         toast.error(err.response?.data?.message || "Lỗi khi xóa tài liệu");
       }
     }
-  }
+  };
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
   }, []);
+  //Lấy Categories từ API
   useEffect(() => {
-    console.log(document);
-  }, [document]);
+    const fetchCategories = async () => {
+      try {
+        const response = await categoriesAPI.getCategoryTree();
+        setCategories(response.data);
+        console.log("Fetched categories:", response.data);
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const shareUrl = `${window.location.origin}/document/${updateResponse?.document_id || document.document_id}`;
 
@@ -165,7 +236,9 @@ const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) =>
           {!updateResponse?.success ? (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Tiêu đề</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Tiêu đề
+                </label>
                 <input
                   type="text"
                   name="title"
@@ -177,7 +250,9 @@ const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) =>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Mô tả</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Mô tả
+                </label>
                 <textarea
                   name="description"
                   rows={3}
@@ -203,7 +278,7 @@ const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) =>
                   />
                   {suggestedTags.length > 0 && (
                     <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto mt-1">
-                      {suggestedTags.map(tag => (
+                      {suggestedTags.map((tag) => (
                         <li
                           key={tag.name}
                           onClick={() => addTag(tag.name)}
@@ -216,7 +291,7 @@ const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) =>
                   )}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {documentForm.tags.map(tag => (
+                  {documentForm.tags.map((tag) => (
                     <span
                       key={tag.name}
                       className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
@@ -233,6 +308,51 @@ const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) =>
                   ))}
                 </div>
               </div>
+              {/* Category Selector */}
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-800">
+                      Phân loại tài liệu
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      Chọn danh mục phù hợp để người khác dễ tìm
+                    </p>
+                  </div>
+
+                  {documentForm.categories.length > 0 && (
+                    <span className="text-xs text-blue-600 font-medium">
+                      Đã chọn {documentForm.categories.length}
+                    </span>
+                  )}
+                </div>
+
+                <CategorySelector
+                  categories={categories}
+                  selected={documentForm.categories}
+                  onToggle={toggleCategory}
+                />
+              </div>
+              {/* Selected Categories */}
+              {documentForm.categories.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {documentForm.categories.map((id) => (
+                    <span
+                      key={id}
+                      className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700"
+                    >
+                      {getCategoryName(id)}
+                      <button
+                      type="button"
+                        onClick={() => toggleCategory(id)}
+                        className="hover:text-red-600"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <div className="flex items-center">
                 <input
@@ -242,7 +362,9 @@ const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) =>
                   onChange={handleInputChange}
                   className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
-                <label className="ml-2 text-sm text-gray-700">Tài liệu riêng tư</label>
+                <label className="ml-2 text-sm text-gray-700">
+                  Tài liệu riêng tư
+                </label>
               </div>
 
               <div className="flex justify-end gap-4">
@@ -253,9 +375,15 @@ const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) =>
                 >
                   Xóa
                 </button>
+                {/* Submit Button */}
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={documentForm.categories.length === 0}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    documentForm.categories.length === 0
+                      ? "bg-gray-300 cursor-not-allowed"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
                 >
                   Hoàn tất
                 </button>
@@ -263,7 +391,9 @@ const UploadSuccessComponent = ({ document }: { document: DocumentResponse }) =>
             </form>
           ) : (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Chia sẻ tài liệu</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                Chia sẻ tài liệu
+              </h3>
               <div className="flex gap-2">
                 <input
                   type="text"
