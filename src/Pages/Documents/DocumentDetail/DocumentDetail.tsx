@@ -85,12 +85,11 @@ const PdfViewer: React.FC = () => {
           setError("No document data returned");
         }
       } catch (err) {
-        console.error("Error fetching document:", err);
         const errorMessage =
           err instanceof Error && "response" in err
             ? (err as any).response?.data?.message
-            : "Error fetching document";
-        setError(errorMessage || "Error fetching document");
+            : "Đây là tài liệu riêng tư hoặc đã bị xóa.";
+        setError(errorMessage || "Đây là tài liệu riêng tư hoặc đã bị xóa.");
       } finally {
         setLoading(false);
       }
