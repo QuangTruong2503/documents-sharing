@@ -51,6 +51,20 @@ const userApi = {
   deleteUser: (id) => {
     return axiosInstance.delete(`/Users/${id}`);
   },
+  verifyTwoFA: (data) => {
+    return axiosInstance.post('/Users/public/verify-2fa', data, {
+      headers: {
+        "Content-Type": `application/json`,
+      }
+    });
+  },
+  resend2FA: (data) => {
+    return axiosInstance.post('/Users/public/resend-2fa', data, {
+      headers: {
+        "Content-Type": `application/json`,
+      }
+    });
+  }
 };
 
 export default userApi;
