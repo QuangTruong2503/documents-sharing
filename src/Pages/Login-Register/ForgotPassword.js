@@ -1,13 +1,16 @@
 import React, { useState } from "react";
 import  verificationsApi from "../../api/verificationsApi.js"// Đường dẫn tới file API của bạn
 import PageTitle from "../../Component/PageTitle.js";
+import { useSearchParams } from "react-router-dom";
 
 function ForgotPassword() {
-  const [email, setEmail] = useState("");
+    const [searchParams] = useSearchParams();
+  const [email, setEmail] = useState(searchParams.get("email") || "");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState(0);
+
 
   // Hàm xử lý gửi yêu cầu reset password
   const handleResetPassword = async (e) => {

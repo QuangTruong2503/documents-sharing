@@ -2,20 +2,27 @@ import React from "react";
 import { Route, Routes } from "react-router-dom";
 import ManageDashboard from "../../Component/Dashboard/DashboardContent.tsx";
 import Profile from "./Profile.tsx";
-import Password from "./Password.js";
 import PageTitle from "../../Component/PageTitle.js";
+import Security from "./Security.tsx";
 
 // Define menu item interface
 interface MenuItem {
   name: string;
   url: string;
+  icon: string;
 }
 
 function AccountPage() {
   const collapseData: MenuItem[] = [
     {
-      name: "Thông tin tài khoản",
+      name: "Thông tin",
       url: "/account/profile",
+      icon: "fa-regular fa-user",
+    },
+    {
+      name: "Bảo mật",
+      url: "/account/security",
+      icon: "fa-solid fa-shield-halved",
     }
   ];
 
@@ -39,7 +46,7 @@ function AccountPage() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <Routes>
                 <Route path="profile" element={<Profile />} />
-                <Route path="password" element={<Password />} />
+                <Route path="security" element={<Security />} />
               </Routes>
             </div>
           </main>

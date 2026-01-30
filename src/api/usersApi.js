@@ -52,7 +52,7 @@ const userApi = {
     return axiosInstance.delete(`/Users/${id}`);
   },
   verifyTwoFA: (data) => {
-    return axiosInstance.post('/Users/public/verify-2fa', data, {
+    return axiosInstance.post('/Users/public/verify-2fa-login', data, {
       headers: {
         "Content-Type": `application/json`,
       }
@@ -62,6 +62,33 @@ const userApi = {
     return axiosInstance.post('/Users/public/resend-2fa', data, {
       headers: {
         "Content-Type": `application/json`,
+      }
+    });
+  },
+  requestEnable2FA: (data) => {
+    const authToken = Cookies.get("token");
+    return axiosInstance.post('/Users/request-enable-2fa', data, {
+      headers: {
+        "Content-Type": `application/json`,
+        "Authorization": `Bearer ${authToken}`
+      }
+    });
+  },
+  requestDisable2FA: (data) => {
+    const authToken = Cookies.get("token");
+    return axiosInstance.post('/Users/request-disable-2fa', data, {
+      headers: {
+        "Content-Type": `application/json`,
+        "Authorization": `Bearer ${authToken}`
+      }
+    });
+  },
+  verify2FASetup: (data) => {
+    const authToken = Cookies.get("token");
+    return axiosInstance.post('/Users/request-verify-2fa-setup', data, {
+      headers: {
+        "Content-Type": `application/json`,
+        "Authorization": `Bearer ${authToken}`
       }
     });
   }

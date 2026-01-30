@@ -6,10 +6,8 @@ import Cookies from "js-cookie";
 import userApi from "../../api/usersApi";
 import { toast } from "react-toastify";
 import Loaders from "../../Component/Loaders/Loader.js";
-import verificationsApi from "../../api/verificationsApi.js";
 import { formatDateToVN } from "../../Helpers/formatDateToVN.js";
 import PageTitle from "../../Component/PageTitle.js";
-import { NavLink } from "react-router-dom";
 
 // Interfaces
 interface User {
@@ -68,46 +66,6 @@ interface OverviewTabProps {
 
 const OverviewTab = React.memo(
   ({ user, onImageChange, isSavingImage }: OverviewTabProps) => {
-    const [isSendingVerification, setIsSendingVerification] = useState(false);
-    const [countdown, setCountdown] = useState(0); // Bộ đếm ngược (giây)
-    const [verificationMessage, setVerificationMessage] = useState(""); // Thông báo trong modal
-    const [isModalOpen, setIsModalOpen] = useState(false); // Trạng thái modal
-
-    // Xử lý gửi yêu cầu xác thực email
-    const handleVerifyEmail = async () => {
-      if (!user.email) {
-        toast.error("Không có email để xác thực.");
-        return;
-      }
-
-      try {
-        setIsSendingVerification(true);
-        const response = await verificationsApi.generateVerifyEmailToken(
-          user.email
-        );
-        setVerificationMessage(response.data.message);
-        setCountdown(120); // 2 phút = 120 giây
-        toast.success("Đã gửi mã xác thực thành công!");
-      } catch (error: any) {
-        toast.error(
-          error.response?.data?.message || "Lỗi khi gửi mã xác thực."
-        );
-        console.error("Error verifying email:", error.message);
-      } finally {
-        setIsSendingVerification(false);
-      }
-    };
-
-    // Bộ đếm ngược
-    useEffect(() => {
-      if (countdown > 0) {
-        const timer = setInterval(() => {
-          setCountdown((prev) => prev - 1);
-        }, 1000);
-        return () => clearInterval(timer); // Dọn dẹp khi unmount hoặc countdown thay đổi
-      }
-    }, [countdown]);
-
     return (
       <div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -129,34 +87,9 @@ const OverviewTab = React.memo(
               {user.role === "user" ? "Người dùng" : "Quản trị viên"}
             </strong>
           </div>
-          <div className="flex gap-1 items-end">
-            <div className="flex flex-col">
-              <span className="text-gray-600">Xác thực tài khoản</span>
-              <strong>
-                {user.is_verified ? "Đã xác thực" : "Chưa xác thực"}
-              </strong>
-            </div>
-            {!user.is_verified && (
-              <button
-                onClick={() => setIsModalOpen(true)} // Mở modal khi nhấn
-                disabled={isSendingVerification || countdown > 0}
-                className={`mt-1 text-sm font-semibold text-blue-600 hover:underline ${
-                  isSendingVerification || countdown > 0
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }`}
-              >
-                {isSendingVerification ? "Đang gửi..." : "Xác thực email"}
-              </button>
-            )}
-          </div>
           <div className="flex flex-col">
             <span className="text-gray-600">Ngày tham gia</span>
             <strong>{formatDateToVN(user.created_at)}</strong>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-gray-600">Mật khẩu</span>
-            <NavLink to={'/forgot-password'} className="text-blue-600 font-semibold w-fit">Đổi mật khẩu</NavLink>
           </div>
         </div>
         <hr className="my-4 border-gray-300" />
@@ -190,53 +123,6 @@ const OverviewTab = React.memo(
             </p>
           </div>
         </div>
-
-        {/* Modal xác nhận */}
-        {isModalOpen && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-              <h3 className="text-lg font-semibold mb-4">
-                Xác nhận gửi email xác thực
-              </h3>
-              <p className="mb-4">
-                Bạn có muốn gửi mã xác thực đến email:{" "}
-                <strong>{user.email}</strong> không?
-              </p>
-              {/* Hiển thị thông báo và countdown trong modal */}
-              {verificationMessage && (
-                <div className="mb-4 text-sm text-green-500">
-                  {verificationMessage}
-                  {countdown > 0 && (
-                    <span className="font-semibold text-black">
-                      {" "}
-                      (Gửi lại sau {Math.floor(countdown / 60)}:
-                      {(countdown % 60).toString().padStart(2, "0")})
-                    </span>
-                  )}
-                </div>
-              )}
-              <div className="flex justify-end space-x-2">
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                >
-                  Đóng
-                </button>
-                <button
-                  onClick={handleVerifyEmail}
-                  disabled={isSendingVerification || countdown > 0}
-                  className={`px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 ${
-                    isSendingVerification || countdown > 0
-                      ? "opacity-50 cursor-not-allowed"
-                      : ""
-                  }`}
-                >
-                  {isSendingVerification ? "Đang gửi..." : "Xác nhận"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
