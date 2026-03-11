@@ -28,7 +28,7 @@ interface UserUpdateData {
 interface UserUpdate {
   email: string;
   fullName: string;
-  avatarUrl: string;
+  avatar: string;
 }
 
 interface UpdateResponse {
@@ -114,7 +114,7 @@ const OverviewTab = React.memo(
             <input
               id="uploadImage"
               type="file"
-              accept="image/*"
+              accept="image/png, image/jpeg, image/jpg, image/webp"
               className="hidden"
               onChange={onImageChange}
             />
@@ -242,7 +242,7 @@ function Profile() {
             toast.success(data.message);
             Cookies.set("user", JSON.stringify(data.user));
             setUser((prev) =>
-              prev ? { ...prev, avatar_url: data.user.avatarUrl } : prev
+              prev ? { ...prev, avatar_url: data.user.avatar } : prev
             );
           } else {
             toast.error(data.message);
