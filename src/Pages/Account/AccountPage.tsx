@@ -32,18 +32,18 @@ function AccountPage() {
         title="Tài khoản"
         description="Quản lý thông tin tài khoản của bạn."
       />
-      <div className="container mx-auto px-4 py-8 min-h-screen">
+      <div className="container mx-auto min-h-screen px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar */}
           <aside className="lg:w-1/4">
-            <div className="bg-white rounded-lg shadow-md p-6 lg:sticky lg:top-6">
+            <div className="surface-card p-6 lg:sticky lg:top-24">
               <ManageDashboard data={collapseData} />
             </div>
           </aside>
 
           {/* Main Content */}
           <main className="flex-1">
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="surface-card p-6">
               <Routes>
                 <Route path="profile" element={<Profile />} />
                 <Route path="security" element={<Security />} />

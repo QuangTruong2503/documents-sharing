@@ -59,7 +59,7 @@ const AccountButton = () => {
         <div className="hidden sm:block">
           <Dropdown
             label={
-              <div className="flex items-center justify-center w-10 h-10 p-0.5 rounded-full overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-colors">
+              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-line p-0.5 transition-colors hover:border-primary">
                 <img
                   src={user.avatar}
                   alt="User avatar"
@@ -71,11 +71,11 @@ const AccountButton = () => {
             arrowIcon={false}
             inline
             placement="bottom-end"
-            className="w-64 rounded-lg shadow-lg border border-gray-200 z-50"
+            className="z-50 w-64 rounded-lg border border-line shadow-lg"
           >
-            <Dropdown.Header className="border-b border-gray-200">
-              <span className="block font-medium text-gray-900">{user.fullName}</span>
-              <span className="block text-sm text-gray-500 truncate">{user.email}</span>
+            <Dropdown.Header className="border-b border-line">
+              <span className="block font-medium text-ink">{user.fullName}</span>
+              <span className="block truncate text-sm text-ink-secondary">{user.email}</span>
             </Dropdown.Header>
             <Dropdown.Item as={NavLink} to="/my-collections">
               <span className="me-2">
@@ -102,7 +102,7 @@ const AccountButton = () => {
               Thông tin cá nhân
             </Dropdown.Item>
             <Dropdown.Divider />
-            <Dropdown.Item onClick={handleLogout} className="text-red-600 hover:!bg-red-50">
+            <Dropdown.Item onClick={handleLogout} className="text-danger hover:!bg-red-50">
               <span className="me-2">
                 <FontAwesomeIcon icon={faSignOut} />
               </span>
@@ -116,7 +116,7 @@ const AccountButton = () => {
           <hr />
           <NavLink
             to="/my-collections"
-            className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="flex items-center rounded-md px-4 py-2 text-ink-secondary hover:bg-canvas hover:text-primary"
           >
             <span className="me-2">
               <FontAwesomeIcon icon={faBookmark} />
@@ -125,7 +125,7 @@ const AccountButton = () => {
           </NavLink>
           <NavLink
             to="/upload-document"
-            className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="flex items-center rounded-md px-4 py-2 text-ink-secondary hover:bg-canvas hover:text-primary"
           >
             <span className="me-2">
               <FontAwesomeIcon icon={faArrowUp} />
@@ -134,7 +134,7 @@ const AccountButton = () => {
           </NavLink>
           <NavLink
             to="/my-documents"
-            className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="flex items-center rounded-md px-4 py-2 text-ink-secondary hover:bg-canvas hover:text-primary"
           >
             <span className="me-2">
               <FontAwesomeIcon icon={faFile} />
@@ -143,7 +143,7 @@ const AccountButton = () => {
           </NavLink>
           <NavLink
             to="/account/profile"
-            className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="flex items-center rounded-md px-4 py-2 text-ink-secondary hover:bg-canvas hover:text-primary"
           >
             <span className="me-2">
               <FontAwesomeIcon icon={faUser} />
@@ -152,7 +152,7 @@ const AccountButton = () => {
           </NavLink>
           <button
             onClick={handleLogout}
-            className="flex items-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-left"
+            className="flex items-center rounded-md px-4 py-2 text-left text-danger hover:bg-red-50"
           >
             <span className="me-2">
               <FontAwesomeIcon icon={faSignOut} />

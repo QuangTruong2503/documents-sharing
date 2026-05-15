@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Search } from "lucide-react";
 
 function SearchBoxComponent() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -21,7 +22,6 @@ function SearchBoxComponent() {
     };
   return (
     <div>
-      {" "}
       {/* Search Box */}
       <form className="w-full" onSubmit={handleSearch}>
         <div className="relative">
@@ -29,30 +29,20 @@ function SearchBoxComponent() {
             type="search"
             value={searchQuery}
             onChange={handleSearchChange}
-            className="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            className="input-field rounded-xl py-2 pl-10 pr-20"
             placeholder="Tìm kiếm tài liệu..."
             required
             autoComplete="off"
           />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral" />
+          <span className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-line bg-canvas px-2 py-0.5 font-mono text-[11px] text-ink-secondary sm:inline">
+            Enter
+          </span>
           <button
             type="submit"
-            className="absolute inset-y-0 start-0 flex items-center ps-3"
+            className="sr-only"
           >
-            <svg
-              className="w-4 h-4 text-gray-500 dark:text-gray-400"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 20 20"
-            >
-              <path
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"
-              />
-            </svg>
+            Tìm kiếm
           </button>
         </div>
       </form>

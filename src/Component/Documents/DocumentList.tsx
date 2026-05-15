@@ -25,9 +25,9 @@ const DocumentList: React.FC<DocumentListProps> = ({
   totalCount,
   onPageChange,
 }) => (
-  <div className="w-full flex flex-col bg-white rounded-lg shadow-sm p-6">
+  <div className="surface-card flex w-full flex-col p-4 sm:p-6">
     {/* Document Grid */}
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 py-4">
+    <div className="grid grid-cols-1 gap-5 py-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {documents.map((doc, index) => (
         <div
           key={doc.document_id}
@@ -41,7 +41,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
 
     {/* Pagination */}
     {totalPages > 1 && (
-      <div className="flex justify-center mt-6">
+      <div className="mt-6 flex justify-center">
         <PaginationComponent
           currentPage={currentPage}
           totalPages={totalPages}

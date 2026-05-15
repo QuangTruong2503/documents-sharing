@@ -123,10 +123,10 @@ function RegisterPage() {
     <>
       <PageTitle  title="Đăng ký" description="Đăng ký tài khoản mới để sử dụng hệ thống" />
       <section ref={scrollToRef} className="">
-      <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto">
+      <div className="mx-auto flex flex-col items-center justify-center px-6 py-8">
         <a
           href="/"
-          className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white"
+          className="mb-6 flex items-center font-display text-2xl font-bold tracking-[-0.03em] text-ink"
         >
           <img
             className="w-8 h-8 mr-2"
@@ -135,16 +135,16 @@ function RegisterPage() {
           />
           DocShare
         </a>
-        <div className="w-full bg-gray-50 rounded-lg shadow-lg shadow-slate-300 sm:max-w-md xl:p-0">
+        <div className="surface-card w-full sm:max-w-md xl:p-0">
           <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
-            <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
+            <h1 className="font-display text-2xl font-bold leading-tight tracking-[-0.03em] text-ink">
               Tạo tài khoản
             </h1>
             <form className="space-y-4 md:space-y-6" onSubmit={handleSubmit}>
               <div>
                 <label
                   htmlFor="email"
-                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  className="mb-2 block text-sm font-medium text-ink"
                 >
                   Email
                 </label>
@@ -154,7 +154,7 @@ function RegisterPage() {
                   id="email"
                   value={registerData.email}
                   onChange={handleInputChange}
-                  className=" border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                  className="input-field"
                   placeholder="name@company.com"
                   required
                   autoComplete="off"
@@ -163,7 +163,7 @@ function RegisterPage() {
               <div>
                 <label
                   htmlFor="password"
-                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  className="mb-2 block text-sm font-medium text-ink"
                 >
                   Mật khẩu
                 </label>
@@ -174,7 +174,7 @@ function RegisterPage() {
                   value={registerData.password}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className=" border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                  className="input-field"
                   required
                   autoComplete="new-password"
                 />
@@ -182,7 +182,7 @@ function RegisterPage() {
               <div>
                 <label
                   htmlFor="confirmPassword"
-                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  className="mb-2 block text-sm font-medium text-ink"
                 >
                   Xác nhận mật khẩu
                 </label>
@@ -193,23 +193,23 @@ function RegisterPage() {
                   value={registerData.confirmPassword}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className=" border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                  className="input-field"
                   required
                 />
               </div>
               {/* Password strength indicators */}
               {registerData.password && (
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    <p className={passwordStrength.isLongEnough ? "text-green-500" : "text-red-500"}>
+                  <div className="text-sm text-ink-secondary">
+                    <p className={passwordStrength.isLongEnough ? "text-success" : "text-danger"}>
                       ✓ Tối thiểu 8 ký tự
                     </p>
-                    <p className={passwordStrength.hasUpperCase ? "text-green-500" : "text-red-500"}>
+                    <p className={passwordStrength.hasUpperCase ? "text-success" : "text-danger"}>
                       ✓ Chữ cái in hoa
                     </p>
-                    <p className={passwordStrength.hasNumber ? "text-green-500" : "text-red-500"}>
+                    <p className={passwordStrength.hasNumber ? "text-success" : "text-danger"}>
                       ✓ Số
                     </p>
-                    <p className={passwordStrength.hasSpecialChar ? "text-green-500" : "text-red-500"}>
+                    <p className={passwordStrength.hasSpecialChar ? "text-success" : "text-danger"}>
                       ✓ Ký tự đặc biệt (!@#$%^&*)
                     </p>
                   </div>
@@ -220,11 +220,11 @@ function RegisterPage() {
                   type="checkbox"
                   checked={showPassword}
                   onChange={toggleShowPassword}
-                  className="w-4 h-4 border border-gray-300 rounded  focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-500"
+                  className="h-5 w-5 rounded-full border border-line text-primary focus:ring-primary"
                 />
                 <label
                   htmlFor="showPass"
-                  className="text-sm text-gray-500 dark:text-gray-300 cursor-pointer"
+                  className="cursor-pointer text-sm text-ink-secondary"
                 >
                   Hiện mật khẩu
                 </label>
@@ -232,17 +232,17 @@ function RegisterPage() {
               <button
                 type="submit"
                 disabled={isActing}
-                className={`w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 ${
+                className={`btn-primary w-full px-5 py-2.5 ${
                   isActing ? "opacity-75 cursor-not-allowed" : ""
                 }`}
               >
                 {isActing ? <LoaderButton /> : "Tạo mới tài khoản"}
               </button>
-              <p className="text-sm font-light text-gray-500 dark:text-gray-400">
+              <p className="text-sm font-light text-ink-secondary">
                 Đã có tài khoản?{" "}
                 <NavLink
                   to="/login"
-                  className="font-medium text-blue-600 hover:underline dark:text-blue-500"
+                  className="font-medium text-primary hover:text-primary-hover"
                 >
                   Đăng nhập
                 </NavLink>

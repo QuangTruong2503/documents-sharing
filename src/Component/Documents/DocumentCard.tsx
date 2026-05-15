@@ -19,42 +19,42 @@ const DocumentCard: React.FC<{ document: Document }> = ({ document }) => {
   };
 
   return (
-    <div className="relative overflow-hidden bg-white shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer group h-full flex flex-col">
+    <div className="surface-card surface-card-hover group relative flex h-full cursor-pointer flex-col overflow-hidden">
       <NavLink
         to={`/document/${document.document_id}`}
         className="absolute inset-0 z-10"
       />
 
       {/* Thumbnail */}
-      <div className="relative h-48 flex justify-center overflow-hidden">
+      <div className="relative flex h-[200px] justify-center overflow-hidden bg-canvas">
         <img
           src={document.thumbnail_url}
           alt={document.title}
-          className=" w-3/4 h-full object-fill border border-gray-200 shadow-sm transition-transform duration-300 group-hover:scale-105"
+          className="h-full w-3/4 border border-line object-fill transition-transform duration-300 group-hover:scale-[1.03]"
           loading="lazy"
         />
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300" />
+        <div className="absolute inset-0 bg-ink/0 transition-all duration-300 group-hover:bg-ink/[0.04]" />
       </div>
 
       {/* Content */}
-      <div className="p-4 flex flex-col justify-between flex-1">
+      <div className="flex flex-1 flex-col justify-between p-4">
         <div className="space-y-2">
-          <h3 className="text-md font-semibold text-gray-800 line-clamp-2 min-h-12">
+          <h3 className="min-h-12 text-[15px] font-bold leading-6 text-ink line-clamp-2">
             {document.title}
           </h3>
-          <p className="text-sm text-gray-600 line-clamp-1">
-            Thêm bởi: <span className="font-medium text-gray-700">{document.full_name}</span>
+          <p className="text-sm text-ink-secondary line-clamp-1">
+            Thêm bởi: <span className="font-medium text-ink">{document.full_name}</span>
           </p>
         </div>
 
         {/* Like Button */}
-        <div className="mt-3 flex justify-between items-center text-sm">
+        <div className="mt-3 flex items-center justify-between text-sm">
           <button
             onClick={handleLikeClick}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors duration-200 ${
+            className={`relative z-20 flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors duration-200 ${
               isLiked
-                ? 'text-blue-600 bg-blue-50'
-                : 'text-gray-500 hover:text-blue-500 hover:bg-gray-100'
+                ? 'bg-primary-soft text-primary'
+                : 'text-neutral hover:bg-canvas hover:text-primary'
             }`}
           >
             <FontAwesomeIcon

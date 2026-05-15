@@ -70,15 +70,15 @@ const Search: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen py-8">
+      <div className="mx-auto max-w-7xl">
         {/* Search Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-800">
-            Kết quả tìm kiếm cho: <span className="text-blue-600">"{search || ''}"</span>
+          <h1 className="font-display text-3xl font-bold tracking-[-0.03em] text-ink">
+            Kết quả tìm kiếm cho: <span className="text-primary">"{search || ''}"</span>
           </h1>
           {totalCount > 0 && (
-            <p className="mt-1 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-ink-secondary">
               Tìm thấy {totalCount} tài liệu
             </p>
           )}
@@ -87,16 +87,16 @@ const Search: React.FC = () => {
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-            <p className="mt-4 text-gray-600">Đang tìm kiếm tài liệu...</p>
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+            <p className="mt-4 text-ink-secondary">Đang tìm kiếm tài liệu...</p>
           </div>
         )}
 
         {/* Error State */}
         {error && !loading && (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm p-6">
+          <div className="surface-card mx-auto max-w-md p-6 py-12 text-center">
             <svg
-              className="mx-auto h-12 w-12 text-red-400"
+              className="mx-auto h-12 w-12 text-danger"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -108,10 +108,10 @@ const Search: React.FC = () => {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="mt-4 text-lg text-gray-700">{error}</p>
+            <p className="mt-4 text-lg text-ink-secondary">{error}</p>
             <button
               onClick={handleRetry}
-              className="mt-6 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="btn-primary mt-6"
             >
               Thử lại
             </button>
@@ -120,9 +120,9 @@ const Search: React.FC = () => {
 
         {/* No Results State */}
         {!loading && !error && documents.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm p-6">
+          <div className="surface-card mx-auto max-w-md p-6 py-12 text-center">
             <svg
-              className="mx-auto h-12 w-12 text-gray-400"
+              className="mx-auto h-12 w-12 text-neutral"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -134,10 +134,10 @@ const Search: React.FC = () => {
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-            <h3 className="mt-4 text-lg font-medium text-gray-900">
+            <h3 className="mt-4 text-lg font-bold text-ink">
               Không tìm thấy tài liệu
             </h3>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-2 text-ink-secondary">
               Không có kết quả phù hợp với từ khóa "{search}". Hãy thử từ khóa khác!
             </p>
           </div>

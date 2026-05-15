@@ -169,32 +169,32 @@ const PdfViewer: React.FC = () => {
         title={documentData.title}
         description={documentData.description}
       />
-      <div className="w-full flex flex-col md:flex-row gap-4">
+      <div className="flex w-full flex-col gap-5 md:flex-row">
         {/* Left Sidebar */}
-        <div className="w-full md:w-1/4 bg-white p-4 rounded-lg shadow-md flex flex-col items-start">
-          <h1 className="text-2xl font-bold mb-2 text-gray-800">
+        <div className="surface-card flex w-full flex-col items-start p-4 md:w-1/4">
+          <h1 className="mb-2 font-display text-2xl font-bold tracking-[-0.03em] text-ink">
             {documentData.title}
           </h1>
-          <p className="text-gray-600 mb-4 text-sm line-clamp-4">
+          <p className="mb-4 text-sm text-ink-secondary line-clamp-4">
             {documentData.description}
           </p>
-          <p className="text-gray-500 text-sm mb-4">
+          <p className="mb-4 text-sm text-neutral">
             Được tải bởi{" "}
             <a
               href="/public-profile"
-              className="font-semibold text-gray-600 underline"
+              className="font-semibold text-ink-secondary hover:text-primary"
             >
               {documentData.full_name}
             </a>{" "}
             vào {formatDateToVN(documentData.uploaded_at)}
           </p>
-          <div className="flex items-center justify-between w-full mb-4">
+          <div className="mb-4 flex w-full items-center justify-between text-sm text-ink-secondary">
             <span>{documentData.download_count} lượt tải</span>
           </div>
-          <div className="w-full grid lg:grid-cols-3 grid-cols-2 gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 lg:grid-cols-3">
             <button
               onClick={() => setShowAISummaryModal(true)}
-              className="flex flex-col items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+              className="flex flex-col items-center rounded-md border border-line bg-canvas p-2 text-ink-secondary transition hover:-translate-y-px hover:text-primary"
             >
               <svg
                 width="16"
@@ -212,22 +212,22 @@ const PdfViewer: React.FC = () => {
                   fill="currentColor"
                 ></path>
               </svg>
-              <span className="text-sm text-gray-600">Tóm tắt AI</span>
+              <span className="text-sm">Tóm tắt AI</span>
             </button>
 
             <button
               onClick={handleDownloadDocument}
               disabled={isDownloading}
               className={`flex flex-col items-center p-2 rounded-lg ${isDownloading
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-gray-100 hover:bg-gray-200"
+                  ? "cursor-not-allowed bg-gray-300"
+                  : "border border-line bg-canvas text-ink-secondary hover:-translate-y-px hover:text-primary"
                 }`}
             >
               <FontAwesomeIcon
                 icon={faDownload}
-                className="text-gray-600 mb-1"
+                className="mb-1"
               />
-              <span className="text-sm text-gray-600">
+              <span className="text-sm">
                 {isDownloading ? "..." : "Download"}
               </span>
             </button>
@@ -236,22 +236,22 @@ const PdfViewer: React.FC = () => {
               onClick={handleLike}
               className={`flex flex-col items-center p-2 rounded-lg
                 ${documentData.myReaction === 1
-                              ? "bg-blue-100"
-                              : "bg-gray-100 hover:bg-gray-200"
+                              ? "bg-primary-soft"
+                              : "border border-line bg-canvas hover:-translate-y-px hover:text-primary"
                             }
               `}
                         >
               <FontAwesomeIcon
                 icon={faThumbsUp}
                 className={`mb-1 ${documentData.myReaction === 1
-                    ? "text-blue-600"
-                    : "text-gray-600"
+                    ? "text-primary"
+                    : "text-ink-secondary"
                   }`}
               />
               <span
                 className={`text-sm ${documentData.myReaction === 1
-                    ? "text-blue-600 font-semibold"
-                    : "text-gray-600"
+                    ? "text-primary font-semibold"
+                    : "text-ink-secondary"
                   }`}
               >
                 {documentData.like_count}
@@ -262,22 +262,22 @@ const PdfViewer: React.FC = () => {
               onClick={handleDislike}
               className={`flex flex-col items-center p-2 rounded-lg
                 ${documentData.myReaction === -1
-                              ? "bg-blue-100"
-                              : "bg-gray-100 hover:bg-gray-200"
+                              ? "bg-primary-soft"
+                              : "border border-line bg-canvas hover:-translate-y-px hover:text-primary"
                             }
               `}
             >
               <FontAwesomeIcon
                 icon={faThumbsDown}
                 className={`mb-1 ${documentData.myReaction === -1
-                    ? "text-blue-600"
-                    : "text-gray-600"
+                    ? "text-primary"
+                    : "text-ink-secondary"
                   }`}
               />
               <span
                 className={`text-sm ${documentData.myReaction === -1
-                    ? "text-blue-600 font-semibold"
-                    : "text-gray-600"
+                    ? "text-primary font-semibold"
+                    : "text-ink-secondary"
                   }`}
               >
                 {documentData.dislike_count}
@@ -286,37 +286,37 @@ const PdfViewer: React.FC = () => {
 
             <button
               onClick={handleSave}
-              className="flex flex-col items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+              className="flex flex-col items-center rounded-md border border-line bg-canvas p-2 text-ink-secondary transition hover:-translate-y-px hover:text-primary"
             >
               <FontAwesomeIcon
                 icon={faBookmark}
-                className="text-gray-600 mb-1"
+                className="mb-1"
               />
-              <span className="text-sm text-gray-600">Save</span>
+              <span className="text-sm">Save</span>
             </button>
             <button
               onClick={handleShare}
-              className="flex flex-col items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+              className="flex flex-col items-center rounded-md border border-line bg-canvas p-2 text-ink-secondary transition hover:-translate-y-px hover:text-primary"
             >
               <FontAwesomeIcon
                 icon={faShareAlt}
-                className="text-gray-600 mb-1"
+                className="mb-1"
               />
-              <span className="text-sm text-gray-600">Share</span>
+              <span className="text-sm">Share</span>
             </button>
             <button
               onClick={handleReport}
-              className="flex flex-col items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+              className="flex flex-col items-center rounded-md border border-line bg-canvas p-2 text-ink-secondary transition hover:-translate-y-px hover:text-danger"
             >
-              <FontAwesomeIcon icon={faFlag} className="text-gray-600 mb-1" />
-              <span className="text-sm text-gray-600">Report</span>
+              <FontAwesomeIcon icon={faFlag} className="mb-1" />
+              <span className="text-sm">Report</span>
             </button>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="w-full md:w-3/4 bg-white p-6 rounded-lg shadow-md">
-          <div className="w-full h-[600px] max-h-svh border border-gray-300 rounded-lg">
+        <div className="surface-card w-full p-4 md:w-3/4 md:p-6">
+          <div className="h-[600px] max-h-svh w-full rounded-lg border border-line">
             <iframe
               src={`https://docs.google.com/gview?url=${documentData.file_url}&embedded=true`}
               className="w-full h-full rounded-lg"

@@ -98,20 +98,20 @@ function UploadDocument() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
+    <div className="flex min-h-screen flex-col items-center px-4 py-12">
       <PageTitle title="Upload Document" description="Upload your documents here" />
       
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-bold text-gray-900">Chia sẻ với thế giới</h1>
-        <p className="mt-2 text-gray-600">Tài liệu, bài thuyết trình, nghiên cứu...</p>
+      <div className="mb-10 text-center">
+        <h1 className="font-display text-4xl font-bold tracking-[-0.03em] text-ink">Chia sẻ với thế giới</h1>
+        <p className="mt-2 text-ink-secondary">Tài liệu, bài thuyết trình, nghiên cứu...</p>
       </div>
 
       <div className="w-full max-w-2xl">
         {!uploadSuccess ? (
           <>
             <div
-              className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center transition-colors ${
-                isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white"
+              className={`flex flex-col items-center rounded-xl border-2 border-dashed p-8 transition-colors ${
+                isDragging ? "border-primary bg-primary-soft" : "border-line bg-surface"
               }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -119,7 +119,7 @@ function UploadDocument() {
             >
               <label
                 htmlFor="file-upload"
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 cursor-pointer transition-colors font-medium"
+                className="btn-primary cursor-pointer px-6 py-3"
               >
                 Chọn tài liệu
               </label>
@@ -130,18 +130,18 @@ function UploadDocument() {
                 accept=".pdf,.docx,.txt"
                 onChange={handleFileChange}
               />
-              <p className="mt-3 text-gray-500">hoặc kéo và thả vào đây</p>
+              <p className="mt-3 text-neutral">hoặc kéo và thả vào đây</p>
             </div>
 
             {selectedFile && (
               <div className="mt-6 text-center">
-                <p className="text-gray-700 mb-4">
+                <p className="mb-4 text-ink-secondary">
                   Đã chọn: <span className="font-medium">{selectedFile.name}</span>
                 </p>
                 <button
                   onClick={handleUpload}
                   disabled={loading}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors flex items-center gap-2 mx-auto"
+                  className="btn-primary mx-auto flex gap-2 px-6 py-3"
                 >
                   {loading ? (
                     "Đang tải..."
@@ -160,30 +160,30 @@ function UploadDocument() {
         )}
 
         {error && (
-          <p className="text-red-600 mt-4 text-center">{error}</p>
+          <p className="mt-4 text-center text-danger">{error}</p>
         )}
 
         {uploadSuccess && (
           <button
             onClick={resetUpload}
-            className="mt-8 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors mx-auto block"
+            className="btn-primary mx-auto mt-8 block px-6 py-3"
           >
             Tải lên tài liệu khác
           </button>
         )}
       </div>
 
-      <div className="mt-8 text-center text-sm text-gray-500 space-y-2">
+      <div className="mt-8 space-y-2 text-center text-sm text-ink-secondary">
         <p>Hỗ trợ: PDF, TXT, DOCX</p>
         <p>
           Bằng cách tải lên, bạn đồng ý với{" "}
-          <a href="/#" className="text-blue-600 hover:underline">
+          <a href="/#" className="text-primary hover:text-primary-hover">
             Thỏa thuận tải lên
           </a>
         </p>
         <p>
           Bạn phải sở hữu bản quyền tài liệu. Xem thêm tại{" "}
-          <a href="/" className="text-blue-600 hover:underline">
+          <a href="/" className="text-primary hover:text-primary-hover">
             Copyright FAQs
           </a>
         </p>

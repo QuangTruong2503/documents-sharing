@@ -75,10 +75,10 @@ function Categories() {
   // Loading State
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 px-4 py-6">
+      <div className="min-h-screen px-4 py-6">
         <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-          <p className="mt-4 text-gray-600">Đang tải tài liệu...</p>
+          <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="mt-4 text-ink-secondary">Đang tải tài liệu...</p>
         </div>
       </div>
     );
@@ -87,10 +87,10 @@ function Categories() {
   // Error State
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-gray-50 px-4 py-6">
-        <div className="text-center py-12 bg-white rounded-lg shadow-sm p-6 max-w-md mx-auto">
+      <div className="min-h-screen px-4 py-6">
+        <div className="surface-card mx-auto max-w-md p-6 py-12 text-center">
           <svg
-            className="mx-auto h-12 w-12 text-red-400"
+            className="mx-auto h-12 w-12 text-danger"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -102,10 +102,10 @@ function Categories() {
               d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <p className="mt-4 text-lg text-gray-700">{error}</p>
+          <p className="mt-4 text-lg text-ink-secondary">{error}</p>
           <button
             onClick={handleRetry}
-            className="mt-6 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="btn-primary mt-6"
           >
             Thử lại
           </button>
@@ -119,10 +119,10 @@ function Categories() {
   // Empty State
   if (documents.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 px-4 py-6">
-        <div className="text-center py-12 bg-white rounded-lg shadow-sm p-6 max-w-md mx-auto">
+      <div className="min-h-screen px-4 py-6">
+        <div className="surface-card mx-auto max-w-md p-6 py-12 text-center">
           <svg
-            className="mx-auto h-12 w-12 text-gray-400"
+            className="mx-auto h-12 w-12 text-neutral"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -134,10 +134,10 @@ function Categories() {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <h3 className="mt-4 text-lg font-medium text-gray-900">
+          <h3 className="mt-4 text-lg font-bold text-ink">
             Không tìm thấy tài liệu
           </h3>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-ink-secondary">
             Chưa có tài liệu nào trong chuyên mục "{category_name}".
           </p>
         </div>
@@ -147,16 +147,16 @@ function Categories() {
 
   // Success State
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-6">
+    <div className="min-h-screen py-6">
       {/* Category Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="mb-2 font-display text-3xl font-bold tracking-[-0.03em] text-ink">
           {category_name}
         </h1>
         {category_description && (
-          <p className="text-gray-600 text-lg">{category_description}</p>
+          <p className="text-lg text-ink-secondary">{category_description}</p>
         )}
-        <p className="text-sm text-gray-500 mt-2">
+        <p className="mt-2 text-sm text-neutral">
           {pagination.totalCount} tài liệu
         </p>
       </div>
@@ -176,17 +176,17 @@ function Categories() {
           <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
+            className="btn-primary disabled:bg-gray-300"
           >
             Trang trước
           </button>
-          <span className="text-gray-700 font-medium">
+          <span className="font-medium text-ink-secondary">
             Trang {pagination.currentPage} / {pagination.totalPages}
           </span>
           <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === pagination.totalPages}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
+            className="btn-primary disabled:bg-gray-300"
           >
             Trang sau
           </button>

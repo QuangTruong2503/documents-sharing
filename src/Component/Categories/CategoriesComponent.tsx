@@ -36,7 +36,7 @@ const CategoriesComponent: React.FC = () => {
   return (
     <>
       {/* Desktop - Hover Dropdown */}
-      <nav className="hidden sm:flex justify-center items-center gap-8 px-8 py-4 bg-white border-t border-gray-100 shadow-sm">
+      <nav className="hidden h-14 items-center justify-center gap-3 border-b border-line bg-surface/80 px-6 backdrop-blur sm:flex">
         {parentCategories.map((parent, index) => {
           const children = getChildren(parent.category_id);
           return (
@@ -49,10 +49,10 @@ const CategoriesComponent: React.FC = () => {
               <NavLink
                 to={`/category/${parent.category_id}`}
                 className={({ isActive }) =>
-                  `font-medium text-gray-700 transition-colors duration-200 whitespace-nowrap ${
+                  `rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200 whitespace-nowrap ${
                     isActive || index === openDropdown
-                      ? "text-blue-600"
-                      : "hover:text-blue-500"
+                      ? "bg-primary-soft text-primary"
+                      : "text-ink-secondary hover:bg-canvas hover:text-primary"
                   }`
                 }
               >
@@ -63,7 +63,7 @@ const CategoriesComponent: React.FC = () => {
                   <span className="opacity-0 p-1"></span>
                   <ul
                     className={`
-                      py-3 px-4 bg-white rounded-lg shadow-xl border border-gray-100
+                      py-3 px-4 bg-surface rounded-lg shadow-lg border border-line
                       grid ${children.length > 10 ? "grid-cols-2" : "grid-cols-1"}
                       gap-3 max-h-[70vh] overflow-y-auto
                     `}
@@ -73,8 +73,8 @@ const CategoriesComponent: React.FC = () => {
                         <NavLink
                           to={`/category/${child.category_id}`}
                           className={({ isActive }) =>
-                            `block text-sm text-gray-600 transition-colors duration-200 ${
-                              isActive ? "text-blue-600" : "hover:text-blue-500"
+                            `block rounded-md px-2 py-1.5 text-sm transition-colors duration-200 ${
+                              isActive ? "bg-primary-soft text-primary" : "text-ink-secondary hover:bg-canvas hover:text-primary"
                             }`
                           }
                         >
@@ -91,32 +91,32 @@ const CategoriesComponent: React.FC = () => {
       </nav>
 
       {/* Mobile - Accordion */}
-      <div className="sm:hidden px-4 py-2">
+      <div className="px-4 py-2 sm:hidden">
         <Accordion collapseAll className="border-none">
           {parentCategories.map((parent) => {
             const children = getChildren(parent.category_id);
             return (
               <Accordion.Panel key={parent.category_id}>
-                <Accordion.Title className="text-gray-700 hover:text-blue-500 focus:ring-2 focus:ring-blue-200 bg-gray-50">
+                <Accordion.Title className="bg-canvas text-ink-secondary hover:text-primary focus:shadow-focus focus:ring-0">
                   <NavLink
                     to={`/category/${parent.category_id}`}
                     className={({ isActive }) =>
-                      `${isActive ? "text-blue-600" : ""}`
+                      `${isActive ? "text-primary" : ""}`
                     }
                   >
                     {parent.name}
                   </NavLink>
                 </Accordion.Title>
-                <Accordion.Content className="bg-white">
+                <Accordion.Content className="bg-surface">
                   {children.length > 0 ? (
-                    <ul className="space-y-3 py-2 text-sm text-gray-600">
+                    <ul className="space-y-3 py-2 text-sm text-ink-secondary">
                       {children.map((child) => (
                         <li key={child.category_id}>
                           <NavLink
                             to={`/category/${child.category_id}`}
                             className={({ isActive }) =>
                               `block transition-colors duration-200 ${
-                                isActive ? "text-blue-600" : "hover:text-blue-500"
+                                isActive ? "text-primary" : "hover:text-primary"
                               }`
                             }
                           >
@@ -126,7 +126,7 @@ const CategoriesComponent: React.FC = () => {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-gray-500 py-2">
+                    <p className="py-2 text-sm text-neutral">
                       No subcategories available
                     </p>
                   )}

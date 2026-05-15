@@ -238,13 +238,13 @@ function LoginPage() {
     console.log(isTwoFARequired)
   }, [isTwoFARequired]);
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="flex min-h-screen items-center justify-center bg-canvas px-4 py-12 sm:px-6 lg:px-8">
       <PageTitle
         title="Đăng nhập"
         description="Đăng nhập vào hệ thống chia sẻ tài liệu"
       />
 
-      <div className="max-w-md w-full space-y-8">
+      <div className="w-full max-w-md space-y-8">
         {/* Header */}
         <div className="text-center">
           <a href="/" className="flex justify-center items-center gap-2">
@@ -253,21 +253,21 @@ function LoginPage() {
               src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/logo.svg"
               alt="DocShare Logo"
             />
-            <h1 className="text-3xl font-bold text-gray-900">DocShare</h1>
+            <h1 className="font-display text-3xl font-bold tracking-[-0.03em] text-ink">DocShare</h1>
           </a>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-ink-secondary">
             Chào mừng bạn trở lại! Vui lòng đăng nhập
           </p>
         </div>
 
         {/* Form Container */}
-        <div className="bg-white py-8 px-6 shadow-2xl rounded-xl border border-gray-100">
+        <div className="surface-card px-6 py-8">
           <form className="space-y-6" onSubmit={fetchLogin} noValidate>
             {/* Email Input */}
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-ink"
               >
                 Email <span className="text-red-500">*</span>
               </label>
@@ -276,9 +276,9 @@ function LoginPage() {
                 name="email"
                 id="email"
                 autoComplete="email"
-                className={`mt-1 block w-full px-4 py-3 rounded-lg border ${
-                  emailError ? 'border-red-500' : 'border-gray-300'
-                } focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200`}
+                className={`input-field mt-1 px-4 py-3 ${
+                  emailError ? 'border-danger' : ''
+                }`}
                 placeholder="name@gmail.com"
                 required
                 value={loginData.email}
@@ -287,7 +287,7 @@ function LoginPage() {
                 aria-describedby={emailError ? "email-error" : undefined}
               />
               {emailError && (
-                <p id="email-error" className="mt-1 text-sm text-red-500">
+                <p id="email-error" className="mt-1 text-sm text-danger">
                   {emailError}
                 </p>
               )}
@@ -297,7 +297,7 @@ function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-ink"
               >
                 Mật khẩu <span className="text-red-500">*</span>
               </label>
@@ -307,7 +307,7 @@ function LoginPage() {
                   name="password"
                   id="password"
                   autoComplete="current-password"
-                  className="block w-full px-4 py-3 pr-12 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  className="input-field block w-full px-4 py-3 pr-12"
                   placeholder="••••••••"
                   required
                   minLength={6}
@@ -317,7 +317,7 @@ function LoginPage() {
                 <button
                   type="button"
                   onClick={toggleShowPassword}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none focus:text-gray-700"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral hover:text-ink focus:outline-none focus:text-ink"
                   aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                   tabIndex={0}
                 >
@@ -330,7 +330,7 @@ function LoginPage() {
             <div className="flex justify-end">
               <NavLink
                 to="/forgot-password"
-                className="text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200 focus:outline-none focus:underline"
+                className="text-sm text-primary transition-colors duration-200 hover:text-primary-hover focus:outline-none focus:underline"
               >
                 Quên mật khẩu?
               </NavLink>
@@ -340,7 +340,7 @@ function LoginPage() {
             <button
               type="submit"
               disabled={isActing}
-              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400 disabled:cursor-not-allowed transition-all duration-200"
+              className="btn-primary w-full py-3"
               aria-busy={isActing}
             >
               {isActing ? <LoaderButton /> : "ĐĂNG NHẬP"}
@@ -351,10 +351,10 @@ function LoginPage() {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
+                <div className="w-full border-t border-line"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500 my-2">
+                <span className="my-2 bg-surface px-2 text-neutral">
                   Hoặc đăng nhập với
                 </span>
               </div>
@@ -367,11 +367,11 @@ function LoginPage() {
           </div>
 
           {/* Register Link */}
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-ink-secondary">
             Chưa có tài khoản?{" "}
             <NavLink
               to="/register"
-              className="font-medium text-blue-600 hover:text-blue-800 transition-colors duration-200 focus:outline-none focus:underline"
+              className="font-medium text-primary transition-colors duration-200 hover:text-primary-hover focus:outline-none focus:underline"
             >
               Đăng ký ngay
             </NavLink>

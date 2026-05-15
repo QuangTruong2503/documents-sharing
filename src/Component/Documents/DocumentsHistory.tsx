@@ -14,19 +14,19 @@ interface Document {
 
 // Giả định DocumentCardSkeleton component
 const DocumentCardSkeleton: React.FC = () => (
-  <div className="relative overflow-hidden bg-white rounded-lg shadow-md h-full flex flex-col animate-pulse">
+  <div className="surface-card flex h-full animate-pulse flex-col overflow-hidden">
     {/* Skeleton Thumbnail */}
-    <div className="relative h-48 flex justify-center overflow-hidden">
-      <div className="w-3/4 h-full bg-gray-200 rounded-md"></div>
+    <div className="relative flex h-[200px] justify-center overflow-hidden bg-canvas">
+      <div className="h-full w-3/4 rounded-md bg-gray-200"></div>
     </div>
     {/* Skeleton Content */}
-    <div className="p-4 flex flex-col justify-between flex-1">
+    <div className="flex flex-1 flex-col justify-between p-4">
       <div className="space-y-2">
-        <div className="w-3/4 h-6 bg-gray-200 rounded-md"></div>
-        <div className="w-1/2 h-5 bg-gray-200 rounded-md"></div>
+        <div className="h-6 w-3/4 rounded-md bg-gray-200"></div>
+        <div className="h-5 w-1/2 rounded-md bg-gray-200"></div>
       </div>
-      <div className="mt-3 flex justify-between items-center text-sm">
-        <div className="w-24 h-8 bg-gray-200 rounded-md"></div>
+      <div className="mt-3 flex items-center justify-between text-sm">
+        <div className="h-8 w-24 rounded-md bg-gray-200"></div>
       </div>
     </div>
   </div>
@@ -82,9 +82,9 @@ const HistoryViewedDocuments: React.FC = () => {
   // Render logic
   if (loading) {
     return (
-      <div className="w-full p-6">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Tài Liệu Đã Xem</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 py-4">
+      <div className="w-full py-8">
+        <h2 className="mb-5 font-display text-2xl font-bold tracking-[-0.03em] text-ink">Tài Liệu Đã Xem</h2>
+        <div className="grid grid-cols-1 gap-5 py-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {Array(5) // Hiển thị 5 skeleton cards khi đang tải
             .fill(null)
             .map((_, index) => (
@@ -112,8 +112,8 @@ const HistoryViewedDocuments: React.FC = () => {
   }
 
   return (
-    <div className="w-full p-6">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Tài Liệu Đã Xem</h2>
+    <div className="w-full py-8">
+      <h2 className="mb-5 font-display text-2xl font-bold tracking-[-0.03em] text-ink">Tài Liệu Đã Xem</h2>
       <DocumentListWithStyles
         documents={documents}
         currentPage={currentPage}

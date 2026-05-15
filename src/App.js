@@ -28,12 +28,11 @@ const queryClient = new QueryClient();
 
 // Layout cho các trang có Header và Footer
 const MainLayout = ({ children }) => (
-  
   <>
     <HeaderComponent />
-    <div className="md:max-w-screen-xl mx-auto md:p-4 min-h-screen">
+    <main className="mx-auto min-h-screen w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-6 lg:py-8">
       {children}
-    </div>
+    </main>
     <ScrollToTopComponent />
     <FooterComponent />
   </>
@@ -41,7 +40,7 @@ const MainLayout = ({ children }) => (
 
 // Layout cho các trang không có Header và Footer (chỉ có nội dung)
 const AuthLayout = ({ children }) => (
-  <div className="min-h-screen grid grid-cols-1 items-center bg-white">
+  <div className="min-h-screen grid grid-cols-1 items-center bg-canvas">
     {children}
   </div>
 );

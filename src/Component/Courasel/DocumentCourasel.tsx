@@ -51,8 +51,8 @@ const DocumentCarousel: React.FC<DocumentCarouselProps> = ({ categoryID, title }
 
   if (isLoading) {
     return (
-      <div className="w-full relative py-2">
-        <div className="w-full text-center p-6">
+      <div className="relative w-full py-2">
+        <div className="w-full p-6 text-center">
           <Swiper
             modules={[Navigation]}
             spaceBetween={5}
@@ -66,17 +66,17 @@ const DocumentCarousel: React.FC<DocumentCarouselProps> = ({ categoryID, title }
           >
             {Array(5).fill(null).map((_, index) => (
               <SwiperSlide key={index}>
-                <div className="relative overflow-hidden bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer group h-full flex flex-col">
-                  <div className="relative h-48 flex justify-center overflow-hidden">
-                    <div className="w-3/4 h-full bg-gray-200 animate-pulse rounded-md"></div>
+                <div className="surface-card relative flex h-full cursor-pointer flex-col overflow-hidden">
+                  <div className="relative flex h-[200px] justify-center overflow-hidden bg-canvas">
+                    <div className="h-full w-3/4 animate-pulse rounded-md bg-gray-200"></div>
                   </div>
-                  <div className="p-4 flex flex-col justify-between flex-1">
+                  <div className="flex flex-1 flex-col justify-between p-4">
                     <div className="space-y-2">
-                      <div className="w-3/4 h-6 bg-gray-200 animate-pulse rounded-md"></div>
-                      <div className="w-1/2 h-5 bg-gray-200 animate-pulse rounded-md"></div>
+                      <div className="h-6 w-3/4 animate-pulse rounded-md bg-gray-200"></div>
+                      <div className="h-5 w-1/2 animate-pulse rounded-md bg-gray-200"></div>
                     </div>
-                    <div className="mt-3 flex justify-between items-center text-sm">
-                      <div className="w-24 h-8 bg-gray-200 animate-pulse rounded-md"></div>
+                    <div className="mt-3 flex items-center justify-between text-sm">
+                      <div className="h-8 w-24 animate-pulse rounded-md bg-gray-200"></div>
                     </div>
                   </div>
                 </div>
@@ -96,15 +96,15 @@ const DocumentCarousel: React.FC<DocumentCarouselProps> = ({ categoryID, title }
   }
 
   return (
-    <div className="w-full relative p-6">
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-2xl font-semibold mb-5">{title}</p>
-        <NavLink className="text-blue-500 font-semibold hover:text-blue-600 hover:underline" to={`category/${categoryID}`} >Xem tất cả</NavLink>
+    <section className="relative w-full py-8">
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="font-display text-2xl font-bold tracking-[-0.03em] text-ink">{title}</h2>
+        <NavLink className="rounded-md px-3 py-2 text-sm font-medium text-primary transition hover:bg-primary-soft hover:text-primary-hover" to={`category/${categoryID}`} >Xem tất cả</NavLink>
       </div>
       <div className="relative">
         <Swiper
           modules={[Navigation]}
-          spaceBetween={5}
+          spaceBetween={20}
           slidesPerView={5}
           navigation={{
             nextEl: ".custom-swiper-button-next",
@@ -123,9 +123,8 @@ const DocumentCarousel: React.FC<DocumentCarouselProps> = ({ categoryID, title }
             <>
               <button
                 className="custom-swiper-button-prev absolute top-1/2 left-2 transform -translate-y-1/2 z-10 
-                  w-10 h-10 bg-white text-gray-600 rounded-full shadow-lg flex items-center justify-center
-                  hover:bg-gray-50 hover:text-blue-600 transition-all duration-300 ease-in-out
-                  border border-gray-200"
+                  flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface text-ink-secondary shadow-lg
+                  transition-all duration-300 ease-in-out hover:-translate-y-px hover:bg-canvas hover:text-primary"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -133,9 +132,8 @@ const DocumentCarousel: React.FC<DocumentCarouselProps> = ({ categoryID, title }
               </button>
               <button
                 className="custom-swiper-button-next absolute top-1/2 right-2 transform -translate-y-1/2 z-10
-                  w-10 h-10 bg-white text-gray-600 rounded-full shadow-lg flex items-center justify-center
-                  hover:bg-gray-50 hover:text-blue-600 transition-all duration-300 ease-in-out
-                  border border-gray-200"
+                  flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface text-ink-secondary shadow-lg
+                  transition-all duration-300 ease-in-out hover:-translate-y-px hover:bg-canvas hover:text-primary"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -145,7 +143,7 @@ const DocumentCarousel: React.FC<DocumentCarouselProps> = ({ categoryID, title }
           )}
         </Swiper>
       </div>
-    </div>
+    </section>
   );
 };
 

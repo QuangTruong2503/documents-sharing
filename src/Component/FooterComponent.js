@@ -2,11 +2,11 @@ import React from "react";
 
 function FooterComponent() {
   return (
-    <footer className="p-4 bg-white dark:bg-gray-800">
-      <div className="mx-auto max-w-screen-xl text-center">
+    <footer className="border-t border-line bg-surface px-4 py-10">
+      <div className="mx-auto max-w-[1280px] text-center">
         <a
           href="/"
-          className="flex justify-center items-center text-2xl font-semibold text-gray-900 dark:text-white"
+          className="flex items-center justify-center font-display text-2xl font-bold tracking-[-0.03em] text-ink"
         >
           <svg
             className="mr-2 h-8"
@@ -154,49 +154,49 @@ function FooterComponent() {
           </svg>
           DocShare
         </a>
-        <p className="my-6 text-gray-500 dark:text-gray-400">
+        <p className="my-6 text-sm text-ink-secondary">
           Dự án học tập chia sẻ tài liệu PDF của người dùng
         </p>
-        <ul className="flex flex-wrap justify-center items-center mb-6 text-gray-900 dark:text-white">
+        <ul className="mb-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm font-medium text-ink-secondary">
           <li>
-            <a href="/" className="mr-4 hover:underline md:mr-6 ">
+            <a href="/" className="hover:text-primary">
               About
             </a>
           </li>
           <li>
-            <a href="/" className="mr-4 hover:underline md:mr-6">
+            <a href="/" className="hover:text-primary">
               Premium
             </a>
           </li>
           <li>
-            <a href="/" className="mr-4 hover:underline md:mr-6 ">
+            <a href="/" className="hover:text-primary">
               Campaigns
             </a>
           </li>
           <li>
-            <a href="/" className="mr-4 hover:underline md:mr-6">
+            <a href="/" className="hover:text-primary">
               Blog
             </a>
           </li>
           <li>
-            <a href="/" className="mr-4 hover:underline md:mr-6">
+            <a href="/" className="hover:text-primary">
               Affiliate Program
             </a>
           </li>
           <li>
-            <a href="/" className="mr-4 hover:underline md:mr-6">
+            <a href="/" className="hover:text-primary">
               FAQs
             </a>
           </li>
           <li>
-            <a href="/" className="mr-4 hover:underline md:mr-6">
+            <a href="/" className="hover:text-primary">
               Contact
             </a>
           </li>
         </ul>
-        <span className="text-sm text-gray-500 sm:text-center dark:text-gray-400">
+        <span className="text-sm text-neutral sm:text-center">
           © 2025{" "}
-          <a href="/" className="hover:underline">
+          <a href="/" className="hover:text-primary">
             T.V.Q.Trường
           </a>
           . All Rights Reserved.
