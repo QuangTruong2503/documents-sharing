@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { NavLink, useParams } from "react-router-dom";
 import documentsApi from "../../../api/documentsApi";
+import collectionsApi from "../../../api/collectionsApi";
 import DocumentSummaryByAI from "../../../Component/Chat/DocumentSummaryByAI.tsx";
 import { checkNotSigned } from "../../../Helpers/CheckSigned";
 import { formatDateToVN } from "../../../Helpers/formatDateToVN";
@@ -15,6 +16,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import PageTitle from "../../../Component/PageTitle";
 import Cookies from "js-cookie";
+import { toast } from "react-toastify";
 
 interface DocumentData {
   document_id: number;
@@ -31,6 +33,14 @@ interface DocumentData {
   myReaction: number | null;
 }
 
+interface Collection {
+  collection_id: number;
+  name: string;
+  description: string;
+  is_public: boolean;
+  documentCount: number;
+}
+
 const PdfViewer: React.FC = () => {
   const { documentID } = useParams<{ documentID: string }>();
   const [documentData, setDocumentData] = useState<DocumentData | null>(null);
@@ -38,6 +48,11 @@ const PdfViewer: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [showAISummaryModal, setShowAISummaryModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<number | "">("");
+  const [collectionsLoading, setCollectionsLoading] = useState(false);
+  const [savingToCollection, setSavingToCollection] = useState(false);
 
   // Hàm lưu lịch sử truy cập vào Cookies
   const saveHistoryToCookies = (docID: string) => {
@@ -132,8 +147,43 @@ const PdfViewer: React.FC = () => {
     }
   };
 
-  // Placeholder handlers
-  const handleSave = () => alert("Chức năng Save chưa được triển khai!");
+  const handleSave = async () => {
+    if (!Cookies.get("token")) {
+      checkNotSigned();
+      return;
+    }
+
+    setShowSaveModal(true);
+    setCollectionsLoading(true);
+    try {
+      const response = await collectionsApi.getMyCollection();
+      const data = response.data || [];
+      setCollections(data);
+      setSelectedCollectionId(data[0]?.collection_id || "");
+    } catch (err: any) {
+      console.error("Lỗi khi tải bộ sưu tập:", err);
+      toast.error(err?.response?.data?.message || "Không thể tải bộ sưu tập.");
+    } finally {
+      setCollectionsLoading(false);
+    }
+  };
+
+  const handleAddDocumentToCollection = async () => {
+    if (!documentID || !selectedCollectionId) return;
+
+    setSavingToCollection(true);
+    try {
+      const response = await collectionsApi.addDocumentToCollection(selectedCollectionId, Number(documentID));
+      toast.success(response.data?.message || "Đã lưu tài liệu vào bộ sưu tập.");
+      setShowSaveModal(false);
+    } catch (err: any) {
+      console.error("Lỗi khi lưu tài liệu vào bộ sưu tập:", err);
+      toast.error(err?.response?.data?.message || "Lưu tài liệu thất bại.");
+    } finally {
+      setSavingToCollection(false);
+    }
+  };
+
   const handleLike = async () => {
     checkNotSigned();
     const response = await documentsApi.updateDocumentLikeStatus(documentID, 1);
@@ -330,6 +380,68 @@ const PdfViewer: React.FC = () => {
           documentId={documentData.document_id}
           onClose={() => setShowAISummaryModal(false)}
         />
+      )}
+      {showSaveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
+          <div className="surface-card w-full max-w-md bg-surface p-6 shadow-card">
+            <h2 className="text-xl font-bold text-ink">Lưu vào bộ sưu tập</h2>
+            <p className="mt-2 text-sm text-ink-secondary line-clamp-2">
+              {documentData.title}
+            </p>
+
+            {collectionsLoading ? (
+              <div className="py-8 text-center text-sm text-ink-secondary">
+                Đang tải bộ sưu tập...
+              </div>
+            ) : collections.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-sm text-ink-secondary">
+                  Bạn chưa có bộ sưu tập nào. Hãy tạo bộ sưu tập trước khi lưu tài liệu.
+                </p>
+                <NavLink to="/my-collections" className="btn-primary mt-5">
+                  Tạo bộ sưu tập
+                </NavLink>
+              </div>
+            ) : (
+              <div className="mt-5">
+                <label className="block text-sm font-medium text-ink">
+                  Chọn bộ sưu tập
+                </label>
+                <select
+                  value={selectedCollectionId}
+                  onChange={(e) => setSelectedCollectionId(Number(e.target.value))}
+                  className="input-field mt-2"
+                >
+                  {collections.map((collection) => (
+                    <option key={collection.collection_id} value={collection.collection_id}>
+                      {collection.name} ({collection.documentCount ?? 0})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSaveModal(false)}
+                className="btn-secondary"
+              >
+                Hủy
+              </button>
+              {collections.length > 0 && !collectionsLoading && (
+                <button
+                  type="button"
+                  onClick={handleAddDocumentToCollection}
+                  disabled={!selectedCollectionId || savingToCollection}
+                  className="btn-primary"
+                >
+                  {savingToCollection ? "Đang lưu..." : "Lưu"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

@@ -3,8 +3,8 @@ import { toast } from "react-toastify";
 import verificationsApi from "../../api/verificationsApi";
 
 interface User {
-  user_id: string;
-  is_verified: boolean;
+  userId: string;
+  isVerified: boolean;
   email: string;
 }
 function VerifyEmailButton({ user }: { user: User }) {
@@ -53,7 +53,7 @@ function VerifyEmailButton({ user }: { user: User }) {
     <div>
       {/* Thông tin xác thực */}
       <div className="flex gap-2 items-end">
-        {user.is_verified ?(
+        {user.isVerified ?(
           <button
             className={"mt-1 text-sm font-semibold bg-gray-400 cursor-not-allowed text-white px-3 py-1 rounded-lg"}
             disabled={true}

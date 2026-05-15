@@ -9,6 +9,7 @@ import { NavLink } from "react-router-dom";
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import FullPageLoader from '../Loaders/FullPageLoader';
+import { normalizeUser } from '../../Helpers/userMapper';
 // AccountButton Component
 const AccountButton = () => {
     const [user, setUser] = useState(null);
@@ -17,7 +18,7 @@ const AccountButton = () => {
       const userStr = Cookies.get("user");
       if (userStr) {
         try {
-          const parsedUser = JSON.parse(userStr);
+          const parsedUser = normalizeUser(JSON.parse(userStr));
           setUser(parsedUser);
         } catch (error) {
           console.error("Error parsing user from cookies:", error);
@@ -61,7 +62,7 @@ const AccountButton = () => {
             label={
               <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-line p-0.5 transition-colors hover:border-primary">
                 <img
-                  src={user.avatar}
+                  src={user.avatarUrl || "/default-avatar.png"}
                   alt="User avatar"
                   className="w-full h-full object-cover rounded-full"
                   onError={(e) => (e.target.src = "/default-avatar.png")}
@@ -74,7 +75,7 @@ const AccountButton = () => {
             className="z-50 w-64 rounded-lg border border-line shadow-lg"
           >
             <Dropdown.Header className="border-b border-line">
-              <span className="block font-medium text-ink">{user.fullName}</span>
+              <span className="block font-medium text-ink">{user.fullName || user.username}</span>
               <span className="block truncate text-sm text-ink-secondary">{user.email}</span>
             </Dropdown.Header>
             <Dropdown.Item as={NavLink} to="/my-collections">

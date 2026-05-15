@@ -10,6 +10,17 @@ import DocumentList from "../../../Component/Documents/DocumentEdit/DocumentList
 import ActionButtons from "../../../Component/Documents/DocumentEdit/ActionButtons.tsx";
 import EditModal from "../../../Component/Modal/EditDocumentModal.tsx"; // Adjust path as needed
 import PageTitle from "../../../Component/PageTitle.js";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowUpAZ,
+  faCloudArrowUp,
+  faFileLines,
+  faFilter,
+  faGlobe,
+  faHeart,
+  faLock,
+  faRotateRight,
+} from "@fortawesome/free-solid-svg-icons";
 
 interface Document {
   document_id: number;
@@ -119,15 +130,31 @@ const MyDocuments: React.FC = () => {
     setSearchParams({ page: newPage.toString() });
   };
 
-  if (loading || error)
+  const publicCount = documents.filter((doc) => doc.is_public).length;
+  const privateCount = documents.length - publicCount;
+  const totalLikes = documents.reduce((total, doc) => total + (doc.like_count || 0), 0);
+
+  if (loading)
     return (
-      <div className="text-center flex items-center justify-center flex-col gap-2">
+      <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
         <Loader />
-        {error ? (
-          <p className="text-red-500">{error}</p>
-        ) : (
-          "Đang tải dữ liệu..."
-        )}
+        <p className="text-sm text-ink-secondary">Đang tải tài liệu của bạn...</p>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="surface-card mx-auto max-w-lg p-8 text-center">
+        <FontAwesomeIcon icon={faRotateRight} className="text-3xl text-danger" />
+        <h1 className="mt-4 text-xl font-bold text-ink">Tải dữ liệu thất bại</h1>
+        <p className="mt-2 text-sm text-ink-secondary">{error}</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="btn-primary mt-6"
+        >
+          Thử lại
+        </button>
       </div>
     );
 
@@ -154,39 +181,100 @@ const MyDocuments: React.FC = () => {
         title="Tài liệu của bạn"
         description="Danh sách tài liệu bạn đã tải lên"
       />
-      <div className="md:container mx-auto py-6">
-        <h2 className="text-3xl font-bold mb-6 text-center">
-          Tài Liệu Đã Tải Lên
-        </h2>
+      <div className="mx-auto max-w-6xl py-6">
+        <section className="mb-6 flex flex-col gap-5 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="mb-2 text-sm font-semibold text-primary">Thư viện cá nhân</p>
+            <h1 className="text-3xl font-bold text-ink">Tài liệu đã tải lên</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-secondary">
+              Theo dõi trạng thái, chỉnh sửa thông tin và quản lý các tài liệu bạn đã chia sẻ.
+            </p>
+          </div>
+          <NavLink to="/upload-document" className="btn-primary w-full sm:w-auto">
+            <FontAwesomeIcon icon={faCloudArrowUp} className="mr-2" />
+            Tải tài liệu mới
+          </NavLink>
+        </section>
 
-        {/* Filter Controls */}
-        <div className="mb-6 flex flex-wrap gap-4 justify-center">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="p-2 border rounded"
-          >
-            <option value="date">Ngày tải lên</option>
-            <option value="title">Tiêu đề</option>
-            <option value="downloads">Lượt tải</option>
-          </select>
+        <div className="mb-6 grid gap-3 sm:grid-cols-3">
+          <div className="surface-card p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-ink-secondary">Tổng tài liệu</span>
+              <FontAwesomeIcon icon={faFileLines} className="text-primary" />
+            </div>
+            <p className="mt-3 text-2xl font-bold text-ink">{pagination.totalCount}</p>
+          </div>
+          <div className="surface-card p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-ink-secondary">Trang này</span>
+              <div className="flex items-center gap-2">
+                <FontAwesomeIcon icon={faGlobe} className="text-success" />
+                <FontAwesomeIcon icon={faLock} className="text-danger" />
+              </div>
+            </div>
+            <p className="mt-3 text-2xl font-bold text-ink">
+              {publicCount} / {privateCount}
+            </p>
+            <p className="mt-1 text-xs text-ink-secondary">Công khai / riêng tư</p>
+          </div>
+          <div className="surface-card p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-ink-secondary">Lượt thích</span>
+              <FontAwesomeIcon icon={faHeart} className="text-primary" />
+            </div>
+            <p className="mt-3 text-2xl font-bold text-ink">{totalLikes}</p>
+            <p className="mt-1 text-xs text-ink-secondary">Tính trên tài liệu đang hiển thị</p>
+          </div>
+        </div>
 
-          <select
-            value={isPublic === null ? "all" : isPublic.toString()}
-            onChange={(e) => {
-              const value = e.target.value;
-              setIsPublic(value === "all" ? null : value === "true");
-            }}
-            className="p-2 border rounded"
-          >
-            <option value="all">Tất cả</option>
-            <option value="true">Công khai</option>
-            <option value="false">Riêng tư</option>
-          </select>
+        <div className="surface-card mb-5 p-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <FontAwesomeIcon icon={faFilter} className="text-primary" />
+              Bộ lọc hiển thị
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[520px]">
+              <label className="block">
+                <span className="mb-1 flex items-center gap-2 text-xs font-semibold text-ink-secondary">
+                  <FontAwesomeIcon icon={faArrowUpAZ} />
+                  Sắp xếp
+                </span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="date">Ngày tải lên</option>
+                  <option value="title">Tiêu đề</option>
+                  <option value="downloads">Lượt tải</option>
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 flex items-center gap-2 text-xs font-semibold text-ink-secondary">
+                  <FontAwesomeIcon icon={faGlobe} />
+                  Trạng thái
+                </span>
+                <select
+                  value={isPublic === null ? "all" : isPublic.toString()}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setIsPublic(value === "all" ? null : value === "true");
+                  }}
+                  className="input-field"
+                >
+                  <option value="all">Tất cả</option>
+                  <option value="true">Công khai</option>
+                  <option value="false">Riêng tư</option>
+                </select>
+              </label>
+            </div>
+          </div>
         </div>
 
         {documents.length > 0 ? (
-          <>
+          <section>
             <DocumentList
               documents={documents}
               actionButtons={renderActionButtons}
@@ -197,16 +285,20 @@ const MyDocuments: React.FC = () => {
               totalCount={pagination.totalCount}
               onPageChange={handlePageChange}
             />
-          </>
+          </section>
         ) : (
-          <div className="text-center text-gray-500 text-lg">
-            <p>Hiện tại không có tài liệu ở trang này.</p>
+          <div className="surface-card mx-auto max-w-xl p-10 text-center">
+            <FontAwesomeIcon icon={faFileLines} className="text-4xl text-neutral" />
+            <h2 className="mt-4 text-xl font-bold text-ink">Chưa có tài liệu phù hợp</h2>
+            <p className="mt-2 text-sm text-ink-secondary">
+              Hiện tại không có tài liệu ở trang này hoặc bộ lọc đang quá hẹp.
+            </p>
             {page === 1 && (
               <NavLink
                 to="/upload-document"
-                className="text-blue-500 hover:underline"
+                className="btn-primary mt-6"
               >
-                Tải lên ngay bây giờ!
+                Tải lên tài liệu đầu tiên
               </NavLink>
             )}
           </div>

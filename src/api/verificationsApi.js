@@ -51,6 +51,37 @@ const verificationsApi = {
                 "Content-Type": "application/json"
             },
         });
+    },
+    requestCurrentEmailVerification: () => {
+        return axiosInstance.post('Verification/change-email/request-current-verification', null, {
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${Cookies.get('token')}`
+            },
+        });
+    },
+    verifyCurrentEmailForChange: (code) => {
+        return axiosInstance.post('Verification/change-email/verify-current', { code }, {
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${Cookies.get('token')}`
+            },
+        });
+    },
+    requestNewEmailConfirmation: (data) => {
+        return axiosInstance.post('Verification/change-email/request-new-email-confirmation', data, {
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${Cookies.get('token')}`
+            },
+        });
+    },
+    confirmChangeEmail: (token) => {
+        return axiosInstance.get(`Verification/public/confirm-change-email?token=${token}`, {
+            headers: {
+                "Content-Type": "application/json"
+            },
+        });
     }
 };
 

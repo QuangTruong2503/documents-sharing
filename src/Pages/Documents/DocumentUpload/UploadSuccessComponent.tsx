@@ -5,6 +5,15 @@ import { toast } from "react-toastify";
 import { NavLink } from "react-router-dom";
 import categoriesAPI from "../../../api/categoriesAPI";
 import CategorySelector from "../../../Component/Categories/CategoriesSelector.tsx";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCheck,
+  faEye,
+  faFileLines,
+  faLock,
+  faTag,
+  faTrash,
+} from "@fortawesome/free-solid-svg-icons";
 
 interface DocumentUpload {
   document_id: number;
@@ -219,24 +228,45 @@ const UploadSuccessComponent = ({
   const shareUrl = `${window.location.origin}/document/${updateResponse?.document_id || document.document_id}`;
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-lg">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="relative">
+    <div className="surface-card w-full p-4 md:p-6">
+      <div className="mb-6 flex items-start gap-3 rounded-lg border border-success/20 bg-success/10 p-4 text-success">
+        <FontAwesomeIcon icon={faCheck} className="mt-0.5" />
+        <div>
+          <h2 className="font-bold">Tải lên thành công</h2>
+          <p className="mt-1 text-sm text-ink-secondary">
+            Hoàn tất thông tin bên dưới để tài liệu sẵn sàng hiển thị.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[260px_1fr]">
+        <div>
+          <div className="relative overflow-hidden rounded-lg border border-line bg-canvas">
           <img
             src={document.thumbnail_url}
             alt={document.title}
-            className="w-full h-fit object-fill border border-gray-300"
+              className="h-auto w-full object-fill"
           />
-          <span className="absolute top-2 right-2 bg-gray-800 text-white text-xs px-2 py-1 rounded">
-            PDF
+            <span className="absolute right-2 top-2 rounded-md bg-ink px-2 py-1 text-xs font-semibold text-white">
+              Preview
           </span>
         </div>
+          <div className="mt-4 rounded-lg border border-line bg-canvas p-4 text-sm text-ink-secondary">
+            <p className="flex items-center gap-2 font-semibold text-ink">
+              <FontAwesomeIcon icon={faFileLines} className="text-primary" />
+              Bản nháp tài liệu
+            </p>
+            <p className="mt-2">
+              Tài liệu đã được upload. Bạn có thể xóa nếu chọn nhầm file.
+            </p>
+          </div>
+        </div>
 
-        <div className="md:col-span-2">
+        <div>
           {!updateResponse?.success ? (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-semibold text-ink">
                   Tiêu đề
                 </label>
                 <input
@@ -245,12 +275,12 @@ const UploadSuccessComponent = ({
                   value={documentForm.title}
                   onChange={handleInputChange}
                   required
-                  className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="input-field mt-2"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-semibold text-ink">
                   Mô tả
                 </label>
                 <textarea
@@ -258,14 +288,18 @@ const UploadSuccessComponent = ({
                   rows={3}
                   value={documentForm.description}
                   onChange={handleInputChange}
-                  className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Thêm mô tả..."
+                  className="input-field mt-2 min-h-28"
+                  placeholder="Tóm tắt nội dung, đối tượng phù hợp hoặc điểm nổi bật của tài liệu..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Tags (tối đa {MAX_TAGS})
+                <label className="flex items-center gap-2 text-sm font-semibold text-ink">
+                  <FontAwesomeIcon icon={faTag} className="text-primary" />
+                  Tags
+                  <span className="text-xs font-medium text-ink-secondary">
+                    tối đa {MAX_TAGS}
+                  </span>
                 </label>
                 <div className="relative">
                   <input
@@ -274,15 +308,15 @@ const UploadSuccessComponent = ({
                     onChange={handleTagInputChange}
                     onKeyPress={handleTagKeyPress}
                     placeholder="Nhập tag..."
-                    className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="input-field mt-2"
                   />
                   {suggestedTags.length > 0 && (
-                    <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto mt-1">
+                    <ul className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-line bg-surface shadow-card">
                       {suggestedTags.map((tag) => (
                         <li
                           key={tag.name}
                           onClick={() => addTag(tag.name)}
-                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          className="cursor-pointer px-4 py-2 text-sm text-ink-secondary hover:bg-canvas hover:text-primary"
                         >
                           {tag.name}
                         </li>
@@ -294,13 +328,13 @@ const UploadSuccessComponent = ({
                   {documentForm.tags.map((tag) => (
                     <span
                       key={tag.name}
-                      className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                      className="inline-flex items-center rounded-md bg-primary-soft px-2 py-1 text-sm font-medium text-primary"
                     >
                       {tag.name}
                       <button
                         type="button"
                         onClick={() => removeTag(tag.name)}
-                        className="ml-1 text-red-600 hover:text-red-800"
+                        className="ml-2 text-primary hover:text-danger"
                       >
                         ×
                       </button>
@@ -309,19 +343,19 @@ const UploadSuccessComponent = ({
                 </div>
               </div>
               {/* Category Selector */}
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div className="rounded-lg border border-line bg-canvas p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-800">
+                    <h3 className="text-sm font-semibold text-ink">
                       Phân loại tài liệu
                     </h3>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-ink-secondary">
                       Chọn danh mục phù hợp để người khác dễ tìm
                     </p>
                   </div>
 
                   {documentForm.categories.length > 0 && (
-                    <span className="text-xs text-blue-600 font-medium">
+                    <span className="text-xs font-medium text-primary">
                       Đã chọn {documentForm.categories.length}
                     </span>
                   )}
@@ -339,7 +373,7 @@ const UploadSuccessComponent = ({
                   {documentForm.categories.map((id) => (
                     <span
                       key={id}
-                      className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700"
+                      className="flex items-center gap-1 rounded-md bg-primary-soft px-3 py-1 text-xs font-medium text-primary"
                     >
                       {getCategoryName(id)}
                       <button
@@ -354,57 +388,62 @@ const UploadSuccessComponent = ({
                 </div>
               )}
 
-              <div className="flex items-center">
+              <label className="flex items-center rounded-lg border border-line bg-canvas p-4">
                 <input
                   type="checkbox"
                   name="is_public"
                   checked={!documentForm.is_public}
                   onChange={handleInputChange}
-                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="h-4 w-4 rounded border-line text-primary focus:ring-primary"
                 />
-                <label className="ml-2 text-sm text-gray-700">
-                  Tài liệu riêng tư
-                </label>
-              </div>
+                <span className="ml-3 text-sm font-medium text-ink">
+                  <FontAwesomeIcon icon={faLock} className="mr-2 text-ink-secondary" />
+                  Đặt tài liệu ở chế độ riêng tư
+                </span>
+              </label>
 
               <div className="flex justify-end gap-4">
                 <button
                   type="button"
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  className="btn-secondary border-danger text-danger hover:border-danger hover:text-danger"
                   onClick={handleDelete}
                 >
+                  <FontAwesomeIcon icon={faTrash} className="mr-2" />
                   Xóa
                 </button>
                 {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={documentForm.categories.length === 0}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
+                  className={`inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                     documentForm.categories.length === 0
-                      ? "bg-gray-300 cursor-not-allowed"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
+                      ? "cursor-not-allowed bg-line text-neutral"
+                      : "bg-primary text-white hover:-translate-y-px hover:bg-primary-hover hover:shadow-glow"
                   }`}
                 >
+                  <FontAwesomeIcon icon={faCheck} className="mr-2" />
                   Hoàn tất
                 </button>
               </div>
             </form>
           ) : (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Chia sẻ tài liệu
-              </h3>
+            <div className="rounded-lg border border-line bg-canvas p-6">
+              <h3 className="text-lg font-bold text-ink">Tài liệu đã sẵn sàng</h3>
+              <p className="mt-2 text-sm text-ink-secondary">
+                Mở tài liệu để kiểm tra trang hiển thị hoặc chia sẻ đường dẫn bên dưới.
+              </p>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={shareUrl}
                   readOnly
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                  className="input-field mt-4 flex-1 bg-surface"
                 />
                 <NavLink
                   to={`/document/${updateResponse.document_id}`}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="btn-primary mt-4"
                 >
+                  <FontAwesomeIcon icon={faEye} className="mr-2" />
                   Xem
                 </NavLink>
               </div>

@@ -12,7 +12,7 @@ const VerificationComponent = () => {
       const checkVerification = async () => {
         try {
           const response = await verificationsApi.checkUserVerified();
-          setIsVerified(response.data.is_verified);
+          setIsVerified(response.data.isVerified ?? response.data.is_verified);
         } catch (error) {
           console.error("Error checking verification status:", error);
         } finally {

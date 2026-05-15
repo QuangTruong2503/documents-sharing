@@ -11,6 +11,7 @@ import PageTitle from "../../Component/PageTitle.js";
 import GoogleLoginComponent from "./GoogleLoginComponent.tsx";
 import OtpModal from "../../Component/Modal/OtpModal.tsx";
 import { UAParser } from "ua-parser-js";
+import { normalizeAuthResponse } from "../../Helpers/userMapper.js";
 
 // Interfaces
 interface Login {
@@ -40,9 +41,14 @@ interface TwoFAVerifyRequest {
 }
 
 interface User {
-  Email: string;
-  FullName: string;
-  AvatarUrl: string;
+  userId: string;
+  username: string;
+  email: string;
+  fullName: string;
+  avatarUrl: string;
+  role: string;
+  isVerified: boolean;
+  twoFactorEnabled: boolean;
 }
 
 interface ApiErrorResponse {
@@ -139,7 +145,7 @@ function LoginPage() {
     };
 
     const response = await userApi.postLogin(payload);
-    const data = response.data;
+    const data = normalizeAuthResponse(response.data);
 
     // Sửa ở đây: dùng đúng key từ backend
     if (data.require2FA === true) {
@@ -188,7 +194,7 @@ function LoginPage() {
       };
 
       const response = await userApi.verifyTwoFA(payload);
-      const data: LoginResponse = response.data;
+      const data: LoginResponse = normalizeAuthResponse(response.data);
 
       if (data.success) {
         Cookies.set("token", data.token, { expires: 3, secure: true, sameSite: 'strict' });

@@ -8,6 +8,7 @@ import FullPageLoader from "../../Component/Loaders/FullPageLoader";
 import { UAParser } from "ua-parser-js";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import config from "../../config/config";
+import { normalizeAuthResponse } from "../../Helpers/userMapper";
 function LoginButton() {
   const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ function LoginButton() {
         handleGetDeviceInfo()
       );
 
-      const data = res.data;
+      const data = normalizeAuthResponse(res.data);
 
       if (data.success) {
         toast.success(data.message);

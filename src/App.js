@@ -16,8 +16,10 @@ import UploadDocument from "./Pages/Documents/DocumentUpload/UploadDocument.tsx"
 import MyDocuments from "./Pages/Documents/MyDocuments/MyDocuments.tsx";
 import DocumentDetail from "./Pages/Documents/DocumentDetail/DocumentDetail.tsx";
 import MyCollections from "./Pages/Collections/MyCollections.tsx";
+import CollectionDetail from "./Pages/Collections/CollectionDetail.tsx";
 import NotFound from "./Pages/NotFound.tsx";
 import VerifyEmail from "./Pages/Verification/VerifyEmail.tsx";
+import ConfirmChangeEmail from "./Pages/Verification/ConfirmChangeEmail.tsx";
 import ChangePassword from "./Pages/Login-Register/ChangePassword.js";
 import Search from "./Pages/Search/Search.tsx";
 import Categories from "./Pages/Categories.tsx";
@@ -96,6 +98,7 @@ function App() {
                   <Route path="*" element={<NotFound />} />
                   {/* Verification */}
                   <Route path="/verify-email/:token" element={<VerifyEmail />} />
+                  <Route path="/confirm-change-email" element={<ConfirmChangeEmail />} />
                   {/* Account */}
                   <Route path="/account/*" element={<AccountPage />} />
                   {/* Document */}
@@ -107,6 +110,7 @@ function App() {
                   <Route path="/category/:id" element={<Categories />}/>
                   {/* Collections */}
                   <Route path="/my-collections" element={<MyCollections />} />
+                  <Route path="/collection/:collectionId" element={<CollectionDetail />} />
                 </Routes>
                 {/* ChatBoxAI */}
                 <ChatBoxAI

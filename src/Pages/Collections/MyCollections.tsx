@@ -57,9 +57,10 @@ const MyCollections: React.FC = () => {
     e.preventDefault();
     try {
       const response = await collectionsApi.postCreateCollection(newCollection);
-      toast.success(response.data);
+      toast.success(response.data?.message || 'Tạo bộ sưu tập mới thành công.');
     } catch (err) {
       console.error(err.message);
+      toast.error('Tạo bộ sưu tập thất bại.');
     } finally {
       setIsModalOpen(false);
       setNewCollection({ name: '', description: '', is_public: true });
@@ -153,7 +154,7 @@ const MyCollections: React.FC = () => {
                   </p>
                   <div className="mt-2 text-sm text-gray-500">
                     <p>{collection.is_public ? 'Công khai' : 'Riêng tư'}</p>
-                    <p>Gồm {collection.documentCount} tài liệu</p>
+                    <p>Gồm {collection.documentCount ?? 0} tài liệu</p>
                   </div>
                 </div>
                 <div className="flex gap-3 items-center">
@@ -231,6 +232,7 @@ const MyCollections: React.FC = () => {
               </div>
               <div className="flex justify-end gap-2">
                 <button
+                  type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded"
                 >

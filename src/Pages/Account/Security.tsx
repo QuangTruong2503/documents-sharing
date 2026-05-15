@@ -6,13 +6,14 @@ import TwoFAVerifyButton from "../../Component/Users/TwoFAVerifyButton.tsx";
 import VerifyEmailButton from "../../Component/Users/VerifyEmailButton.tsx";
 import Loaders from "../../Component/Loaders/Loader";
 import userApi from "../../api/usersApi";
+import { normalizeUser } from "../../Helpers/userMapper";
 
 // Interfaces
 interface User {
-  user_id: string;
-  is_verified: boolean;
+  userId: string;
+  isVerified: boolean;
   email: string;
-  two_factor_enabled: boolean;
+  twoFactorEnabled: boolean;
 }
 
 function Security() {
@@ -22,13 +23,13 @@ function Security() {
     const fetchUserData = async () => {
       try {
         const response = await userApi.getUserById();
-        const data = response.data;
+        const data = normalizeUser(response.data);
 
         setUser({
-          user_id: data.user_id,
-          is_verified: data.is_verified,
+          userId: data.userId,
+          isVerified: data.isVerified,
           email: data.email,
-          two_factor_enabled: data.two_factor_enabled,
+          twoFactorEnabled: data.twoFactorEnabled,
         });
       } catch (error: any) {
         toast.error("Không thể tải dữ liệu người dùng.");
@@ -75,25 +76,25 @@ function Security() {
             <span
               className={`inline-flex items-center gap-1 mt-2 rounded-full px-3 py-1 text-xs font-semibold
                 ${
-                  user.two_factor_enabled
+                  user.twoFactorEnabled
                     ? "bg-green-100 text-green-700"
                     : "bg-yellow-100 text-yellow-700"
                 }`}
             >
               <i
                 className={`fa-solid ${
-                  user.two_factor_enabled
+                  user.twoFactorEnabled
                     ? "fa-circle-check"
                     : "fa-circle-exclamation"
                 }`}
               ></i>
-              {user.two_factor_enabled ? "Đã bật" : "Chưa bật"}
+              {user.twoFactorEnabled ? "Đã bật" : "Chưa bật"}
             </span>
           </div>
         </div>
 
         <TwoFAVerifyButton
-          isTwoFactorEnabled={user.two_factor_enabled}
+          isTwoFactorEnabled={user.twoFactorEnabled}
         />
       </div>
 
@@ -112,19 +113,19 @@ function Security() {
             <span
               className={`inline-flex items-center gap-1 mt-2 rounded-full px-3 py-1 text-xs font-semibold
                 ${
-                  user.is_verified
+                  user.isVerified
                     ? "bg-green-100 text-green-700"
                     : "bg-yellow-100 text-yellow-700"
                 }`}
             >
               <i
                 className={`fa-solid ${
-                  user.is_verified
+                  user.isVerified
                     ? "fa-circle-check"
                     : "fa-circle-exclamation"
                 }`}
               ></i>
-              {user.is_verified ? "Đã xác thực" : "Chưa xác thực"}
+              {user.isVerified ? "Đã xác thực" : "Chưa xác thực"}
             </span>
           </div>
         </div>

@@ -28,6 +28,33 @@ const collectionsApi = {
             }
         });
     },
+    getCollectionDetail: (id) => {
+        const authToken = Cookies.get("token");
+        return axiosInstance.get(`Collections/${id}`, {
+            headers: {
+                "Authorization": `Bearer ${authToken}`
+            }
+        });
+    },
+    addDocumentToCollection: (collectionId, documentId) => {
+        const authToken = Cookies.get("token");
+        return axiosInstance.post(`Collections/${collectionId}/documents`, {
+            document_id: documentId
+        }, {
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${authToken}`
+            }
+        });
+    },
+    removeDocumentFromCollection: (collectionId, documentId) => {
+        const authToken = Cookies.get("token");
+        return axiosInstance.delete(`Collections/${collectionId}/documents/${documentId}`, {
+            headers: {
+                "Authorization": `Bearer ${authToken}`
+            }
+        });
+    },
     deleteCollection: (id) => {
         const authToken = Cookies.get("token");
         return axiosInstance.delete(`Collections/delete?id=${id}` , {

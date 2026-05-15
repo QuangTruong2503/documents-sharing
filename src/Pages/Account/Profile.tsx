@@ -1,43 +1,56 @@
-import { faImage } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import React, { useEffect, useState, useCallback, useMemo } from "react";
-import LoaderButton from "../../Component/Loaders/LoaderButton";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Cookies from "js-cookie";
-import userApi from "../../api/usersApi";
 import { toast } from "react-toastify";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCamera,
+  faCheckCircle,
+  faEnvelope,
+  faImage,
+  faRotateRight,
+  faShieldHalved,
+  faUpload,
+  faUser,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
+import LoaderButton from "../../Component/Loaders/LoaderButton";
 import Loaders from "../../Component/Loaders/Loader.js";
-import { formatDateToVN } from "../../Helpers/formatDateToVN.js";
 import PageTitle from "../../Component/PageTitle.js";
+import userApi from "../../api/usersApi";
+import verificationsApi from "../../api/verificationsApi";
+import { formatDateToVN } from "../../Helpers/formatDateToVN.js";
+import { normalizeUser } from "../../Helpers/userMapper.js";
 
-// Interfaces
 interface User {
-  user_id: string;
+  userId: string;
   username: string;
-  full_name: string | null;
-  email: string;
-  avatar_url: string | null;
-  created_at: string;
-  role: string;
-  is_verified: boolean;
-}
-interface UserUpdateData {
-  username: string;
-  email: string;
-  full_name: string;
-}
-interface UserUpdate {
-  email: string;
   fullName: string;
-  avatar: string;
+  email: string;
+  avatarUrl: string;
+  createdAt: string;
+  role: string;
+  isVerified: boolean;
+  twoFactorEnabled: boolean;
+}
+
+interface UserUpdateData {
+  fullName: string;
+}
+
+interface UserUpdate {
+  email?: string;
+  fullName?: string;
+  full_name?: string;
+  avatar?: string;
+  avatar_url?: string;
 }
 
 interface UpdateResponse {
   message: string;
   success: boolean;
-  user: UserUpdate;
+  user?: UserUpdate;
 }
 
-// Tab Component
 interface TabButtonProps {
   label: string;
   isActive: boolean;
@@ -46,10 +59,11 @@ interface TabButtonProps {
 
 const TabButton = ({ label, isActive, onClick }: TabButtonProps) => (
   <button
-    className={`px-4 py-2 transition-colors duration-300 ease-in-out ${
+    type="button"
+    className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
       isActive
-        ? "border-b-2 border-blue-500 text-blue-500"
-        : "hover:text-blue-500"
+        ? "bg-primary-soft text-primary"
+        : "text-ink-secondary hover:bg-canvas hover:text-primary"
     }`}
     onClick={onClick}
   >
@@ -57,77 +71,162 @@ const TabButton = ({ label, isActive, onClick }: TabButtonProps) => (
   </button>
 );
 
-// Overview Component
 interface OverviewTabProps {
   user: User;
-  onImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  selectedImage: File | null;
+  imagePreview: string | null;
   isSavingImage: boolean;
+  onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onImageUpload: () => void;
+  onClearImage: () => void;
+  onOpenEmailModal: () => void;
 }
 
 const OverviewTab = React.memo(
-  ({ user, onImageChange, isSavingImage }: OverviewTabProps) => {
+  ({
+    user,
+    selectedImage,
+    imagePreview,
+    isSavingImage,
+    onImageSelect,
+    onImageUpload,
+    onClearImage,
+    onOpenEmailModal,
+  }: OverviewTabProps) => {
+    const avatarSrc = imagePreview || user.avatarUrl || "/default-avatar.png";
+
     return (
-      <div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="flex flex-col">
-            <span className="text-gray-600">Tên đăng nhập</span>
-            <strong>{user.username}</strong>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-gray-600">Email</span>
-            <strong>{user.email}</strong>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-gray-600">Họ và tên</span>
-            <strong>{user.full_name || "Chưa cập nhật"}</strong>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-gray-600">Vai trò</span>
-            <strong>
-              {user.role === "user" ? "Người dùng" : "Quản trị viên"}
-            </strong>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-gray-600">Ngày tham gia</span>
-            <strong>{formatDateToVN(user.created_at)}</strong>
-          </div>
-        </div>
-        <hr className="my-4 border-gray-300" />
-        <div className="flex items-center space-x-4">
-          <img
-            src={user.avatar_url || "/default-avatar.png"}
-            alt="avatar"
-            className="w-24 h-24 rounded-full object-cover p-2 border-2 border-solid"
-          />
-          <div className="flex flex-col justify-start items-start space-y-2">
-            {isSavingImage ? (
-              <LoaderButton />
-            ) : (
+      <div className="space-y-6">
+        <section className="grid gap-5 lg:grid-cols-[260px_1fr]">
+          <div className="surface-card bg-canvas p-5 text-center">
+            <div className="relative mx-auto h-36 w-36">
+              <img
+                src={avatarSrc}
+                alt="avatar"
+                className="h-36 w-36 rounded-full border border-line bg-surface object-cover"
+              />
               <label
-                className="cursor-pointer w-fit text-blue-600 border-2 border-solid border-blue-500 p-2 rounded hover:bg-blue-100"
                 htmlFor="uploadImage"
+                className="absolute bottom-1 right-1 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-primary text-white shadow-card transition hover:bg-primary-hover"
+                title="Chọn ảnh đại diện"
               >
-                Chọn ảnh
-                <FontAwesomeIcon icon={faImage} className="ml-2" />
+                <FontAwesomeIcon icon={faCamera} />
               </label>
-            )}
+            </div>
+
             <input
               id="uploadImage"
               type="file"
               accept="image/png, image/jpeg, image/jpg, image/webp"
               className="hidden"
-              onChange={onImageChange}
+              onChange={onImageSelect}
             />
-            <p className="text-sm text-gray-600">
-              Vui lòng chọn ảnh nhỏ hơn 3MB. Ảnh phải phù hợp, không phản cảm.
-            </p>
+
+            <h2 className="mt-4 text-lg font-bold text-ink">
+              {user.fullName || user.username}
+            </h2>
+            <p className="text-sm text-ink-secondary">{user.email}</p>
+
+            {selectedImage ? (
+              <div className="mt-5 rounded-lg border border-line bg-surface p-3 text-left">
+                <p className="line-clamp-1 text-sm font-semibold text-ink">
+                  {selectedImage.name}
+                </p>
+                <p className="mt-1 text-xs text-ink-secondary">
+                  Ảnh đã chọn, bấm tải lên để lưu.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={onImageUpload}
+                    disabled={isSavingImage}
+                    className="btn-primary flex-1 gap-2"
+                  >
+                    {isSavingImage ? (
+                      "Đang tải..."
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faUpload} />
+                        Tải lên
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClearImage}
+                    disabled={isSavingImage}
+                    className="btn-secondary px-3"
+                    title="Bỏ chọn ảnh"
+                  >
+                    <FontAwesomeIcon icon={faXmark} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-5 text-sm text-ink-secondary">
+                <FontAwesomeIcon icon={faImage} className="mr-2 text-primary" />
+                PNG, JPG, WEBP nhỏ hơn 3MB.
+              </div>
+            )}
           </div>
-        </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="surface-card p-4">
+              <span className="text-sm text-ink-secondary">Họ và tên</span>
+              <strong className="mt-1 block text-ink">
+                {user.fullName || "Chưa cập nhật"}
+              </strong>
+            </div>
+            <div className="surface-card p-4">
+              <span className="text-sm text-ink-secondary">Email</span>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <strong className="break-all text-ink">{user.email}</strong>
+                <span
+                  className={`rounded-md px-2 py-1 text-xs font-semibold ${
+                    user.isVerified
+                      ? "bg-success/10 text-success"
+                      : "bg-warning/10 text-warning"
+                  }`}
+                >
+                  {user.isVerified ? "Đã xác thực" : "Chưa xác thực"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenEmailModal}
+                className="btn-secondary mt-3 gap-2"
+              >
+                <FontAwesomeIcon icon={faEnvelope} />
+                Đổi email
+              </button>
+            </div>
+            <div className="surface-card p-4">
+              <span className="text-sm text-ink-secondary">Tên đăng nhập</span>
+              <strong className="mt-1 block text-ink">{user.username}</strong>
+              <p className="mt-1 text-xs text-ink-secondary">
+                Dùng để định danh tài khoản, không chỉnh sửa tại đây.
+              </p>
+            </div>
+            <div className="surface-card p-4">
+              <span className="text-sm text-ink-secondary">Vai trò</span>
+              <strong className="mt-1 flex items-center gap-2 text-ink">
+                <FontAwesomeIcon icon={faShieldHalved} className="text-primary" />
+                {user.role === "user" ? "Người dùng" : "Quản trị viên"}
+              </strong>
+            </div>
+            <div className="surface-card p-4 sm:col-span-2">
+              <span className="text-sm text-ink-secondary">Ngày tham gia</span>
+              <strong className="mt-1 block text-ink">
+                {user.createdAt ? formatDateToVN(user.createdAt) : "Chưa cập nhật"}
+              </strong>
+            </div>
+          </div>
+        </section>
       </div>
     );
   }
 );
-// UpdateTab Component
+
 interface UpdateTabProps {
   user: UserUpdateData;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -138,52 +237,35 @@ interface UpdateTabProps {
 
 const UpdateTab = React.memo(
   ({ user, onChange, onSubmit, isSaving, onReload }: UpdateTabProps) => (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="form-group flex flex-col gap-1">
-        <label className="text-gray-600">Tên đăng nhập</label>
+    <form onSubmit={onSubmit} className="max-w-2xl space-y-5">
+      <div>
+        <label className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <FontAwesomeIcon icon={faUser} className="text-primary" />
+          Họ và tên
+        </label>
         <input
           type="text"
-          name="username"
-          value={user.username || ""}
-          className="border rounded px-3 py-2 text-sm w-1/3"
+          name="fullName"
+          value={user.fullName || ""}
           onChange={onChange}
+          className="input-field mt-2"
+          placeholder="Nhập họ và tên của bạn"
         />
+        <p className="mt-2 text-xs text-ink-secondary">
+          Tên này sẽ hiển thị trên tài liệu và hồ sơ công khai của bạn.
+        </p>
       </div>
-      <div className="form-group flex flex-col gap-1">
-        <label className="text-gray-600">Họ và Tên</label>
-        <input
-          type="text"
-          name="full_name"
-          value={user.full_name || ""}
-          onChange={onChange}
-          className="border rounded px-3 py-2 text-sm w-1/3"
-        />
-      </div>
-      <div className="form-group flex flex-col gap-1">
-        <label className="text-gray-600">Email</label>
-        <input
-          type="email"
-          name="email"
-          value={user.email}
-          onChange={onChange}
-          className="border rounded px-3 py-2 text-sm w-1/3"
-        />
-      </div>
-      <div className="flex space-x-2">
-        <button
-          type="reset"
-          className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-          onClick={onReload}
-        >
+
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="btn-secondary gap-2" onClick={onReload}>
+          <FontAwesomeIcon icon={faRotateRight} />
           Đặt lại
         </button>
         {isSaving ? (
           <LoaderButton />
         ) : (
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
+          <button type="submit" className="btn-primary gap-2">
+            <FontAwesomeIcon icon={faCheckCircle} />
             Lưu thay đổi
           </button>
         )}
@@ -192,6 +274,226 @@ const UpdateTab = React.memo(
   )
 );
 
+interface EmailChangeModalProps {
+  currentEmail: string;
+  onClose: () => void;
+}
+
+const EmailChangeModal = ({
+  currentEmail,
+  onClose,
+}: EmailChangeModalProps) => {
+  const [step, setStep] = useState<"request-current" | "verify-current" | "new-email" | "done">("request-current");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [currentEmailVerifiedToken, setCurrentEmailVerifiedToken] = useState("");
+  const [maskedCurrentEmail, setMaskedCurrentEmail] = useState(currentEmail);
+  const [maskedPendingEmail, setMaskedPendingEmail] = useState("");
+  const [expiresIn, setExpiresIn] = useState<number | null>(null);
+
+  const handleRequestCurrentVerification = async () => {
+    try {
+      setIsSubmitting(true);
+      const response = await verificationsApi.requestCurrentEmailVerification();
+      setMaskedCurrentEmail(response.data?.currentEmail || currentEmail);
+      setExpiresIn(response.data?.expiresIn || null);
+      toast.success(response.data?.message || "Mã xác thực đã được gửi.");
+      setStep("verify-current");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không thể gửi mã xác thực.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyCurrentEmail = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!code.trim()) {
+      toast.warning("Vui lòng nhập mã xác thực.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const response = await verificationsApi.verifyCurrentEmailForChange(code.trim());
+      setCurrentEmailVerifiedToken(response.data?.currentEmailVerifiedToken || "");
+      setExpiresIn(response.data?.expiresIn || null);
+      toast.success(response.data?.message || "Email hiện tại đã được xác thực.");
+      setStep("new-email");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Mã xác thực không hợp lệ.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRequestNewEmailConfirmation = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const newEmail = email.trim();
+
+    if (!newEmail) {
+      toast.warning("Vui lòng nhập email mới.");
+      return;
+    }
+    if (newEmail === currentEmail) {
+      toast.warning("Email mới phải khác email hiện tại.");
+      return;
+    }
+    if (!currentEmailVerifiedToken) {
+      toast.error("Phiên xác thực email hiện tại đã hết hạn. Vui lòng thực hiện lại.");
+      setStep("request-current");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const response = await verificationsApi.requestNewEmailConfirmation({
+        currentEmailVerifiedToken,
+        newEmail,
+      });
+      setMaskedPendingEmail(response.data?.pendingEmail || newEmail);
+      setExpiresIn(response.data?.expiresIn || null);
+      toast.success(response.data?.message || "Đã gửi email xác nhận đến email mới.");
+      setStep("done");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không thể gửi xác nhận đến email mới.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
+      <div className="surface-card w-full max-w-md bg-surface p-6 shadow-card">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-ink">Đổi email</h2>
+            <p className="mt-2 text-sm leading-6 text-ink-secondary">
+              Xác thực email hiện tại trước, sau đó gửi link xác nhận đến email mới.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-2 text-neutral transition hover:bg-canvas hover:text-ink"
+            title="Đóng"
+          >
+            <FontAwesomeIcon icon={faXmark} />
+          </button>
+        </div>
+
+        <div className="mt-5 rounded-lg border border-line bg-canvas p-3 text-sm text-ink-secondary">
+          Email hiện tại: <strong className="break-all text-ink">{currentEmail}</strong>
+        </div>
+
+        {expiresIn && step !== "request-current" && (
+          <p className="mt-3 text-xs font-medium text-ink-secondary">
+            Mã hoặc phiên xác thực có hiệu lực trong {Math.floor(expiresIn / 60)} phút.
+          </p>
+        )}
+
+        {step === "request-current" && (
+          <div className="mt-5">
+            <div className="rounded-lg border border-primary/20 bg-primary-soft p-4 text-sm text-ink-secondary">
+              Bước 1: gửi mã xác thực đến email hiện tại để đảm bảo chính chủ đang yêu cầu đổi email.
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" onClick={onClose} className="btn-secondary">
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleRequestCurrentVerification}
+                disabled={isSubmitting}
+                className="btn-primary"
+              >
+                {isSubmitting ? "Đang gửi..." : "Gửi mã xác thực"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === "verify-current" && (
+          <form onSubmit={handleVerifyCurrentEmail} className="mt-5">
+            <label className="block">
+              <span className="text-sm font-semibold text-ink">
+                Mã xác thực từ {maskedCurrentEmail}
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="input-field mt-2 text-center text-lg font-semibold tracking-[0.3em]"
+                placeholder="123456"
+                maxLength={6}
+                required
+              />
+            </label>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleRequestCurrentVerification}
+                disabled={isSubmitting}
+                className="btn-secondary"
+              >
+                Gửi lại mã
+              </button>
+              <button type="submit" disabled={isSubmitting} className="btn-primary">
+                {isSubmitting ? "Đang xác thực..." : "Xác thực"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {step === "new-email" && (
+          <form onSubmit={handleRequestNewEmailConfirmation} className="mt-5">
+            <label className="block">
+              <span className="text-sm font-semibold text-ink">Email mới</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input-field mt-2"
+                placeholder="name@example.com"
+                required
+              />
+            </label>
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" onClick={onClose} className="btn-secondary">
+                Hủy
+              </button>
+              <button type="submit" disabled={isSubmitting} className="btn-primary">
+                {isSubmitting ? "Đang gửi..." : "Gửi email xác nhận"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {step === "done" && (
+          <div className="mt-5">
+            <div className="rounded-lg border border-success/20 bg-success/10 p-4">
+              <p className="flex items-center gap-2 font-semibold text-success">
+                <FontAwesomeIcon icon={faCheckCircle} />
+                Đã gửi email xác nhận
+              </p>
+              <p className="mt-2 text-sm leading-6 text-ink-secondary">
+                Vui lòng mở hộp thư <strong className="text-ink">{maskedPendingEmail}</strong> và bấm link xác nhận để hoàn tất đổi email.
+              </p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button type="button" onClick={onClose} className="btn-primary">
+                Đã hiểu
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 function Profile() {
   const [isSavingImage, setIsSavingImage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -199,67 +501,99 @@ function Profile() {
   const [userUpdate, setUserUpdate] = useState<UserUpdateData | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [isReload, setIsReload] = useState(false);
-  // Fetch user data
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const response = await userApi.getUserById();
-        setUser(response.data);
-        setUserUpdate(response.data);
+        const normalizedUser = normalizeUser(response.data);
+        setUser(normalizedUser);
+        setUserUpdate({ fullName: normalizedUser.fullName || "" });
       } catch (error: any) {
         toast.error("Không thể tải dữ liệu người dùng.");
         console.error("Error fetching user data:", error.message);
       }
     };
+
     fetchUserData();
   }, [isReload]);
 
-  // Handle image upload
-  const handleImageChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files[0]) {
-        const file = e.target.files[0];
-        if (file.size > 3 * 1024 * 1024) {
-          toast.warning("Vui lòng chọn ảnh nhỏ hơn 3MB.");
-          e.target.value = "";
-          return;
-        }
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
 
-        const formData = new FormData();
-        formData.append("image", file);
+  const clearSelectedImage = useCallback(() => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(null);
+    setSelectedImage(null);
+  }, [imagePreview]);
 
-        if (!user?.user_id) {
-          toast.error("Không thể xác định người dùng.");
-          return;
-        }
+  const handleImageSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-        try {
-          setIsSavingImage(true);
-          const response = await userApi.updateImage(formData);
-          const data: UpdateResponse = response.data;
-
-          if (data.success) {
-            toast.success(data.message);
-            Cookies.set("user", JSON.stringify(data.user));
-            setUser((prev) =>
-              prev ? { ...prev, avatar_url: data.user.avatar } : prev
-            );
-          } else {
-            toast.error(data.message);
-          }
-        } catch (error: any) {
-          toast.error("Lỗi khi tải ảnh lên.");
-          console.error("Error uploading image:", error.message);
-        } finally {
-          setIsSavingImage(false);
-          e.target.value = "";
-        }
+      if (file.size > 3 * 1024 * 1024) {
+        toast.warning("Vui lòng chọn ảnh nhỏ hơn 3MB.");
+        e.target.value = "";
+        return;
       }
+
+      if (!["image/png", "image/jpeg", "image/jpg", "image/webp"].includes(file.type)) {
+        toast.warning("Chỉ hỗ trợ PNG, JPG, JPEG hoặc WEBP.");
+        e.target.value = "";
+        return;
+      }
+
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      setSelectedImage(file);
+      setImagePreview(URL.createObjectURL(file));
+      e.target.value = "";
     },
-    [user]
+    [imagePreview]
   );
 
-  // Handle form submission
+  const handleImageUpload = useCallback(async () => {
+    if (!selectedImage) return;
+    if (!user?.userId) {
+      toast.error("Không thể xác định người dùng.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", selectedImage);
+
+    try {
+      setIsSavingImage(true);
+      const response = await userApi.updateImage(formData);
+      const data: UpdateResponse = response.data;
+
+      if (data.success) {
+        toast.success(data.message);
+        const updatedUser = normalizeUser({
+          ...user,
+          ...(data.user || {}),
+          avatarUrl: data.user?.avatar || data.user?.avatarUrl || data.user?.avatar_url,
+        });
+        Cookies.set("user", JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        clearSelectedImage();
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error: any) {
+      toast.error("Lỗi khi tải ảnh lên.");
+      console.error("Error uploading image:", error.message);
+    } finally {
+      setIsSavingImage(false);
+    }
+  }, [clearSelectedImage, selectedImage, user]);
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
@@ -267,12 +601,20 @@ function Profile() {
 
       try {
         setIsSaving(true);
-        const response = await userApi.updateUser(userUpdate);
+        const response = await userApi.updateUser({
+          fullName: userUpdate.fullName,
+        });
         const responseData: UpdateResponse = response.data;
         if (responseData.success) {
           toast.success(responseData.message);
-          Cookies.set("user", JSON.stringify(responseData.user));
-          setIsReload(!isReload);
+          const updatedUser = normalizeUser({
+            ...user,
+            ...(responseData.user || {}),
+            fullName: responseData.user?.fullName || responseData.user?.full_name || userUpdate.fullName,
+          });
+          Cookies.set("user", JSON.stringify(updatedUser));
+          setUser(updatedUser);
+          setIsReload((prev) => !prev);
         } else {
           toast.error(responseData.message);
         }
@@ -283,59 +625,61 @@ function Profile() {
         setIsSaving(false);
       }
     },
-    [userUpdate, isReload]
+    [user, userUpdate]
   );
 
-  // Handle input change with debounce
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (userUpdate) {
-        setUserUpdate((prev) => ({
-          ...prev!,
-          [e.target.name]: e.target.value,
-        }));
-      }
-    },
-    [userUpdate]
-  );
-  // Memoized tab content
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setUserUpdate((prev) => ({
+      ...prev!,
+      [e.target.name]: e.target.value,
+    }));
+  }, []);
+
   const tabContent = useMemo(() => {
+    if (!user || !userUpdate) return null;
+
     if (activeTab === "overview") {
       return (
         <OverviewTab
-          user={user!}
-          onImageChange={handleImageChange}
+          user={user}
+          selectedImage={selectedImage}
+          imagePreview={imagePreview}
           isSavingImage={isSavingImage}
+          onImageSelect={handleImageSelect}
+          onImageUpload={handleImageUpload}
+          onClearImage={clearSelectedImage}
+          onOpenEmailModal={() => setIsEmailModalOpen(true)}
         />
       );
     }
-    if (activeTab === "update") {
-      return (
-        <UpdateTab
-          user={userUpdate!}
-          onChange={handleChange}
-          onSubmit={handleSubmit}
-          onReload={() => setIsReload(!isReload)}
-          isSaving={isSaving}
-        />
-      );
-    }
-    return null;
+
+    return (
+      <UpdateTab
+        user={userUpdate}
+        onChange={handleChange}
+        onSubmit={handleSubmit}
+        onReload={() => setIsReload((prev) => !prev)}
+        isSaving={isSaving}
+      />
+    );
   }, [
     activeTab,
+    clearSelectedImage,
+    handleChange,
+    handleImageSelect,
+    handleImageUpload,
+    handleSubmit,
+    imagePreview,
+    isSaving,
+    isSavingImage,
+    selectedImage,
     user,
     userUpdate,
-    handleImageChange,
-    handleChange,
-    handleSubmit,
-    isSavingImage,
-    isSaving,
-    isReload,
   ]);
 
   if (user === null) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex min-h-96 items-center justify-center">
         <Loaders />
       </div>
     );
@@ -347,8 +691,16 @@ function Profile() {
         title="Thông tin cá nhân"
         description="Quản lý thông tin cá nhân của bạn"
       />
-      <div className="container p-4">
-        <div className="flex mb-4 text-lg font-semibold">
+      <div>
+        <div className="mb-6">
+          <p className="mb-2 text-sm font-semibold text-primary">Hồ sơ tài khoản</p>
+          <h1 className="text-2xl font-bold text-ink">Thông tin cá nhân</h1>
+          <p className="mt-2 text-sm text-ink-secondary">
+            Quản lý ảnh đại diện, tên hiển thị và email xác nhận của tài khoản.
+          </p>
+        </div>
+
+        <div className="mb-6 inline-flex rounded-lg border border-line bg-surface p-1">
           <TabButton
             label="Tổng quan"
             isActive={activeTab === "overview"}
@@ -360,9 +712,16 @@ function Profile() {
             onClick={() => setActiveTab("update")}
           />
         </div>
-        <hr className="my-4 border-gray-300" />
+
         {tabContent}
       </div>
+
+      {isEmailModalOpen && (
+        <EmailChangeModal
+          currentEmail={user.email}
+          onClose={() => setIsEmailModalOpen(false)}
+        />
+      )}
     </>
   );
 }

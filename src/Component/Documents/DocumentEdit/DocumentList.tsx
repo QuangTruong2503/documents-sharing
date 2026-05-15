@@ -18,7 +18,7 @@ interface DocumentListProps {
 
 const DocumentList: React.FC<DocumentListProps> = ({ documents, actionButtons }) => {
   return (
-    <div className="grid grid-cols-1">
+    <div className="space-y-3">
       {documents.map((doc) => (
         <DocumentCard
           key={doc.document_id}
