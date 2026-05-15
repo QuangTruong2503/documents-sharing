@@ -1,14 +1,16 @@
 import axiosInstance from "./axiosInstance";
 import Cookies from "js-cookie";
 
+const authHeaders = () => {
+  const authToken = Cookies.get("token");
+  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
+};
+
 const documentsApi = {
   //read document by id
   getDocumentByID: (documentID) => {
-    const authToken = Cookies.get("token");
     return axiosInstance.get(`public/document/${documentID}`, {
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-      },
+      headers: authHeaders(),
     });
   },
   //Lấy dữ liệu theo tim kiếm
