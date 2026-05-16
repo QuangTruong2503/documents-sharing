@@ -17,11 +17,6 @@ An editorial precision interface for a community platform where developers disco
 - **Warning** (#F59E0B): Pending states, caution banners
 - **Error** (#EF4444): Destructive actions, validation errors, rejected status
 
-## Typography
-- **Display Font**: General Sans — loaded from Fontshare
-- **Body Font**: DM Sans — loaded from Google Fonts
-- **Code Font**: JetBrains Mono — loaded from Google Fonts
-
 Display and heading text uses General Sans at bold weight with tight letter spacing (-0.03em to -0.04em). Body and UI text uses DM Sans at regular and medium weights. The contrast between the geometric display font and the humanist body font creates a refined editorial feel. Code blocks, API keys, and CLI commands use JetBrains Mono at regular weight.
 
 Type scale: Display 72px, Headline 60px, Section heading 32px, Subhead 24px, Body 15px, Small 13px, Caption 12px, Overline 11px uppercase.

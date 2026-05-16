@@ -1,5 +1,4 @@
 import React from "react";
-import PaginationComponent from "../Pagination/Pagination.tsx";
 import DocumentCard from "./DocumentCard.tsx";
 
 interface Document {
@@ -20,10 +19,6 @@ interface DocumentListProps {
 
 const DocumentList: React.FC<DocumentListProps> = ({
   documents,
-  currentPage,
-  totalPages,
-  totalCount,
-  onPageChange,
 }) => (
   <div className="surface-card flex w-full flex-col p-4 sm:p-6">
     {/* Document Grid */}
@@ -38,18 +33,6 @@ const DocumentList: React.FC<DocumentListProps> = ({
         </div>
       ))}
     </div>
-
-    {/* Pagination */}
-    {totalPages > 1 && (
-      <div className="mt-6 flex justify-center">
-        <PaginationComponent
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          onPageChange={onPageChange}
-        />
-      </div>
-    )}
   </div>
 );
 

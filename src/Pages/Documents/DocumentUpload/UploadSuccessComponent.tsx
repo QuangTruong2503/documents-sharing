@@ -49,7 +49,6 @@ interface Tag {
   name: string;
 }
 
-const MAX_TAGS = 3;
 const MAX_CATEGORIES = 3;
 
 const UploadSuccessComponent = ({
@@ -115,7 +114,6 @@ const UploadSuccessComponent = ({
     const trimmedTag = tagName.trim();
     if (
       !trimmedTag ||
-      documentForm.tags.length >= MAX_TAGS ||
       documentForm.tags.some((t) => t.name === trimmedTag)
     )
       return;
@@ -298,7 +296,7 @@ const UploadSuccessComponent = ({
                   <FontAwesomeIcon icon={faTag} className="text-primary" />
                   Tags
                   <span className="text-xs font-medium text-ink-secondary">
-                    tối đa {MAX_TAGS}
+                    thêm tag để dễ tìm kiếm
                   </span>
                 </label>
                 <div className="relative">

@@ -25,6 +25,7 @@ import Search from "./Pages/Search/Search.tsx";
 import Categories from "./Pages/Categories.tsx";
 import ChatBoxAI from "./Component/Chat/ChatBoxAI.tsx";
 import { useState } from "react";
+import Admin from "./Pages/Admin/Admin.tsx";
 
 const queryClient = new QueryClient();
 
@@ -108,6 +109,7 @@ function App() {
                   <Route path="/document/:documentID" element={<DocumentDetail />} />
                   <Route path="/search/:search" element={<Search />}/>
                   <Route path="/category/:id" element={<Categories />}/>
+                  <Route path="/admin" element={<Admin />}/>
                   {/* Collections */}
                   <Route path="/my-collections" element={<MyCollections />} />
                   <Route path="/collection/:collectionId" element={<CollectionDetail />} />
