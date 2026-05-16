@@ -4,6 +4,8 @@ import ManageDashboard from "../../Component/Dashboard/DashboardContent.tsx";
 import Profile from "./Profile.tsx";
 import PageTitle from "../../Component/PageTitle.js";
 import Security from "./Security.tsx";
+import Cookies from "js-cookie";
+import { normalizeUser } from "../../Helpers/userMapper.js";
 
 // Define menu item interface
 interface MenuItem {
@@ -13,6 +15,18 @@ interface MenuItem {
 }
 
 function AccountPage() {
+  const getCurrentUserId = () => {
+    const userStr = Cookies.get("user");
+    if (!userStr) return "";
+
+    try {
+      return normalizeUser(JSON.parse(userStr)).userId;
+    } catch {
+      return "";
+    }
+  };
+
+  const currentUserId = getCurrentUserId();
   const collapseData: MenuItem[] = [
     {
       name: "Thông tin",
@@ -23,7 +37,16 @@ function AccountPage() {
       name: "Bảo mật",
       url: "/account/security",
       icon: "fa-solid fa-shield-halved",
-    }
+    },
+    ...(currentUserId
+      ? [
+          {
+            name: "Hồ sơ công khai",
+            url: `/public-profile/${currentUserId}`,
+            icon: "fa-solid fa-address-card",
+          },
+        ]
+      : []),
   ];
 
   return (

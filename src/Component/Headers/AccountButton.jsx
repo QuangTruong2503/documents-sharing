@@ -1,6 +1,6 @@
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowUp, faFile, faSignOut, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faArrowUp, faFile, faFlag, faSignOut, faUser } from '@fortawesome/free-solid-svg-icons';
 import { faBookmark } from '@fortawesome/free-regular-svg-icons';
 import userApi from '../../api/usersApi';
 import Cookies from 'js-cookie';
@@ -96,6 +96,12 @@ const AccountButton = () => {
               </span>
               Tài liệu của tôi
             </Dropdown.Item>
+            <Dropdown.Item as={NavLink} to="/my-reports">
+              <span className="me-2">
+                <FontAwesomeIcon icon={faFlag} />
+              </span>
+              Báo cáo của tôi
+            </Dropdown.Item>
             <Dropdown.Item as={NavLink} to="/account/profile">
               <span className="me-2">
                 <FontAwesomeIcon icon={faUser} />
@@ -150,6 +156,15 @@ const AccountButton = () => {
               <FontAwesomeIcon icon={faUser} />
             </span>
             Thông tin cá nhân
+          </NavLink>
+          <NavLink
+            to="/my-reports"
+            className="flex items-center rounded-md px-4 py-2 text-ink-secondary hover:bg-canvas hover:text-primary"
+          >
+            <span className="me-2">
+              <FontAwesomeIcon icon={faFlag} />
+            </span>
+            Báo cáo của tôi
           </NavLink>
           <button
             onClick={handleLogout}

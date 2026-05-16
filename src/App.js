@@ -26,6 +26,9 @@ import Categories from "./Pages/Categories.tsx";
 import ChatBoxAI from "./Component/Chat/ChatBoxAI.tsx";
 import { useState } from "react";
 import Admin from "./Pages/Admin/Admin.tsx";
+import MyReports from "./Pages/Reports/MyReports.tsx";
+import ReportDetail from "./Pages/Reports/ReportDetail.tsx";
+import PublicProfile from "./Pages/PublicProfile/PublicProfile.tsx";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +110,9 @@ function App() {
                   <Route path="/my-documents" element={<MyDocuments />} />
                   <Route path="/my-documents/page/:page" element={<MyDocuments />} />
                   <Route path="/document/:documentID" element={<DocumentDetail />} />
+                  <Route path="/public-profile/:userID" element={<PublicProfile />} />
+                  <Route path="/my-reports" element={<MyReports />} />
+                  <Route path="/my-reports/:reportId" element={<ReportDetail />} />
                   <Route path="/search/:search" element={<Search />}/>
                   <Route path="/category/:id" element={<Categories />}/>
                   <Route path="/admin" element={<Admin />}/>

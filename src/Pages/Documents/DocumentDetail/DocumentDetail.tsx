@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { NavLink, useParams } from "react-router-dom";
 import documentsApi from "../../../api/documentsApi";
 import collectionsApi from "../../../api/collectionsApi";
+import reportsApi from "../../../api/reportsApi";
 import DocumentSummaryByAI from "../../../Component/Chat/DocumentSummaryByAI.tsx";
 import { checkNotSigned } from "../../../Helpers/CheckSigned";
 import { formatDateToVN } from "../../../Helpers/formatDateToVN";
@@ -53,6 +54,24 @@ const PdfViewer: React.FC = () => {
   const [selectedCollectionId, setSelectedCollectionId] = useState<number | "">("");
   const [collectionsLoading, setCollectionsLoading] = useState(false);
   const [savingToCollection, setSavingToCollection] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportOptions, setReportOptions] = useState({
+    suggestedReasons: [
+      "Nội dung vi phạm bản quyền",
+      "Nội dung sai sự thật",
+      "Tài liệu spam hoặc quảng cáo",
+      "Tài liệu không phù hợp",
+      "File lỗi hoặc không thể xem",
+      "Lý do khác",
+    ],
+    reasonRules: {
+      minLength: 5,
+      maxLength: 1000,
+    },
+  });
+  const [selectedReason, setSelectedReason] = useState("");
+  const [reportReason, setReportReason] = useState("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   // Hàm lưu lịch sử truy cập vào Cookies
   const saveHistoryToCookies = (docID: string) => {
@@ -198,7 +217,78 @@ const PdfViewer: React.FC = () => {
     alert("Chức năng Dislike chưa được triển khai!");
   };
   const handleShare = () => alert("Chức năng Share chưa được triển khai!");
-  const handleReport = () => alert("Chức năng Report chưa được triển khai!");
+  const handleReport = async () => {
+    if (!Cookies.get("token")) {
+      checkNotSigned();
+      return;
+    }
+
+    setShowReportModal(true);
+    try {
+      const response = await reportsApi.getOptions();
+      const options = response.data?.data;
+      if (options) {
+        setReportOptions({
+          suggestedReasons: options.suggestedReasons ?? reportOptions.suggestedReasons,
+          reasonRules: options.reasonRules ?? reportOptions.reasonRules,
+        });
+        const firstReason = options.suggestedReasons?.[0] ?? "";
+        setSelectedReason(firstReason);
+        setReportReason(firstReason);
+      }
+    } catch (err: any) {
+      console.error("Lỗi khi tải tùy chọn báo cáo:", err);
+      setSelectedReason(reportOptions.suggestedReasons[0]);
+      setReportReason(reportOptions.suggestedReasons[0]);
+    }
+  };
+
+  const handleSelectReportReason = (value: string) => {
+    setSelectedReason(value);
+    if (value !== "Lý do khác") {
+      setReportReason(value);
+    } else {
+      setReportReason("");
+    }
+  };
+
+  const handleSubmitReport = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!documentID) return;
+
+    const reason = reportReason.trim();
+    const { minLength, maxLength } = reportOptions.reasonRules;
+
+    if (reason.length < minLength) {
+      toast.error(`Lý do báo cáo cần ít nhất ${minLength} ký tự.`);
+      return;
+    }
+
+    if (reason.length > maxLength) {
+      toast.error(`Lý do báo cáo không được vượt quá ${maxLength} ký tự.`);
+      return;
+    }
+
+    setIsSubmittingReport(true);
+    try {
+      const response = await reportsApi.createReport({
+        documentId: Number(documentID),
+        reason,
+      });
+      toast.success(response.data?.message || "Đã gửi báo cáo tài liệu.");
+      setShowReportModal(false);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const data = err?.response?.data;
+      if (status === 409 && data?.data) {
+        toast.info(data.message || "Bạn đã có báo cáo đang xử lý cho tài liệu này.");
+      } else {
+        toast.error(data?.message || "Gửi báo cáo thất bại.");
+      }
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
 
   // Render logic
   if (loading) {
@@ -230,12 +320,12 @@ const PdfViewer: React.FC = () => {
           </p>
           <p className="mb-4 text-sm text-neutral">
             Được tải bởi{" "}
-            <a
-              href="/public-profile"
+            <NavLink
+              to={`/public-profile/${documentData.user_id}`}
               className="font-semibold text-ink-secondary hover:text-primary"
             >
               {documentData.full_name}
-            </a>{" "}
+            </NavLink>{" "}
             vào {formatDateToVN(documentData.uploaded_at)}
           </p>
           <div className="mb-4 flex w-full items-center justify-between text-sm text-ink-secondary">
@@ -441,6 +531,79 @@ const PdfViewer: React.FC = () => {
               )}
             </div>
           </div>
+        </div>
+      )}
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
+          <form onSubmit={handleSubmitReport} className="surface-card w-full max-w-lg bg-surface p-6 shadow-card">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-ink">Báo cáo tài liệu</h2>
+                <p className="mt-2 line-clamp-2 text-sm text-ink-secondary">
+                  {documentData.title}
+                </p>
+              </div>
+              <FontAwesomeIcon icon={faFlag} className="mt-1 text-danger" />
+            </div>
+
+            <div className="mt-5">
+              <label className="block text-sm font-medium text-ink">
+                Lý do gợi ý
+              </label>
+              <select
+                value={selectedReason}
+                onChange={(event) => handleSelectReportReason(event.target.value)}
+                className="input-field mt-2"
+              >
+                {reportOptions.suggestedReasons.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {reason}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-ink">
+                Nội dung báo cáo
+              </label>
+              <textarea
+                value={reportReason}
+                onChange={(event) => setReportReason(event.target.value)}
+                minLength={reportOptions.reasonRules.minLength}
+                maxLength={reportOptions.reasonRules.maxLength}
+                rows={5}
+                className="input-field mt-2 resize-none"
+                placeholder="Nhập lý do báo cáo..."
+                required
+              />
+              <div className="mt-2 flex justify-between text-xs text-neutral">
+                <span>
+                  {reportOptions.reasonRules.minLength}-{reportOptions.reasonRules.maxLength} ký tự
+                </span>
+                <span>
+                  {reportReason.trim().length}/{reportOptions.reasonRules.maxLength}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowReportModal(false)}
+                className="btn-secondary"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmittingReport}
+                className="btn-primary bg-danger hover:bg-red-700"
+              >
+                {isSubmittingReport ? "Đang gửi..." : "Gửi báo cáo"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </>

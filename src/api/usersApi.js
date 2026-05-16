@@ -2,6 +2,11 @@
 import axiosInstance from './axiosInstance';
 import Cookies from 'js-cookie'
 
+const cleanParams = (params = {}) =>
+  Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== "" && value !== null && value !== undefined)
+  );
+
 const userApi = {
   getUserById: () => {
     const authToken = Cookies.get("token");
@@ -10,6 +15,30 @@ const userApi = {
         "Authorization": `Bearer ${authToken}`
       }
     });
+  },
+  getPublicProfile: (userID) => {
+    return axiosInstance.get(`/public/profile/${userID}`);
+  },
+  getFollowRelation: (followerID, followingID) => {
+    return axiosInstance.get(`/public/follows/${followerID}/${followingID}`);
+  },
+  getFollowStatus: (userID) => {
+    return axiosInstance.get(`/public/follows/status/${userID}`);
+  },
+  followUser: (followingID) => {
+    return axiosInstance.post(`/follows/${followingID}`);
+  },
+  unfollowUser: (followingID) => {
+    return axiosInstance.delete(`/follows/${followingID}`);
+  },
+  removeFollower: (followerID) => {
+    return axiosInstance.delete(`/follows/followers/${followerID}`);
+  },
+  getPublicFollowers: (userID, params) => {
+    return axiosInstance.get(`/public/users/${userID}/followers`, { params: cleanParams(params) });
+  },
+  getPublicFollowing: (userID, params) => {
+    return axiosInstance.get(`/public/users/${userID}/following`, { params: cleanParams(params) });
   },
   postLogin: (data) => {
     return axiosInstance.post('/Users/public/request-login', data);
