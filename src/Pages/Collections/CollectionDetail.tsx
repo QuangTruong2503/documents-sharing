@@ -4,9 +4,11 @@ import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faLock, faTrash } from "@fortawesome/free-solid-svg-icons";
 import collectionsApi from "../../api/collectionsApi.js";
+import usersApi from "../../api/usersApi.js";
 import PageTitle from "../../Component/PageTitle.js";
 import Loader from "../../Component/Loaders/Loader.js";
 import { formatDateToVN } from "../../Helpers/formatDateToVN";
+import Cookies from "js-cookie";
 
 interface CollectionDocument {
   document_id: number;
@@ -36,6 +38,14 @@ const CollectionDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [isPublicView, setIsPublicView] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    pageSize: 8,
+    totalCount: 0,
+    totalPages: 1,
+  });
 
   useEffect(() => {
     const fetchCollection = async () => {
@@ -48,8 +58,39 @@ const CollectionDetail: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await collectionsApi.getCollectionDetail(collectionId);
-        setCollection(response.data);
+        try {
+          const response = await usersApi.getPublicCollectionDetail(collectionId, { pageNumber: page, pageSize: 8 });
+          const body = response.data?.data ?? response.data ?? {};
+          const documents = body.documents ?? [];
+          setCollection({
+            ...body.collection,
+            documents,
+            document_count: body.pagination?.totalCount ?? documents.length,
+          });
+          setPagination(
+            body.pagination ?? {
+              currentPage: page,
+              pageSize: 8,
+              totalCount: documents.length,
+              totalPages: 1,
+            }
+          );
+          setIsPublicView(true);
+        } catch (publicError: any) {
+          if (!Cookies.get("token")) {
+            throw publicError;
+          }
+
+          const response = await collectionsApi.getCollectionDetail(collectionId);
+          setCollection(response.data);
+          setPagination({
+            currentPage: 1,
+            pageSize: response.data?.documents?.length ?? 0,
+            totalCount: response.data?.document_count ?? response.data?.documents?.length ?? 0,
+            totalPages: 1,
+          });
+          setIsPublicView(false);
+        }
       } catch (err: any) {
         console.error("Lỗi khi tải chi tiết bộ sưu tập:", err);
         setError(err?.response?.data?.message || "Không thể tải bộ sưu tập.");
@@ -60,7 +101,7 @@ const CollectionDetail: React.FC = () => {
 
     window.scrollTo({ top: 0, behavior: "smooth" });
     fetchCollection();
-  }, [collectionId]);
+  }, [collectionId, page]);
 
   const handleRemoveDocument = async (documentId: number) => {
     if (!collectionId) return;
@@ -113,11 +154,11 @@ const CollectionDetail: React.FC = () => {
       <PageTitle title={collection.name} description={collection.description} />
       <div className="mx-auto max-w-6xl">
         <NavLink
-          to="/my-collections"
+          to={isPublicView && collection?.user_id ? `/public-profile/${collection.user_id}` : "/my-collections"}
           className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-ink-secondary transition hover:text-primary"
         >
           <FontAwesomeIcon icon={faArrowLeft} />
-          Bộ sưu tập của tôi
+          {isPublicView ? "Hồ sơ công khai" : "Bộ sưu tập của tôi"}
         </NavLink>
 
         <section className="mb-6 border-b border-line pb-6">
@@ -175,15 +216,17 @@ const CollectionDetail: React.FC = () => {
                         {document.description || "Không có mô tả."}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveDocument(document.document_id)}
-                      disabled={removingId === document.document_id}
-                      className="rounded-md p-2 text-neutral transition hover:bg-danger/10 hover:text-danger disabled:pointer-events-none disabled:opacity-50"
-                      title="Xóa khỏi bộ sưu tập"
-                    >
-                      <FontAwesomeIcon icon={faTrash} />
-                    </button>
+                    {!isPublicView && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDocument(document.document_id)}
+                        disabled={removingId === document.document_id}
+                        className="rounded-md p-2 text-neutral transition hover:bg-danger/10 hover:text-danger disabled:pointer-events-none disabled:opacity-50"
+                        title="Xóa khỏi bộ sưu tập"
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    )}
                   </div>
                   <div className="mt-4 flex items-center justify-between text-xs text-ink-secondary">
                     <span>{document.owner_name}</span>
@@ -192,6 +235,31 @@ const CollectionDetail: React.FC = () => {
                 </div>
               </article>
             ))}
+          </div>
+        )}
+        {isPublicView && pagination.totalPages > 1 && (
+          <div className="mt-5 flex items-center justify-between border-t border-line pt-4 text-sm text-ink-secondary">
+            <span>
+              Trang {pagination.currentPage}/{pagination.totalPages} - {pagination.totalCount.toLocaleString("vi-VN")} tài liệu
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn-secondary px-3 py-2"
+                disabled={pagination.currentPage <= 1}
+                onClick={() => setPage(pagination.currentPage - 1)}
+              >
+                Trước
+              </button>
+              <button
+                type="button"
+                className="btn-secondary px-3 py-2"
+                disabled={pagination.currentPage >= pagination.totalPages}
+                onClick={() => setPage(pagination.currentPage + 1)}
+              >
+                Sau
+              </button>
+            </div>
           </div>
         )}
       </div>

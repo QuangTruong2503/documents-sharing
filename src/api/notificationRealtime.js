@@ -1,6 +1,5 @@
 import * as signalR from "@microsoft/signalr";
 import Cookies from "js-cookie";
-import { toast } from "react-toastify";
 import config from "../config/config";
 
 const subscribers = new Set();

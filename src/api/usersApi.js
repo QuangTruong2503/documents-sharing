@@ -40,6 +40,15 @@ const userApi = {
   getPublicFollowing: (userID, params) => {
     return axiosInstance.get(`/public/users/${userID}/following`, { params: cleanParams(params) });
   },
+  getPublicDocuments: (userID, params) => {
+    return axiosInstance.get(`/public/users/${userID}/documents`, { params: cleanParams(params) });
+  },
+  getPublicCollections: (userID, params) => {
+    return axiosInstance.get(`/public/users/${userID}/collections`, { params: cleanParams(params) });
+  },
+  getPublicCollectionDetail: (collectionID, params) => {
+    return axiosInstance.get(`/public/collections/${collectionID}`, { params: cleanParams(params) });
+  },
   postLogin: (data) => {
     return axiosInstance.post('/Users/public/request-login', data);
   },

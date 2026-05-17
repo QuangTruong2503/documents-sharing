@@ -1,6 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, useParams } from "react-router-dom";
-import { BookOpen, CalendarDays, ChevronLeft, ChevronRight, FileText, RefreshCw, Search, UserMinus, UserPlus, Users } from "lucide-react";
+import {
+  BookOpen,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileText,
+  FolderOpen,
+  Heart,
+  RefreshCw,
+  Search,
+  ThumbsDown,
+  UserMinus,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { toast } from "react-toastify";
 import PageTitle from "../../Component/PageTitle";
 import usersApi from "../../api/usersApi";
@@ -33,7 +48,7 @@ interface FollowListItem {
   is_following: boolean | null;
 }
 
-type FollowTab = "followers" | "following";
+type ProfileTab = "public-documents" | "public-collections" | "followers" | "following";
 
 interface FollowStatus {
   user_id: string;
@@ -41,6 +56,42 @@ interface FollowStatus {
   is_authenticated: boolean;
   is_self: boolean;
   is_following: boolean;
+}
+
+interface PaginationState {
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+interface PublicDocument {
+  document_id: number;
+  title: string;
+  description: string;
+  thumbnail_url: string;
+  file_type: string;
+  download_count: number;
+  uploaded_at: string;
+  like_count: number;
+  dislike_count: number;
+  categories?: { category_id: string; name: string; parent_id: string | null }[];
+  tags?: { tag_id: number; name: string }[];
+}
+
+interface PublicCollection {
+  collection_id: number;
+  name: string;
+  description: string;
+  created_at: string;
+  document_count: number;
+  latest_documents?: {
+    document_id: number;
+    title: string;
+    thumbnail_url: string;
+    file_type: string;
+    uploaded_at: string;
+  }[];
 }
 
 const PAGE_SIZE = 8;
@@ -55,8 +106,8 @@ const formatDate = (value?: string) => {
 };
 
 const statCards = [
-  { key: "public_document_count", label: "Tài liệu công khai", icon: FileText },
-  { key: "public_collection_count", label: "Bộ sưu tập công khai", icon: BookOpen },
+  { key: "public_document_count", label: "Tài liệu công khai", icon: FileText, tab: "public-documents" },
+  { key: "public_collection_count", label: "Bộ sưu tập công khai", icon: BookOpen, tab: "public-collections" },
   { key: "follower_count", label: "Người theo dõi", icon: Users, tab: "followers" },
   { key: "following_count", label: "Đang theo dõi", icon: Users, tab: "following" },
 ] as const;
@@ -67,9 +118,9 @@ const PublicProfile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [followStatus, setFollowStatus] = useState<FollowStatus | null>(null);
-  const [activeTab, setActiveTab] = useState<FollowTab>("followers");
+  const [activeTab, setActiveTab] = useState<ProfileTab>("public-documents");
   const [followRows, setFollowRows] = useState<FollowListItem[]>([]);
-  const [followPagination, setFollowPagination] = useState({
+  const [followPagination, setFollowPagination] = useState<PaginationState>({
     currentPage: 1,
     pageSize: PAGE_SIZE,
     totalCount: 0,
@@ -78,6 +129,24 @@ const PublicProfile: React.FC = () => {
   const [followPage, setFollowPage] = useState(1);
   const [followSearch, setFollowSearch] = useState("");
   const [followLoading, setFollowLoading] = useState(false);
+  const [documents, setDocuments] = useState<PublicDocument[]>([]);
+  const [documentsPagination, setDocumentsPagination] = useState<PaginationState>({
+    currentPage: 1,
+    pageSize: PAGE_SIZE,
+    totalCount: 0,
+    totalPages: 1,
+  });
+  const [documentsPage, setDocumentsPage] = useState(1);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [collections, setCollections] = useState<PublicCollection[]>([]);
+  const [collectionsPagination, setCollectionsPagination] = useState<PaginationState>({
+    currentPage: 1,
+    pageSize: PAGE_SIZE,
+    totalCount: 0,
+    totalPages: 1,
+  });
+  const [collectionsPage, setCollectionsPage] = useState(1);
+  const [collectionsLoading, setCollectionsLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState("");
   const [profileReloadKey, setProfileReloadKey] = useState(0);
   const [listReloadKey, setListReloadKey] = useState(0);
@@ -126,7 +195,7 @@ const PublicProfile: React.FC = () => {
   }, [profileReloadKey, userID]);
 
   useEffect(() => {
-    if (!userID) return;
+    if (!userID || (activeTab !== "followers" && activeTab !== "following")) return;
 
     const timeout = window.setTimeout(() => {
     setFollowLoading(true);
@@ -159,9 +228,63 @@ const PublicProfile: React.FC = () => {
     return () => window.clearTimeout(timeout);
   }, [activeTab, followPage, followSearch, listReloadKey, userID]);
 
-  const changeTab = (tab: FollowTab) => {
+  useEffect(() => {
+    if (!userID || activeTab !== "public-documents") return;
+
+    setDocumentsLoading(true);
+    usersApi
+      .getPublicDocuments(userID, { pageNumber: documentsPage, pageSize: PAGE_SIZE })
+      .then((response) => {
+        const body = response.data?.data ?? response.data ?? {};
+        const rows = body.documents ?? [];
+        setDocuments(rows);
+        setDocumentsPagination(
+          body.pagination ?? {
+            currentPage: documentsPage,
+            pageSize: PAGE_SIZE,
+            totalCount: rows.length,
+            totalPages: 1,
+          }
+        );
+      })
+      .catch((error) => {
+        toast.error(error?.response?.data?.message || "Không tải được tài liệu công khai.");
+        setDocuments([]);
+      })
+      .finally(() => setDocumentsLoading(false));
+  }, [activeTab, documentsPage, userID]);
+
+  useEffect(() => {
+    if (!userID || activeTab !== "public-collections") return;
+
+    setCollectionsLoading(true);
+    usersApi
+      .getPublicCollections(userID, { pageNumber: collectionsPage, pageSize: PAGE_SIZE })
+      .then((response) => {
+        const body = response.data?.data ?? response.data ?? {};
+        const rows = body.collections ?? [];
+        setCollections(rows);
+        setCollectionsPagination(
+          body.pagination ?? {
+            currentPage: collectionsPage,
+            pageSize: PAGE_SIZE,
+            totalCount: rows.length,
+            totalPages: 1,
+          }
+        );
+      })
+      .catch((error) => {
+        toast.error(error?.response?.data?.message || "Không tải được bộ sưu tập công khai.");
+        setCollections([]);
+      })
+      .finally(() => setCollectionsLoading(false));
+  }, [activeTab, collectionsPage, userID]);
+
+  const changeTab = (tab: ProfileTab) => {
     setActiveTab(tab);
     setFollowPage(1);
+    setDocumentsPage(1);
+    setCollectionsPage(1);
   };
 
   const refreshFollowData = () => {
@@ -177,8 +300,7 @@ const PublicProfile: React.FC = () => {
 
     setActionLoadingId(targetUserId);
     try {
-      const response = await usersApi.followUser(targetUserId);
-      toast.success(response.data?.message || "Đã theo dõi người dùng.");
+      await usersApi.followUser(targetUserId);
       refreshFollowData();
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Theo dõi thất bại.");
@@ -190,8 +312,7 @@ const PublicProfile: React.FC = () => {
   const handleUnfollowUser = async (targetUserId: string) => {
     setActionLoadingId(targetUserId);
     try {
-      const response = await usersApi.unfollowUser(targetUserId);
-      toast.success(response.data?.message || "Đã bỏ theo dõi.");
+      await usersApi.unfollowUser(targetUserId);
       refreshFollowData();
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Bỏ theo dõi thất bại.");
@@ -213,6 +334,43 @@ const PublicProfile: React.FC = () => {
     } finally {
       setActionLoadingId("");
     }
+  };
+
+  const renderPagination = (
+    pagination: PaginationState,
+    label: string,
+    onPageChange: (page: number) => void
+  ) => {
+    if (pagination.totalPages <= 1) return null;
+
+    return (
+      <div className="flex items-center justify-between border-t border-line px-4 py-3 text-sm text-ink-secondary">
+        <span>
+          Trang {pagination.currentPage}/{pagination.totalPages} -{" "}
+          {pagination.totalCount.toLocaleString("vi-VN")} {label}
+        </span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="btn-secondary px-3 py-2"
+            disabled={pagination.currentPage <= 1}
+            onClick={() => onPageChange(pagination.currentPage - 1)}
+            title="Trang trước"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className="btn-secondary px-3 py-2"
+            disabled={pagination.currentPage >= pagination.totalPages}
+            onClick={() => onPageChange(pagination.currentPage + 1)}
+            title="Trang sau"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -301,7 +459,7 @@ const PublicProfile: React.FC = () => {
               <button
                 key={key}
                 type="button"
-                onClick={() => tab && changeTab(tab as FollowTab)}
+                onClick={() => changeTab(tab)}
                 className={`rounded-md border border-line bg-canvas p-4 text-left transition hover:-translate-y-px hover:border-primary ${
                   tab && activeTab === tab ? "border-primary bg-primary-soft" : ""
                 }`}
@@ -320,41 +478,185 @@ const PublicProfile: React.FC = () => {
 
         <section className="surface-card overflow-hidden">
           <div className="border-b border-line p-3">
-            <div className="flex rounded-md bg-canvas p-1">
-              <button
-                type="button"
-                onClick={() => changeTab("followers")}
-                className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition ${
-                  activeTab === "followers" ? "bg-primary text-white" : "text-ink-secondary hover:bg-white hover:text-ink"
-                }`}
-              >
-                Người theo dõi
-              </button>
-              <button
-                type="button"
-                onClick={() => changeTab("following")}
-                className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition ${
-                  activeTab === "following" ? "bg-primary text-white" : "text-ink-secondary hover:bg-white hover:text-ink"
-                }`}
-              >
-                Đang theo dõi
-              </button>
+            <div className="grid rounded-md bg-canvas p-1 sm:grid-cols-4">
+              {[
+                ["public-documents", "Tài liệu"],
+                ["public-collections", "Bộ sưu tập"],
+                ["followers", "Người theo dõi"],
+                ["following", "Đang theo dõi"],
+              ].map(([tab, label]) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => changeTab(tab as ProfileTab)}
+                  className={`rounded-md px-4 py-2 text-sm font-medium transition ${
+                    activeTab === tab ? "bg-primary text-white" : "text-ink-secondary hover:bg-white hover:text-ink"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-            <label className="relative mt-3 block">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral" />
-              <input
-                value={followSearch}
-                onChange={(event) => {
-                  setFollowSearch(event.target.value);
-                  setFollowPage(1);
-                }}
-                className="input-field pl-9"
-                placeholder={activeTab === "followers" ? "Tìm người theo dõi..." : "Tìm người đang theo dõi..."}
-              />
-            </label>
+            {(activeTab === "followers" || activeTab === "following") && (
+              <label className="relative mt-3 block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral" />
+                <input
+                  value={followSearch}
+                  onChange={(event) => {
+                    setFollowSearch(event.target.value);
+                    setFollowPage(1);
+                  }}
+                  className="input-field pl-9"
+                  placeholder={activeTab === "followers" ? "Tìm người theo dõi..." : "Tìm người đang theo dõi..."}
+                />
+              </label>
+            )}
           </div>
 
-          {followLoading ? (
+          {activeTab === "public-documents" && (
+            documentsLoading ? (
+              <div className="flex min-h-64 items-center justify-center">
+                <RefreshCw className="h-7 w-7 animate-spin text-primary" />
+              </div>
+            ) : documents.length === 0 ? (
+              <div className="px-4 py-14 text-center text-sm text-ink-secondary">
+                Người dùng này chưa có tài liệu công khai.
+              </div>
+            ) : (
+              <>
+                <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {documents.map((document) => (
+                    <article key={document.document_id} className="surface-card surface-card-hover overflow-hidden">
+                      <NavLink to={`/document/${document.document_id}`} className="block">
+                        <div className="flex h-44 justify-center overflow-hidden bg-canvas">
+                          <img
+                            src={document.thumbnail_url || "/default-thumbnail.png"}
+                            alt={document.title}
+                            className="h-full w-3/4 border border-line object-fill transition duration-300 hover:scale-[1.03]"
+                            loading="lazy"
+                            onError={(event) => {
+                              event.currentTarget.src = "/default-thumbnail.png";
+                            }}
+                          />
+                        </div>
+                      </NavLink>
+                      <div className="p-4">
+                        <NavLink
+                          to={`/document/${document.document_id}`}
+                          className="line-clamp-2 min-h-12 text-[15px] font-bold leading-6 text-ink hover:text-primary"
+                        >
+                          {document.title}
+                        </NavLink>
+                        <p className="mt-2 line-clamp-2 text-sm text-ink-secondary">
+                          {document.description || "Không có mô tả."}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-1">
+                          {(document.categories ?? []).slice(0, 2).map((category) => (
+                            <span key={category.category_id} className="rounded-md bg-primary-soft px-2 py-1 text-xs text-primary">
+                              {category.name}
+                            </span>
+                          ))}
+                          {(document.tags ?? []).slice(0, 2).map((tag) => (
+                            <span key={tag.tag_id} className="rounded-md bg-canvas px-2 py-1 text-xs text-ink-secondary">
+                              #{tag.name}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="mt-4 flex items-center justify-between text-xs text-ink-secondary">
+                          <span>{formatDate(document.uploaded_at)}</span>
+                          <span className="inline-flex items-center gap-1">
+                            <Download className="h-3.5 w-3.5" />
+                            {document.download_count ?? 0}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex items-center gap-3 text-xs text-ink-secondary">
+                          <span className="inline-flex items-center gap-1">
+                            <Heart className="h-3.5 w-3.5 text-danger" />
+                            {document.like_count ?? 0}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <ThumbsDown className="h-3.5 w-3.5" />
+                            {document.dislike_count ?? 0}
+                          </span>
+                          <span className="ml-auto uppercase">{document.file_type || "file"}</span>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                {renderPagination(documentsPagination, "tài liệu", setDocumentsPage)}
+              </>
+            )
+          )}
+
+          {activeTab === "public-collections" && (
+            collectionsLoading ? (
+              <div className="flex min-h-64 items-center justify-center">
+                <RefreshCw className="h-7 w-7 animate-spin text-primary" />
+              </div>
+            ) : collections.length === 0 ? (
+              <div className="px-4 py-14 text-center text-sm text-ink-secondary">
+                Người dùng này chưa có bộ sưu tập công khai.
+              </div>
+            ) : (
+              <>
+                <div className="grid gap-4 p-4 sm:grid-cols-2">
+                  {collections.map((collection) => (
+                    <article key={collection.collection_id} className="surface-card surface-card-hover overflow-hidden p-4">
+                      <NavLink
+                        to={`/collection/${collection.collection_id}`}
+                        className="flex items-start justify-between gap-3"
+                      >
+                        <div className="min-w-0">
+                          <h3 className="line-clamp-2 text-lg font-bold text-ink hover:text-primary">
+                            {collection.name}
+                          </h3>
+                          <p className="mt-2 line-clamp-2 text-sm leading-6 text-ink-secondary">
+                            {collection.description || "Không có mô tả."}
+                          </p>
+                        </div>
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
+                          <FolderOpen className="h-5 w-5" />
+                        </span>
+                      </NavLink>
+                      <div className="mt-4 flex items-center justify-between text-sm text-ink-secondary">
+                        <span>{collection.document_count ?? 0} tài liệu</span>
+                        <span>Tạo {formatDate(collection.created_at)}</span>
+                      </div>
+                      <div className="mt-4 grid grid-cols-3 gap-2">
+                        {(collection.latest_documents ?? []).slice(0, 3).map((document) => (
+                          <NavLink
+                            key={document.document_id}
+                            to={`/document/${document.document_id}`}
+                            className="block overflow-hidden rounded-md border border-line bg-canvas"
+                            title={document.title}
+                          >
+                            <img
+                              src={document.thumbnail_url || "/default-thumbnail.png"}
+                              alt={document.title}
+                              className="h-24 w-full object-cover"
+                              loading="lazy"
+                              onError={(event) => {
+                                event.currentTarget.src = "/default-thumbnail.png";
+                              }}
+                            />
+                          </NavLink>
+                        ))}
+                        {(collection.latest_documents ?? []).length === 0 && (
+                          <div className="col-span-3 rounded-md border border-dashed border-line bg-canvas px-3 py-8 text-center text-sm text-ink-secondary">
+                            Chưa có tài liệu hiển thị.
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                {renderPagination(collectionsPagination, "bộ sưu tập", setCollectionsPage)}
+              </>
+            )
+          )}
+
+          {(activeTab === "followers" || activeTab === "following") && (followLoading ? (
             <div className="flex min-h-64 items-center justify-center">
               <RefreshCw className="h-7 w-7 animate-spin text-primary" />
             </div>
@@ -435,36 +737,10 @@ const PublicProfile: React.FC = () => {
                 );
               })}
             </div>
-          )}
+          ))}
 
-          {followPagination.totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-line px-4 py-3 text-sm text-ink-secondary">
-              <span>
-                Trang {followPagination.currentPage}/{followPagination.totalPages} -{" "}
-                {followPagination.totalCount.toLocaleString("vi-VN")} người dùng
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="btn-secondary px-3 py-2"
-                  disabled={followPagination.currentPage <= 1}
-                  onClick={() => setFollowPage(followPagination.currentPage - 1)}
-                  title="Trang trước"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary px-3 py-2"
-                  disabled={followPagination.currentPage >= followPagination.totalPages}
-                  onClick={() => setFollowPage(followPagination.currentPage + 1)}
-                  title="Trang sau"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
+          {(activeTab === "followers" || activeTab === "following") &&
+            renderPagination(followPagination, "người dùng", setFollowPage)}
         </section>
       </div>
     </>
