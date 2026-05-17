@@ -10,8 +10,10 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import FullPageLoader from '../Loaders/FullPageLoader';
 import { normalizeUser } from '../../Helpers/userMapper';
+import NotificationDropdown from '../Notifications/NotificationDropdown';
+import { stopNotificationRealtime } from '../../api/notificationRealtime';
 // AccountButton Component
-const AccountButton = () => {
+const AccountButton = ({ onClose }) => {
     const [user, setUser] = useState(null);
     const [isLogout, setIsLogout] = useState(false);
     const updateUserFromCookies = () => {
@@ -45,6 +47,7 @@ const AccountButton = () => {
       }
       finally{
         setIsLogout(false);
+        stopNotificationRealtime();
         Cookies.remove("user");
         Cookies.remove("token");
         window.location.href = "/";
@@ -57,7 +60,8 @@ const AccountButton = () => {
     return (
       <div className="relative">
         {/* Dropdown: Chỉ hiển thị từ sm trở lên */}
-        <div className="hidden sm:block">
+        <div className="hidden sm:flex items-center gap-2">
+          <NotificationDropdown />
           <Dropdown
             label={
               <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-line p-0.5 transition-colors hover:border-primary">
@@ -121,8 +125,10 @@ const AccountButton = () => {
         {/* Các nút liệt kê: Chỉ hiển thị dưới sm */}
         <div className="sm:hidden flex flex-col space-y-2">
           <hr />
+          <NotificationDropdown compact onNavigate={onClose} />
           <NavLink
             to="/my-collections"
+            onClick={onClose}
             className="flex items-center rounded-md px-4 py-2 text-ink-secondary hover:bg-canvas hover:text-primary"
           >
             <span className="me-2">
@@ -132,6 +138,7 @@ const AccountButton = () => {
           </NavLink>
           <NavLink
             to="/upload-document"
+            onClick={onClose}
             className="flex items-center rounded-md px-4 py-2 text-ink-secondary hover:bg-canvas hover:text-primary"
           >
             <span className="me-2">
@@ -141,6 +148,7 @@ const AccountButton = () => {
           </NavLink>
           <NavLink
             to="/my-documents"
+            onClick={onClose}
             className="flex items-center rounded-md px-4 py-2 text-ink-secondary hover:bg-canvas hover:text-primary"
           >
             <span className="me-2">
@@ -150,6 +158,7 @@ const AccountButton = () => {
           </NavLink>
           <NavLink
             to="/account/profile"
+            onClick={onClose}
             className="flex items-center rounded-md px-4 py-2 text-ink-secondary hover:bg-canvas hover:text-primary"
           >
             <span className="me-2">
@@ -159,6 +168,7 @@ const AccountButton = () => {
           </NavLink>
           <NavLink
             to="/my-reports"
+            onClick={onClose}
             className="flex items-center rounded-md px-4 py-2 text-ink-secondary hover:bg-canvas hover:text-primary"
           >
             <span className="me-2">

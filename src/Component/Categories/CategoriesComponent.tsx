@@ -10,7 +10,11 @@ export interface Category {
   parent_id: string | null;
 }
 
-const CategoriesComponent: React.FC = () => {
+interface CategoriesComponentProps {
+  onNavigate?: () => void;
+}
+
+const CategoriesComponent: React.FC<CategoriesComponentProps> = ({ onNavigate }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
 
@@ -100,6 +104,7 @@ const CategoriesComponent: React.FC = () => {
                 <Accordion.Title className="bg-canvas text-ink-secondary hover:text-primary focus:shadow-focus focus:ring-0">
                   <NavLink
                     to={`/category/${parent.category_id}`}
+                    onClick={onNavigate}
                     className={({ isActive }) =>
                       `${isActive ? "text-primary" : ""}`
                     }
@@ -114,6 +119,7 @@ const CategoriesComponent: React.FC = () => {
                         <li key={child.category_id}>
                           <NavLink
                             to={`/category/${child.category_id}`}
+                            onClick={onNavigate}
                             className={({ isActive }) =>
                               `block transition-colors duration-200 ${
                                 isActive ? "text-primary" : "hover:text-primary"

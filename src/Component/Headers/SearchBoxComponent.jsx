@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 
-function SearchBoxComponent() {
+function SearchBoxComponent({ onSearchComplete }) {
     const [searchQuery, setSearchQuery] = useState("");
     const navigate = useNavigate();
   
@@ -17,6 +17,7 @@ function SearchBoxComponent() {
       e.preventDefault();
       if (searchQuery.trim()) {
         navigate(`/search/${encodeURIComponent(searchQuery.trim())}`); // Mã hóa URL
+        if (onSearchComplete) onSearchComplete();
         return;
       }
     };

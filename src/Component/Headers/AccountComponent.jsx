@@ -45,7 +45,7 @@ const AccountComponent = ({ onClose }) => {
             </div>
           </>
         ) : (
-          <AccountButton />
+          <AccountButton onClose={closeToggleMenu} />
         )}
       </div>
     );

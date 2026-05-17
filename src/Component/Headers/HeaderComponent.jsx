@@ -54,10 +54,10 @@ function HeaderComponent() {
         <Drawer.Header title="Menu" />
         <Drawer.Items>
           <div className="space-y-4">
-            <CategoriesComponent />
+            <CategoriesComponent onNavigate={closeMenu} />
             <AccountComponent onClose={closeMenu} />
             <hr />
-            <SearchBoxComponent />
+            <SearchBoxComponent onSearchComplete={closeMenu} />
           </div>
         </Drawer.Items>
       </Drawer>
