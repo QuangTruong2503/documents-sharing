@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /account
+Disallow: /my-documents
+Disallow: /my-collections
+Disallow: /my-reports
+
+Sitemap: https://docshare.id.vn/sitemap.xml

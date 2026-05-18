@@ -256,7 +256,7 @@ function LoginPage() {
           <a href="/" className="flex justify-center items-center gap-2">
             <img
               className="h-10 w-10"
-              src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/logo.svg"
+              src="/docshare-logo.png"
               alt="DocShare Logo"
             />
             <h1 className="font-display text-3xl font-bold tracking-[-0.03em] text-ink">DocShare</h1>

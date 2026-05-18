@@ -1,19 +1,15 @@
-import { useEffect } from "react";
+import SEO from "components/SEO";
 
-const PageTitle = ({ title, description }) => {
-  useEffect(() => {
-    document.title = `${title} - DocShare`;
-
-    let metaDescription = document.querySelector('meta[name="description"]');
-    if (!metaDescription) {
-      metaDescription = document.createElement("meta");
-      metaDescription.name = "description";
-      document.head.appendChild(metaDescription);
-    }
-    metaDescription.content = description;
-  }, [title, description]);
-
-  return null; // Không cần return JSX
-};
+const PageTitle = ({ title, description, url, image, type, robots, jsonLd }) => (
+  <SEO
+    title={title}
+    description={description}
+    url={url}
+    image={image}
+    type={type}
+    robots={robots}
+    jsonLd={jsonLd}
+  />
+);
 
 export default PageTitle;

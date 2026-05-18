@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Cookies from "js-cookie";
+import { Navigate } from "react-router-dom";
 import {
   BarChart3,
   Boxes,
@@ -7,9 +9,11 @@ import {
   ChevronRight,
   FileText,
   FolderTree,
+  Globe2,
   LayoutDashboard,
   Library,
   RefreshCw,
+  Save,
   Search,
   ShieldAlert,
   Tags,
@@ -19,6 +23,8 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import adminApi from "api/adminApi";
+import PageTitle from "components/PageTitle";
+import { normalizeUser } from "utils/userMapper";
 
 const PAGE_SIZE = 8;
 const TAXONOMY_PAGE_SIZE = 10;
@@ -32,6 +38,7 @@ const tabs = [
   { id: "tags", label: "Thẻ", icon: Tags },
   { id: "collections", label: "Bộ sưu tập", icon: Library },
   { id: "analytics", label: "Thống kê", icon: BarChart3 },
+  { id: "seo", label: "SEO", icon: Globe2 },
 ];
 
 const reportStatuses = ["Chờ giải quyết", "Đang xử lý", "Đã xử lý", "Từ chối"];
@@ -63,6 +70,21 @@ const formatDate = (value?: string) => {
 
 const formatNumber = (value?: number) => (value ?? 0).toLocaleString("vi-VN");
 const ownerName = (owner: any) => owner?.full_name || owner?.username || owner?.email || "-";
+
+const canAccessAdmin = () => {
+  const token = Cookies.get("token");
+  const userStr = Cookies.get("user");
+
+  if (!token || !userStr) return false;
+
+  try {
+    const user = normalizeUser(JSON.parse(userStr));
+    return user.role?.toLowerCase() === "admin";
+  } catch {
+    Cookies.remove("user");
+    return false;
+  }
+};
 
 function Badge({ children, tone = "neutral" }: { children: React.ReactNode; tone?: string }) {
   const tones: Record<string, string> = {
@@ -804,7 +826,190 @@ function AnalyticsView() {
   );
 }
 
-function Admin() {
+const defaultSeoForm = {
+  siteName: "DocShare",
+  siteUrl: "https://docshare.id.vn",
+  defaultTitle: "DocShare - Nền tảng chia sẻ tài liệu học tập",
+  defaultDescription:
+    "DocShare là nền tảng lưu trữ, tìm kiếm và chia sẻ tài liệu học tập miễn phí cho học sinh, sinh viên và cộng đồng tự học.",
+  defaultImage: "https://docshare.id.vn/og-image.svg",
+  locale: "vi_VN",
+};
+
+const defaultRobots = `User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /account
+Disallow: /my-documents
+Disallow: /my-collections
+Disallow: /my-reports
+
+Sitemap: https://docshare.id.vn/sitemap.xml`;
+
+function SeoView() {
+  const [form, setForm] = useState(defaultSeoForm);
+  const [robots, setRobots] = useState(defaultRobots);
+  const [routesText, setRoutesText] = useState("/\n/search/tai-lieu\n/login\n/register");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.allSettled([
+      adminApi.getSeoSettings(),
+      adminApi.getRobotsTxt(),
+      adminApi.getSitemapRoutes(),
+    ])
+      .then(([settingsResult, robotsResult, routesResult]) => {
+        if (settingsResult.status === "fulfilled") {
+          setForm({ ...defaultSeoForm, ...(unwrap(settingsResult.value) ?? {}) });
+        }
+        if (robotsResult.status === "fulfilled") {
+          const data = unwrap(robotsResult.value);
+          setRobots(data?.content ?? data ?? defaultRobots);
+        }
+        if (routesResult.status === "fulfilled") {
+          const routes = unwrap(routesResult.value);
+          if (Array.isArray(routes)) {
+            setRoutesText(routes.map((item: any) => item.path ?? item).join("\n"));
+          }
+        }
+      })
+      .catch(() => toast.error("Không tải được cấu hình SEO"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const updateField = (field: keyof typeof defaultSeoForm, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const saveSettings = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      await adminApi.updateSeoSettings(form);
+      toast.success("Đã lưu cấu hình SEO");
+    } catch {
+      toast.error("Backend chưa hỗ trợ lưu cấu hình SEO");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveRobots = async () => {
+    setSaving(true);
+    try {
+      await adminApi.updateRobotsTxt({ content: robots });
+      toast.success("Đã lưu robots.txt");
+    } catch {
+      toast.error("Backend chưa hỗ trợ cập nhật robots.txt");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const generateSitemap = async () => {
+    const routes = routesText
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    setSaving(true);
+    try {
+      await adminApi.updateSitemapRoutes({ routes });
+      await adminApi.generateSitemap();
+      toast.success("Đã yêu cầu generate sitemap");
+    } catch {
+      toast.error("Backend chưa hỗ trợ generate sitemap");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <LoadingState />;
+
+  return (
+    <div className="grid gap-5 xl:grid-cols-[1fr_420px]">
+      <form onSubmit={saveSettings} className="surface-card p-4">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Metadata mặc định</h2>
+            <p className="mt-1 text-sm text-ink-secondary">Dùng làm fallback cho title, description, canonical và Open Graph.</p>
+          </div>
+          <button className="btn-primary shrink-0" type="submit" disabled={saving}>
+            <Save className="mr-2 h-4 w-4" />
+            Lưu
+          </button>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-ink-secondary">Tên website</span>
+            <input className="input-field" value={form.siteName} onChange={(event) => updateField("siteName", event.target.value)} />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-ink-secondary">Domain chính</span>
+            <input className="input-field" value={form.siteUrl} onChange={(event) => updateField("siteUrl", event.target.value)} />
+          </label>
+          <label className="block md:col-span-2">
+            <span className="mb-1 block text-sm font-medium text-ink-secondary">Title mặc định</span>
+            <input className="input-field" value={form.defaultTitle} onChange={(event) => updateField("defaultTitle", event.target.value)} maxLength={70} />
+          </label>
+          <label className="block md:col-span-2">
+            <span className="mb-1 block text-sm font-medium text-ink-secondary">Meta description mặc định</span>
+            <textarea className="input-field min-h-28" value={form.defaultDescription} onChange={(event) => updateField("defaultDescription", event.target.value)} maxLength={180} />
+            <span className="mt-1 block text-xs text-neutral">{form.defaultDescription.length}/180 ký tự</span>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-ink-secondary">Ảnh Open Graph</span>
+            <input className="input-field" value={form.defaultImage} onChange={(event) => updateField("defaultImage", event.target.value)} />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-ink-secondary">Locale</span>
+            <input className="input-field" value={form.locale} onChange={(event) => updateField("locale", event.target.value)} />
+          </label>
+        </div>
+      </form>
+
+      <section className="surface-card p-4">
+        <h2 className="text-lg font-semibold">Preview social</h2>
+        <div className="mt-4 overflow-hidden rounded-md border border-line bg-white">
+          <img src={form.defaultImage || "/og-image.svg"} alt="Ảnh xem trước Open Graph của DocShare" className="h-44 w-full object-cover" />
+          <div className="p-4">
+            <p className="text-xs uppercase text-neutral">{form.siteUrl}</p>
+            <h3 className="mt-1 line-clamp-2 font-semibold text-ink">{form.defaultTitle}</h3>
+            <p className="mt-2 line-clamp-3 text-sm text-ink-secondary">{form.defaultDescription}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="surface-card p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">robots.txt</h2>
+          <button className="btn-secondary" onClick={saveRobots} disabled={saving}>
+            <Save className="mr-2 h-4 w-4" />
+            Lưu robots
+          </button>
+        </div>
+        <textarea className="input-field min-h-64 font-mono text-sm" value={robots} onChange={(event) => setRobots(event.target.value)} />
+      </section>
+
+      <section className="surface-card p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Sitemap routes</h2>
+          <button className="btn-primary" onClick={generateSitemap} disabled={saving}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Generate
+          </button>
+        </div>
+        <textarea className="input-field min-h-64 font-mono text-sm" value={routesText} onChange={(event) => setRoutesText(event.target.value)} placeholder="/&#10;/category/cong-nghe&#10;/document/example-id" />
+        <p className="mt-2 text-xs text-neutral">Mỗi dòng là một route. Backend nên bổ sung thêm URL động từ tài liệu, chuyên mục, bộ sưu tập công khai.</p>
+      </section>
+    </div>
+  );
+}
+
+function AdminContent() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const currentTab = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
 
@@ -817,53 +1022,71 @@ function Admin() {
     tags: <TaxonomyView type="tags" />,
     collections: <CollectionsView />,
     analytics: <AnalyticsView />,
+    seo: <SeoView />,
   }[activeTab];
 
   return (
-    <div className="min-h-screen py-2">
-      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="mb-2 inline-flex items-center gap-2 rounded-md bg-primary-soft px-3 py-1 text-sm font-medium text-primary">
-            <UserCog className="h-4 w-4" />
-            Admin
+    <>
+      <PageTitle
+        title="Quản trị"
+        description="Khu vực quản trị DocShare."
+        robots="noindex, nofollow"
+      />
+      <div className="min-h-screen py-2">
+        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-md bg-primary-soft px-3 py-1 text-sm font-medium text-primary">
+              <UserCog className="h-4 w-4" />
+              Admin
+            </div>
+            <h1 className="text-3xl font-bold tracking-[-0.03em] text-ink">Quản trị DocShare</h1>
+            <p className="mt-2 text-ink-secondary">Điều phối người dùng, tài liệu, báo cáo và dữ liệu phân loại.</p>
           </div>
-          <h1 className="text-3xl font-bold tracking-[-0.03em] text-ink">Quản trị DocShare</h1>
-          <p className="mt-2 text-ink-secondary">Điều phối người dùng, tài liệu, báo cáo và dữ liệu phân loại.</p>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-[240px_1fr]">
+          <aside className="surface-card h-fit p-2">
+            <nav className="grid gap-1">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = tab.id === activeTab;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm font-medium transition ${
+                      isActive ? "bg-primary text-white shadow-glow" : "text-ink-secondary hover:bg-gray-50 hover:text-ink"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+
+          <main>
+            <div className="mb-4 flex items-center gap-2">
+              <currentTab.icon className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">{currentTab.label}</h2>
+            </div>
+            {content}
+          </main>
         </div>
       </div>
-
-      <div className="grid gap-5 lg:grid-cols-[240px_1fr]">
-        <aside className="surface-card h-fit p-2">
-          <nav className="grid gap-1">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = tab.id === activeTab;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm font-medium transition ${
-                    isActive ? "bg-primary text-white shadow-glow" : "text-ink-secondary hover:bg-gray-50 hover:text-ink"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
-
-        <main>
-          <div className="mb-4 flex items-center gap-2">
-            <currentTab.icon className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-semibold">{currentTab.label}</h2>
-          </div>
-          {content}
-        </main>
-      </div>
-    </div>
+    </>
   );
+}
+
+function Admin() {
+  const hasAdminAccess = useMemo(() => canAccessAdmin(), []);
+
+  if (!hasAdminAccess) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <AdminContent />;
 }
 
 export default Admin;

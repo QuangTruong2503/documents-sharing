@@ -6,7 +6,12 @@ import PageTitle from 'components/PageTitle';
 const NotFound: React.FC = () => {
   return (
     <>
-      <PageTitle title="404 Not Found" description="Trang không tồn tại" />
+      <PageTitle
+        title="Không tìm thấy trang"
+        description="Trang bạn đang tìm kiếm không tồn tại hoặc đã được di chuyển."
+        url="https://docshare.id.vn/404"
+        robots="noindex, follow"
+      />
       <div className="min-h-screen flex items-center justify-center ">
       <div className="text-center items-center flex flex-col">
         <img alt='Not Found' src={`https://res.cloudinary.com/brandocloud/image/upload/v1742615401/DocShare/images/l4mluc06tc4b3yk8jfiz.svg`}></img>
