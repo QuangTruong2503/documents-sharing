@@ -25,6 +25,7 @@ interface DocumentData {
   title: string;
   description: string;
   file_url: string;
+  file_type?: string;
   is_public: boolean;
   download_count: number;
   uploaded_at: string;
@@ -41,6 +42,26 @@ interface Collection {
   is_public: boolean;
   documentCount: number;
 }
+
+const VIEWER_RETRY_DELAY = 8000;
+const MAX_VIEWER_RETRIES = 3;
+
+const isPdfDocument = (documentData: DocumentData) => {
+  const fileType = documentData.file_type?.toLowerCase() || "";
+  const fileUrl = documentData.file_url.toLowerCase().split("?")[0];
+
+  return fileType.includes("pdf") || fileUrl.endsWith(".pdf");
+};
+
+const buildGoogleViewerUrl = (fileUrl: string, attempt: number) => {
+  const params = new URLSearchParams({
+    url: fileUrl,
+    embedded: "true",
+    viewerAttempt: String(attempt),
+  });
+
+  return `https://docs.google.com/gview?${params.toString()}`;
+};
 
 const PdfViewer: React.FC = () => {
   const { documentID } = useParams<{ documentID: string }>();
@@ -72,6 +93,8 @@ const PdfViewer: React.FC = () => {
   const [selectedReason, setSelectedReason] = useState("");
   const [reportReason, setReportReason] = useState("");
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [viewerAttempt, setViewerAttempt] = useState(0);
+  const [viewerLoaded, setViewerLoaded] = useState(false);
 
   // Hàm lưu lịch sử truy cập vào Cookies
   const saveHistoryToCookies = (docID: string) => {
@@ -131,6 +154,28 @@ const PdfViewer: React.FC = () => {
 
     fetchDocumentData();
   }, [documentID]);
+
+  useEffect(() => {
+    setViewerAttempt(0);
+    setViewerLoaded(false);
+  }, [documentData?.file_url]);
+
+  useEffect(() => {
+    if (!documentData || viewerLoaded || viewerAttempt >= MAX_VIEWER_RETRIES) {
+      return;
+    }
+
+    const retryTimer = window.setTimeout(() => {
+      setViewerAttempt((currentAttempt) => currentAttempt + 1);
+    }, VIEWER_RETRY_DELAY);
+
+    return () => window.clearTimeout(retryTimer);
+  }, [documentData, viewerAttempt, viewerLoaded]);
+
+  const handleReloadViewer = () => {
+    setViewerLoaded(false);
+    setViewerAttempt((currentAttempt) => currentAttempt + 1);
+  };
 
   const handleDownloadDocument = async () => {
     setIsDownloading(true);
@@ -303,6 +348,11 @@ const PdfViewer: React.FC = () => {
     return <div className="text-center p-4">Không có dữ liệu tài liệu</div>;
   }
 
+  const viewerUrl = isPdfDocument(documentData)
+    ? documentData.file_url
+    : buildGoogleViewerUrl(documentData.file_url, viewerAttempt);
+  const viewerFallbackUrl = documentData.file_url;
+
   return (
     <>
       <PageTitle
@@ -456,12 +506,49 @@ const PdfViewer: React.FC = () => {
 
         {/* Main Content */}
         <div className="surface-card w-full p-4 md:w-3/4 md:p-6">
-          <div className="h-[600px] max-h-svh w-full rounded-lg border border-line">
+          <div className="relative h-[600px] max-h-svh w-full overflow-hidden rounded-lg border border-line">
+            {!viewerLoaded && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-surface/95 p-6 text-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-primary" />
+                <div>
+                  <p className="font-medium text-ink">Đang tải tài liệu...</p>
+                  <p className="mt-1 text-sm text-ink-secondary">
+                    Nếu Google Viewer phản hồi chậm, hệ thống sẽ tự thử lại.
+                  </p>
+                </div>
+              </div>
+            )}
             <iframe
-              src={`https://docs.google.com/gview?url=${documentData.file_url}&embedded=true`}
-              className="w-full h-full rounded-lg"
+              key={`${documentData.document_id}-${viewerAttempt}`}
+              src={viewerUrl}
+              className="h-full w-full rounded-lg"
               title="PDF Viewer"
+              onLoad={() => setViewerLoaded(true)}
             />
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-ink-secondary">
+            <span>
+              {viewerLoaded
+                ? "Tài liệu đã được tải."
+                : `Đang thử tải lần ${viewerAttempt + 1}/${MAX_VIEWER_RETRIES + 1}.`}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleReloadViewer}
+                className="btn-secondary px-3 py-2"
+              >
+                Tải lại khung xem
+              </button>
+              <a
+                href={viewerFallbackUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-secondary px-3 py-2"
+              >
+                Mở file gốc
+              </a>
+            </div>
           </div>
         </div>
       </div>
