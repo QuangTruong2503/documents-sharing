@@ -1,6 +1,6 @@
 import * as signalR from "@microsoft/signalr";
 import Cookies from "js-cookie";
-import config from "../config/config";
+import config from "config/config";
 
 const subscribers = new Set();
 let connection = null;
