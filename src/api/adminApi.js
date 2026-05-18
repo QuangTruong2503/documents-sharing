@@ -37,6 +37,14 @@ const adminApi = {
   deleteCollection: (collectionId) => axiosInstance.delete(`/admin/collections/${collectionId}`),
 
   getDocumentAnalytics: (params) => axiosInstance.get("/admin/analytics/documents", { params: cleanParams(params) }),
+
+  getSeoSettings: () => axiosInstance.get("/admin/seo/settings"),
+  updateSeoSettings: (data) => axiosInstance.put("/admin/seo/settings", data),
+  getSitemapRoutes: () => axiosInstance.get("/admin/seo/sitemap-routes"),
+  updateSitemapRoutes: (data) => axiosInstance.put("/admin/seo/sitemap-routes", data),
+  generateSitemap: () => axiosInstance.post("/admin/seo/sitemap/generate"),
+  getRobotsTxt: () => axiosInstance.get("/admin/seo/robots"),
+  updateRobotsTxt: (data) => axiosInstance.put("/admin/seo/robots", data),
 };
 
 export default adminApi;
