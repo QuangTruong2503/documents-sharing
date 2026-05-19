@@ -1,5 +1,5 @@
 import "styles/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastContainer, Zoom } from "react-toastify";
 
@@ -13,10 +13,12 @@ import ForgotPassword from "pages/Auth/ForgotPassword.js";
 import ScrollToTopComponent from "components/ScrollToTopComponent.tsx";
 import AccountPage from "pages/Account/AccountPage.tsx";
 import UploadDocument from "pages/Documents/DocumentUpload/UploadDocument.tsx";
-import MyDocuments from "pages/Documents/MyDocuments/MyDocuments.tsx";
 import DocumentDetail from "pages/Documents/DocumentDetail/DocumentDetail.tsx";
 import MyCollections from "pages/Collections/MyCollections.tsx";
 import CollectionDetail from "pages/Collections/CollectionDetail.tsx";
+import MyLibraryPage from "pages/Library/MyLibraryPage.tsx";
+import FolderDetailPage from "pages/Folders/FolderDetailPage.tsx";
+import MyFolderInvitesPage from "pages/Folders/MyFolderInvitesPage.tsx";
 import NotFound from "pages/NotFound.tsx";
 import VerifyEmail from "pages/Verification/VerifyEmail.tsx";
 import ConfirmChangeEmail from "pages/Verification/ConfirmChangeEmail.tsx";
@@ -107,8 +109,17 @@ function App() {
                   <Route path="/account/*" element={<AccountPage />} />
                   {/* Document */}
                   <Route path="/upload-document" element={<UploadDocument />} />
-                  <Route path="/my-documents" element={<MyDocuments />} />
-                  <Route path="/my-documents/page/:page" element={<MyDocuments />} />
+                  <Route path="/library" element={<MyLibraryPage />} />
+                  <Route path="/documents" element={<Navigate to="/library" replace />} />
+                  <Route path="/documents/my" element={<Navigate to="/library" replace />} />
+                  <Route path="/documents/shared-with-me" element={<Navigate to="/library?area=shared" replace />} />
+                  <Route path="/documents/team" element={<Navigate to="/library?area=team" replace />} />
+                  <Route path="/documents/recent" element={<Navigate to="/library?area=recent" replace />} />
+                  <Route path="/documents/favorites" element={<Navigate to="/library?area=favorites" replace />} />
+                  <Route path="/documents/shared-links" element={<Navigate to="/library?area=shared-links" replace />} />
+                  <Route path="/documents/trash" element={<Navigate to="/library?area=trash" replace />} />
+                  <Route path="/my-documents" element={<Navigate to="/library?tab=documents" replace />} />
+                  <Route path="/my-documents/page/:page" element={<Navigate to="/library?tab=documents" replace />} />
                   <Route path="/document/:documentID" element={<DocumentDetail />} />
                   <Route path="/public-profile/:userID" element={<PublicProfile />} />
                   <Route path="/my-reports" element={<MyReports />} />
@@ -119,6 +130,25 @@ function App() {
                   {/* Collections */}
                   <Route path="/my-collections" element={<MyCollections />} />
                   <Route path="/collection/:collectionId" element={<CollectionDetail />} />
+                  {/* Folders */}
+                  <Route path="/folders" element={<Navigate to="/library?tab=folders" replace />} />
+                  <Route path="/folders/my" element={<Navigate to="/library?tab=folders" replace />} />
+                  <Route path="/folders/shared-with-me" element={<Navigate to="/library?tab=shared" replace />} />
+                  <Route path="/folders/:folderId" element={<FolderDetailPage />} />
+                  <Route path="/folders/:folderId/documents" element={<FolderDetailPage />} />
+                  <Route path="/folders/:folderId/members" element={<FolderDetailPage />} />
+                  <Route path="/folders/:folderId/invites" element={<FolderDetailPage />} />
+                  <Route path="/documents/folders/:folderId" element={<FolderDetailPage />} />
+                  <Route path="/documents/folders/:folderId/documents" element={<FolderDetailPage />} />
+                  <Route path="/documents/folders/:folderId/members" element={<FolderDetailPage />} />
+                  <Route path="/documents/folders/:folderId/invites" element={<FolderDetailPage />} />
+                  <Route path="/documents/files/:documentID" element={<DocumentDetail />} />
+                  <Route path="/library/folders/:folderId" element={<FolderDetailPage />} />
+                  <Route path="/library/folders/:folderId/documents" element={<FolderDetailPage />} />
+                  <Route path="/library/folders/:folderId/members" element={<FolderDetailPage />} />
+                  <Route path="/library/folders/:folderId/invites" element={<FolderDetailPage />} />
+                  <Route path="/folder-invites" element={<MyFolderInvitesPage />} />
+                  <Route path="/folder-invites/:inviteId" element={<MyFolderInvitesPage />} />
                 </Routes>
                 {/* ChatBoxAI */}
                 <ChatBoxAI
