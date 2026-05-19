@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import documentsApi from "api/documentsApi";
 import { toast } from "react-toastify";
-import Loader from "../Loaders/Loader";
+import { RefreshCw } from "lucide-react";
 
 interface EditModalProps {
   documentID: number | null;
@@ -85,7 +85,7 @@ const EditModal: React.FC<EditModalProps> = ({
       >
         <div className="bg-white rounded-lg p-6 w-full max-w-md">
           <div className="text-center flex items-center justify-center flex-col gap-2">
-            <Loader />
+            <RefreshCw className="h-7 w-7 animate-spin text-primary" />
             {error ? (
               <p className="text-red-500">{error}</p>
             ) : (

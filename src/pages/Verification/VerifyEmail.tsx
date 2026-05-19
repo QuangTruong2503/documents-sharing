@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { RefreshCw } from "lucide-react";
 import verificationsApi from "api/verificationsApi";
-import Loader from "components/Loaders/Loader";
 import PageTitle from "components/PageTitle";
 
 const VerifyEmail: React.FC = () => {
@@ -49,7 +49,7 @@ const VerifyEmail: React.FC = () => {
 
           {loading ? (
             <div className="flex flex-col items-center">
-              <Loader />
+              <RefreshCw className="h-7 w-7 animate-spin text-primary" />
               <p className="text-lg text-gray-600 mt-2">Đang xác thực...</p>
             </div>
           ) : (

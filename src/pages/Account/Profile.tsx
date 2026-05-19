@@ -13,8 +13,8 @@ import {
   faUser,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { RefreshCw } from "lucide-react";
 import LoaderButton from "components/Loaders/LoaderButton";
-import Loaders from "components/Loaders/Loader.js";
 import PageTitle from "components/PageTitle.js";
 import userApi from "api/usersApi";
 import verificationsApi from "api/verificationsApi";
@@ -680,7 +680,7 @@ function Profile() {
   if (user === null) {
     return (
       <div className="flex min-h-96 items-center justify-center">
-        <Loaders />
+        <RefreshCw className="h-7 w-7 animate-spin text-primary" />
       </div>
     );
   }

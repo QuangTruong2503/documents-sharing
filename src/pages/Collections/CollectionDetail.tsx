@@ -3,10 +3,10 @@ import { NavLink, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faLock, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { RefreshCw } from "lucide-react";
 import collectionsApi from "api/collectionsApi.js";
 import usersApi from "api/usersApi.js";
 import PageTitle from "components/PageTitle.js";
-import Loader from "components/Loaders/Loader.js";
 import { formatDateToVN } from "utils/formatDateToVN";
 import Cookies from "js-cookie";
 
@@ -131,7 +131,7 @@ const CollectionDetail: React.FC = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-16">
-        <Loader />
+        <RefreshCw className="h-7 w-7 animate-spin text-primary" />
         <p className="text-sm text-ink-secondary">Đang tải bộ sưu tập...</p>
       </div>
     );

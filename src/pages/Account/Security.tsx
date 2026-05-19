@@ -1,10 +1,10 @@
 import React, { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { toast } from "react-toastify";
+import { RefreshCw } from "lucide-react";
 
 import TwoFAVerifyButton from "components/Users/TwoFAVerifyButton.tsx";
 import VerifyEmailButton from "components/Users/VerifyEmailButton.tsx";
-import Loaders from "components/Loaders/Loader";
 import userApi from "api/usersApi";
 import { normalizeUser } from "utils/userMapper";
 
@@ -43,7 +43,7 @@ function Security() {
   if (!user) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <Loaders />
+        <RefreshCw className="h-7 w-7 animate-spin text-primary" />
       </div>
     );
   }

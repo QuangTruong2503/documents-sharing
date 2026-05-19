@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import collectionsApi from 'api/collectionsApi.js';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPen, faShare, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { RefreshCw } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { NavLink } from 'react-router-dom';
 import PageTitle from 'components/PageTitle.js';
-import Loader from 'components/Loaders/Loader.js';
 
 interface Collection {
   collection_id: number;
@@ -129,9 +129,9 @@ const MyCollections: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="flex flex-col justify-center items-center my-12">
-            <Loader />
-            <p className="ml-4 text-gray-600">Đang tải bộ sưu tập...</p>
+          <div className="flex flex-col justify-center items-center gap-3 my-12">
+            <RefreshCw className="h-7 w-7 animate-spin text-primary" />
+            <p className="text-gray-600">Đang tải bộ sưu tập...</p>
           </div>
         ) : collections.length < 1 ? (
           <p className="text-gray-500">Hiện chưa có bộ sưu tập.</p>
