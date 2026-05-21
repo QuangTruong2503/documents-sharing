@@ -39,13 +39,70 @@ export const toDateTimeLocalValue = (value?: string | null) => {
 export const canEvery = (items: WorkspaceItem[], permission: keyof NonNullable<WorkspaceItem["permissions"]>) =>
   items.length > 0 && items.every((item) => item.permissions?.[permission] !== false);
 
+const mimeExtensionMap: Record<string, string> = {
+  "application/pdf": "pdf",
+  "application/msword": "doc",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+  "application/vnd.ms-excel": "xls",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+  "application/vnd.ms-powerpoint": "ppt",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "text/csv": "csv",
+  "text/plain": "txt",
+};
+
+const getHeaderValue = (headers: any, key: string) => {
+  if (!headers) return "";
+  if (typeof headers.get === "function") return headers.get(key) || headers.get(key.toLowerCase()) || "";
+  return headers[key] || headers[key.toLowerCase()] || "";
+};
+
+const getFilenameFromContentDisposition = (contentDisposition: string) => {
+  const encodedMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (encodedMatch?.[1]) {
+    try {
+      return decodeURIComponent(encodedMatch[1].trim().replace(/^"|"$/g, ""));
+    } catch {
+      return encodedMatch[1].trim().replace(/^"|"$/g, "");
+    }
+  }
+
+  const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  return filenameMatch?.[1]?.trim() || "";
+};
+
+const hasFileExtension = (fileName: string) => /\.[^./\\]+$/.test(fileName);
+
+const getExtensionFromDocument = (document: WorkspaceItem, contentType: string) => {
+  const extension = document.extension?.replace(/^\./, "").trim();
+  if (extension && !extension.includes("/")) return extension;
+
+  const mimeType = (document.mimeType || contentType || "").split(";")[0].trim().toLowerCase();
+  return mimeExtensionMap[mimeType] || "";
+};
+
+const getWorkspaceDownloadFileName = (document: WorkspaceItem, response: any, contentType: string) => {
+  const headerFileName = getFilenameFromContentDisposition(getHeaderValue(response.headers, "content-disposition"));
+  const baseFileName = headerFileName || document.name || document.title || `document-${document.id}`;
+
+  if (hasFileExtension(baseFileName)) return baseFileName;
+
+  const extension = getExtensionFromDocument(document, contentType);
+  return extension ? `${baseFileName}.${extension}` : baseFileName;
+};
+
 export const downloadWorkspaceDocument = async (document: WorkspaceItem) => {
   const response = await workspaceLibraryApi.downloadDocument(document.id);
-  const blob = new Blob([response.data]);
+  const responseContentType = getHeaderValue(response.headers, "content-type");
+  const blobType = responseContentType || document.mimeType || response.data?.type || "";
+  const blob = new Blob([response.data], blobType ? { type: blobType } : undefined);
   const url = window.URL.createObjectURL(blob);
   const link = window.document.createElement("a");
   link.href = url;
-  link.download = document.name || document.title || `document-${document.id}`;
+  link.download = getWorkspaceDownloadFileName(document, response, blobType);
   window.document.body.appendChild(link);
   link.click();
   link.remove();

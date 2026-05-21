@@ -49,6 +49,7 @@ import {
   WorkspacePagination,
   workspaceFailureMessage,
 } from "utils/workspaceLibraryHelpers.ts";
+import { copyTextToClipboard, copyWorkspaceItemLink } from "utils/workspaceItemLinks.ts";
 import { apiMessage } from "pages/Folders/FolderListPage.tsx";
 
 type ViewMode = "grid" | "list";
@@ -240,6 +241,7 @@ const WorkspaceToolbar = ({
   onRename,
   onMove,
   onCopy,
+  onCopyLink,
   onMerge,
   onShare,
   onFavorite,
@@ -258,6 +260,7 @@ const WorkspaceToolbar = ({
   onRename: () => void;
   onMove: () => void;
   onCopy: () => void;
+  onCopyLink: () => void;
   onMerge: () => void;
   onShare: () => void;
   onFavorite: () => void;
@@ -268,8 +271,6 @@ const WorkspaceToolbar = ({
   const selectedCount = selectedItems.length;
   const single = selectedCount === 1;
   const allDocuments = selectedItems.length > 0 && selectedItems.every((item) => item.type === "document");
-  const canCreate = area === "my" && folderPermissions.canCreateFolder !== false;
-  const canUpload = area === "my" && folderPermissions.canUpload !== false;
   const canRename = single && selectedItems[0].permissions?.canRename !== false;
   const canMove = canEvery(selectedItems, "canMove");
   const canCopy = canEvery(selectedItems, "canCopy");
@@ -295,6 +296,12 @@ const WorkspaceToolbar = ({
             <Copy className="mr-2 h-4 w-4" />
             Sao chép
           </button>
+          {single && (
+            <button type="button" onClick={onCopyLink} className="btn-secondary px-3 py-2">
+              <Link2 className="mr-2 h-4 w-4" />
+              Copy link
+            </button>
+          )}
           {allDocuments && selectedCount > 1 && (
             <button type="button" onClick={onMerge} className="btn-secondary px-3 py-2">
               <Folder className="mr-2 h-4 w-4" />
@@ -336,12 +343,7 @@ const WorkspaceToolbar = ({
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <WorkspaceCreateDropdown
-            canUpload={canUpload}
-            canCreateFolder={canCreate}
-            onUpload={onUpload}
-            onCreateFolder={onCreate}
-          />
+          <></>
         </div>
       )}
       <div className="inline-flex w-fit rounded-md border border-line bg-canvas p-1">
@@ -366,39 +368,87 @@ const WorkspaceToolbar = ({
   );
 };
 
+const ItemActionDropdown = ({
+  item,
+  onCopyLink,
+  onRename,
+  onMove,
+  onTrash,
+}: {
+  item: WorkspaceItem;
+  onCopyLink: () => void;
+  onRename: () => void;
+  onMove: () => void;
+  onTrash: () => void;
+}) => {
+  const permissions = getPermissions(item);
+
+  return (
+    <details className="group/menu relative">
+      <summary className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-md bg-surface/95 text-ink-secondary hover:text-primary [&::-webkit-details-marker]:hidden" title="Thao tác">
+        <MoreHorizontal className="h-4 w-4" />
+      </summary>
+      <div className="absolute right-0 top-10 z-30 w-44 overflow-hidden rounded-md border border-line bg-surface py-1 shadow-card">
+        <button type="button" onClick={onCopyLink} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary">
+          <Link2 className="h-4 w-4" />
+          Copy link
+        </button>
+        <button type="button" onClick={onRename} disabled={permissions.canRename === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40">
+          <Pencil className="h-4 w-4" />
+          Đổi tên
+        </button>
+        <button type="button" onClick={onMove} disabled={permissions.canMove === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40">
+          <MoveRight className="h-4 w-4" />
+          Di chuyển
+        </button>
+        <button type="button" onClick={onTrash} disabled={permissions.canDelete === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-danger/10 disabled:pointer-events-none disabled:opacity-40">
+          <Trash2 className="h-4 w-4" />
+          Xóa
+        </button>
+      </div>
+    </details>
+  );
+};
+
 const WorkspaceItemCard = ({
   item,
   selected,
   onSelect,
   onPreview,
-  onMenu,
+  onCopyLink,
+  onRename,
+  onMove,
+  onTrash,
 }: {
   item: WorkspaceItem;
   selected: boolean;
   onSelect: () => void;
   onPreview: () => void;
-  onMenu: () => void;
+  onCopyLink: () => void;
+  onRename: () => void;
+  onMove: () => void;
+  onTrash: () => void;
 }) => {
   const isFolder = item.type === "folder";
   const ext = getExtension(item);
   const Icon = isFolder ? Folder : fileIconMap[ext] || File;
 
   return (
-    <article className={`rounded-lg border bg-surface transition hover:-translate-y-0.5 hover:shadow-card ${selected ? "border-primary ring-2 ring-primary/20" : "border-line"}`}>
+    <article className={`group rounded-lg border bg-surface transition hover:-translate-y-0.5 hover:shadow-card ${selected ? "border-primary ring-2 ring-primary/20" : "border-line"}`}>
       <div className="relative">
         <button
           type="button"
           onClick={onSelect}
           className={`absolute left-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-md border ${
             selected ? "border-primary bg-primary text-white" : "border-line bg-surface/95 text-ink-secondary hover:text-primary"
-          }`}
+          } ${selected ? "opacity-100" : "opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"}`}
           aria-label={selected ? "Bỏ chọn mục" : "Chọn mục"}
         >
           {selected ? <Check className="h-4 w-4" /> : <span className="h-3.5 w-3.5 rounded-sm border border-current" />}
         </button>
-        <button type="button" onClick={onMenu} className="absolute right-3 top-3 z-10 rounded-md bg-surface/95 p-2 text-ink-secondary hover:text-primary" title="Thao tác">
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
+        <div className="absolute right-3 top-3 z-20 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+          <ItemActionDropdown item={item} onCopyLink={onCopyLink} onRename={onRename} onMove={onMove} onTrash={onTrash} />
+        </div>
         {isFolder ? (
           <NavLink to={`/library/folders/${item.id}`} className="flex h-36 items-center justify-center bg-primary-soft">
             <Icon className="h-14 w-14 text-primary" />
@@ -446,16 +496,22 @@ const WorkspaceItemList = ({
   selectedIds,
   onToggle,
   onPreview,
-  onMenu,
+  onCopyLink,
+  onRename,
+  onMove,
+  onTrash,
 }: {
   items: WorkspaceItem[];
   selectedIds: string[];
   onToggle: (item: WorkspaceItem) => void;
   onPreview: (item: WorkspaceItem) => void;
-  onMenu: (item: WorkspaceItem) => void;
+  onCopyLink: (item: WorkspaceItem) => void;
+  onRename: (item: WorkspaceItem) => void;
+  onMove: (item: WorkspaceItem) => void;
+  onTrash: (item: WorkspaceItem) => void;
 }) => (
   <div className="overflow-x-auto rounded-lg border border-line bg-surface">
-    <div className="grid min-w-[760px] grid-cols-[44px_1fr_120px_120px_150px_48px] gap-3 border-b border-line px-4 py-3 text-xs font-semibold uppercase text-ink-secondary">
+    <div className="grid min-w-[800px] grid-cols-[44px_1fr_120px_120px_150px_88px] gap-3 border-b border-line px-4 py-3 text-xs font-semibold uppercase text-ink-secondary">
       <span />
       <span>Tên</span>
       <span>Loại</span>
@@ -467,11 +523,11 @@ const WorkspaceItemList = ({
       const selected = selectedIds.includes(`${item.type}-${item.id}`);
       const Icon = item.type === "folder" ? Folder : fileIconMap[getExtension(item)] || File;
       return (
-        <div key={`${item.type}-${item.id}`} className="grid min-w-[760px] grid-cols-[44px_1fr_120px_120px_150px_48px] gap-3 border-b border-line px-4 py-3 last:border-b-0 hover:bg-canvas">
+        <div key={`${item.type}-${item.id}`} className="group grid min-w-[800px] grid-cols-[44px_1fr_120px_120px_150px_88px] gap-3 border-b border-line px-4 py-3 last:border-b-0 hover:bg-canvas">
           <button
             type="button"
             onClick={() => onToggle(item)}
-            className={`flex h-8 w-8 items-center justify-center rounded-md border ${selected ? "border-primary bg-primary text-white" : "border-line text-ink-secondary"}`}
+            className={`flex h-8 w-8 items-center justify-center rounded-md border ${selected ? "border-primary bg-primary text-white opacity-100" : "border-line text-ink-secondary opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"}`}
             aria-label={selected ? "Bỏ chọn mục" : "Chọn mục"}
           >
             {selected ? <Check className="h-4 w-4" /> : <span className="h-3.5 w-3.5 rounded-sm border border-current" />}
@@ -493,9 +549,9 @@ const WorkspaceItemList = ({
           <span className="self-center text-sm text-ink-secondary">{item.type === "folder" ? "Folder" : getExtension(item).toUpperCase()}</span>
           <span className="self-center text-sm text-ink-secondary">{item.type === "folder" ? formatSize(item.totalSize) : formatSize(item.size)}</span>
           <span className="self-center text-sm text-ink-secondary">{item.updatedAt ? formatDateToVN(item.updatedAt) : "--"}</span>
-          <button type="button" onClick={() => onMenu(item)} className="rounded-md p-2 text-ink-secondary hover:text-primary" title="Thao tác">
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
+          <div className="flex items-center justify-end opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+            <ItemActionDropdown item={item} onCopyLink={() => onCopyLink(item)} onRename={() => onRename(item)} onMove={() => onMove(item)} onTrash={() => onTrash(item)} />
+          </div>
         </div>
       );
     })}
@@ -536,7 +592,7 @@ const PreviewDrawer = ({ item, onClose, onShare }: { item: WorkspaceItem | null;
   };
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-md border-l border-line bg-surface shadow-card lg:absolute lg:inset-y-0 lg:right-0">
+    <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-md border-l border-line bg-surface shadow-card lg:inset-y-0 lg:right-0">
       <div className="flex items-center justify-between border-b border-line p-4">
         <div className="min-w-0">
           <p className="truncate font-bold text-ink">{getItemName(document)}</p>
@@ -885,7 +941,7 @@ const ShareDialog = ({ item, onClose }: { item: WorkspaceItem; onClose: () => vo
       await save();
       return;
     }
-    await navigator.clipboard.writeText(settings.shareUrl);
+    await copyTextToClipboard(settings.shareUrl);
     toast.success("Đã sao chép liên kết.");
   };
 
@@ -1140,11 +1196,20 @@ const MyLibraryPage: React.FC = () => {
     setDialog({ type, item: selectedItems[0] } as DialogState);
   };
 
-  const trashSelected = async () => {
-    if (selectedItems.length === 0) return;
-    if (!window.confirm(`Chuyển ${selectedItems.length} mục vào thùng rác?`)) return;
+  const copyItemLink = async (item: WorkspaceItem) => {
     try {
-      const response = await workspaceLibraryApi.trashItems(toPayloadItems(selectedItems));
+      await copyWorkspaceItemLink(item);
+      toast.success(`Đã sao chép link ${item.type === "folder" ? "thư mục" : "tài liệu"}.`);
+    } catch {
+      toast.error("Không thể sao chép link.");
+    }
+  };
+
+  const trashItems = async (itemsToTrash: WorkspaceItem[]) => {
+    if (itemsToTrash.length === 0) return;
+    if (!window.confirm(`Chuyển ${itemsToTrash.length} mục vào thùng rác?`)) return;
+    try {
+      const response = await workspaceLibraryApi.trashItems(toPayloadItems(itemsToTrash));
       if (response.failed?.length) {
         toast.info(workspaceFailureMessage(response, "Một số mục chưa thể chuyển vào thùng rác."));
       } else {
@@ -1154,6 +1219,13 @@ const MyLibraryPage: React.FC = () => {
     } catch (error: any) {
       toast.error(apiMessage(error, "Không thể xóa mục đã chọn."));
     }
+  };
+
+  const trashSelected = () => trashItems(selectedItems);
+
+  const moveSingleItem = (item: WorkspaceItem) => {
+    setSelectedKeys([`${item.type}-${item.id}`]);
+    setDialog({ type: "move", mode: "move", items: [item] });
   };
 
   const restoreSelected = async () => {
@@ -1264,6 +1336,7 @@ const MyLibraryPage: React.FC = () => {
                 onRename={() => openSingleAction("rename")}
                 onMove={() => setDialog({ type: "move", mode: "move", items: selectedItems })}
                 onCopy={() => setDialog({ type: "move", mode: "copy", items: selectedItems })}
+                onCopyLink={() => selectedItems.length === 1 && copyItemLink(selectedItems[0])}
                 onMerge={() => setDialog({ type: "merge", items: selectedItems })}
                 onShare={() => openSingleAction("share")}
                 onFavorite={favoriteSelected}
@@ -1273,7 +1346,7 @@ const MyLibraryPage: React.FC = () => {
               />
             )}
 
-            <div className={`p-4 ${previewItem ? "lg:pr-[28rem]" : ""}`}>
+            <div className="p-4">
               {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                   <RefreshCw className="h-7 w-7 animate-spin text-primary" />
@@ -1298,10 +1371,10 @@ const MyLibraryPage: React.FC = () => {
                       selected={selectedKeys.includes(`${item.type}-${item.id}`)}
                       onSelect={() => toggleSelection(item)}
                       onPreview={() => setPreviewItem(item)}
-                      onMenu={() => {
-                        setSelectedKeys([`${item.type}-${item.id}`]);
-                        setDialog({ type: "share", item });
-                      }}
+                      onCopyLink={() => copyItemLink(item)}
+                      onRename={() => setDialog({ type: "rename", item })}
+                      onMove={() => moveSingleItem(item)}
+                      onTrash={() => trashItems([item])}
                     />
                   ))}
                 </div>
@@ -1311,10 +1384,10 @@ const MyLibraryPage: React.FC = () => {
                   selectedIds={selectedKeys}
                   onToggle={toggleSelection}
                   onPreview={setPreviewItem}
-                  onMenu={(item) => {
-                    setSelectedKeys([`${item.type}-${item.id}`]);
-                    setDialog({ type: "share", item });
-                  }}
+                  onCopyLink={copyItemLink}
+                  onRename={(item) => setDialog({ type: "rename", item })}
+                  onMove={moveSingleItem}
+                  onTrash={(item) => trashItems([item])}
                 />
               )}
               <PaginationComponent
