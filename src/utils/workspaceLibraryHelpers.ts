@@ -29,6 +29,14 @@ export const workspaceFailureMessage = (response: any, fallback: string) => {
   return `${first.message || fallback}${extra}`;
 };
 
+export const workspaceBatchMessage = (response: any, successKey: string, successMessage: string, partialFallback: string) => {
+  const failedCount = response?.failed?.length || 0;
+  const successCount = response?.[successKey]?.length || 0;
+  if (failedCount === 0) return successMessage;
+  const failureMessage = workspaceFailureMessage(response, partialFallback);
+  return successCount > 0 ? `${successCount} mục thành công. ${failureMessage}` : failureMessage;
+};
+
 export const toDateTimeLocalValue = (value?: string | null) => {
   if (!value) return "";
   const date = new Date(value);

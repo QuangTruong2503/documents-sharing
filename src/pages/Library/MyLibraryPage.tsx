@@ -39,6 +39,8 @@ import workspaceLibraryApi, {
 } from "api/workspaceLibraryApi.ts";
 import PaginationComponent from "components/Pagination/Pagination.tsx";
 import WorkspaceCreateDropdown from "components/Workspace/WorkspaceCreateDropdown.tsx";
+import WorkspaceConfirmDialog from "components/Workspace/WorkspaceConfirmDialog.tsx";
+import WorkspaceLoadingSkeleton from "components/Workspace/WorkspaceLoadingSkeleton.tsx";
 import { formatDateToVN } from "utils/formatDateToVN";
 import {
   canEvery,
@@ -46,6 +48,7 @@ import {
   downloadWorkspaceDocument,
   normalizeWorkspacePagination,
   toDateTimeLocalValue,
+  workspaceBatchMessage,
   WorkspacePagination,
   workspaceFailureMessage,
 } from "utils/workspaceLibraryHelpers.ts";
@@ -54,6 +57,15 @@ import { apiMessage } from "pages/Folders/FolderListPage.tsx";
 
 type ViewMode = "grid" | "list";
 type LibraryArea = "my" | "shared" | "team" | "recent" | "favorites" | "shared-links" | "trash";
+type ConfirmActionState =
+  | {
+      title: string;
+      message: string;
+      confirmLabel: string;
+      variant?: "danger" | "primary";
+      onConfirm: () => Promise<void>;
+    }
+  | null;
 type DialogState =
   | { type: "create-folder" }
   | { type: "upload" }
@@ -282,44 +294,6 @@ const WorkspaceToolbar = ({
       {selectedCount > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-ink">{selectedCount} mục đã chọn</span>
-          {single && (
-            <button type="button" onClick={onRename} disabled={!canRename} className="btn-secondary px-3 py-2">
-              <Pencil className="mr-2 h-4 w-4" />
-              Đổi tên
-            </button>
-          )}
-          <button type="button" onClick={onMove} disabled={!canMove} className="btn-secondary px-3 py-2">
-            <MoveRight className="mr-2 h-4 w-4" />
-            Di chuyển
-          </button>
-          <button type="button" onClick={onCopy} disabled={!canCopy} className="btn-secondary px-3 py-2">
-            <Copy className="mr-2 h-4 w-4" />
-            Sao chép
-          </button>
-          {single && (
-            <button type="button" onClick={onCopyLink} className="btn-secondary px-3 py-2">
-              <Link2 className="mr-2 h-4 w-4" />
-              Copy link
-            </button>
-          )}
-          {allDocuments && selectedCount > 1 && (
-            <button type="button" onClick={onMerge} className="btn-secondary px-3 py-2">
-              <Folder className="mr-2 h-4 w-4" />
-              Gom vào thư mục
-            </button>
-          )}
-          {single && (
-            <button type="button" onClick={onShare} disabled={!canShare} className="btn-secondary px-3 py-2">
-              <Share2 className="mr-2 h-4 w-4" />
-              Chia sẻ
-            </button>
-          )}
-          {single && (
-            <button type="button" onClick={onFavorite} className="btn-secondary px-3 py-2">
-              <Heart className="mr-2 h-4 w-4" />
-              Yêu thích
-            </button>
-          )}
           {area === "trash" ? (
             <>
               <button type="button" onClick={onRestore} className="btn-secondary px-3 py-2">
@@ -332,10 +306,50 @@ const WorkspaceToolbar = ({
               </button>
             </>
           ) : (
-            <button type="button" onClick={onTrash} disabled={!canDelete} className="btn-secondary border-danger px-3 py-2 text-danger hover:border-danger hover:text-danger">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Xóa
-            </button>
+            <>
+              {single && (
+                <button type="button" onClick={onRename} disabled={!canRename} className="btn-secondary px-3 py-2">
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Đổi tên
+                </button>
+              )}
+              <button type="button" onClick={onMove} disabled={!canMove} className="btn-secondary px-3 py-2">
+                <MoveRight className="mr-2 h-4 w-4" />
+                Di chuyển
+              </button>
+              <button type="button" onClick={onCopy} disabled={!canCopy} className="btn-secondary px-3 py-2">
+                <Copy className="mr-2 h-4 w-4" />
+                Sao chép
+              </button>
+              {single && (
+                <button type="button" onClick={onCopyLink} className="btn-secondary px-3 py-2">
+                  <Link2 className="mr-2 h-4 w-4" />
+                  Copy link
+                </button>
+              )}
+              {allDocuments && selectedCount > 1 && (
+                <button type="button" onClick={onMerge} className="btn-secondary px-3 py-2">
+                  <Folder className="mr-2 h-4 w-4" />
+                  Gom vào thư mục
+                </button>
+              )}
+              {single && (
+                <button type="button" onClick={onShare} disabled={!canShare} className="btn-secondary px-3 py-2">
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Chia sẻ
+                </button>
+              )}
+              {single && (
+                <button type="button" onClick={onFavorite} className="btn-secondary px-3 py-2">
+                  <Heart className="mr-2 h-4 w-4" />
+                  Yêu thích
+                </button>
+              )}
+              <button type="button" onClick={onTrash} disabled={!canDelete} className="btn-secondary border-danger px-3 py-2 text-danger hover:border-danger hover:text-danger">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Xóa
+              </button>
+            </>
           )}
           <button type="button" onClick={onClear} className="btn-secondary px-3 py-2" title="Bỏ chọn">
             <X className="h-4 w-4" />
@@ -351,7 +365,9 @@ const WorkspaceToolbar = ({
           type="button"
           onClick={() => onViewMode("grid")}
           className={`rounded px-2.5 py-2 ${viewMode === "grid" ? "bg-surface text-primary shadow-sm" : "text-ink-secondary"}`}
-          title="Grid view"
+          title="Xem dạng lưới"
+          aria-label="Xem dạng lưới"
+          aria-pressed={viewMode === "grid"}
         >
           <Grid3X3 className="h-4 w-4" />
         </button>
@@ -359,7 +375,9 @@ const WorkspaceToolbar = ({
           type="button"
           onClick={() => onViewMode("list")}
           className={`rounded px-2.5 py-2 ${viewMode === "list" ? "bg-surface text-primary shadow-sm" : "text-ink-secondary"}`}
-          title="List view"
+          title="Xem dạng danh sách"
+          aria-label="Xem dạng danh sách"
+          aria-pressed={viewMode === "list"}
         >
           <List className="h-4 w-4" />
         </button>
@@ -370,48 +388,100 @@ const WorkspaceToolbar = ({
 
 const ItemActionDropdown = ({
   item,
+  area,
   onCopyLink,
   onRename,
   onMove,
   onTrash,
+  onRestore,
+  onDeleteForever,
 }: {
   item: WorkspaceItem;
+  area: LibraryArea;
   onCopyLink: () => void;
   onRename: () => void;
   onMove: () => void;
   onTrash: () => void;
+  onRestore: () => void;
+  onDeleteForever: () => void;
 }) => {
   const permissions = getPermissions(item);
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  const runAction = (action: () => void) => {
+    setOpen(false);
+    action();
+  };
 
   return (
-    <details className="group/menu relative">
-      <summary className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-md bg-surface/95 text-ink-secondary hover:text-primary [&::-webkit-details-marker]:hidden" title="Thao tác">
+    <div ref={menuRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex h-8 w-8 items-center justify-center rounded-md bg-surface/95 text-ink-secondary hover:text-primary"
+        title="Thao tác"
+        aria-label={`Mở thao tác cho ${getItemName(item)}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
         <MoreHorizontal className="h-4 w-4" />
-      </summary>
-      <div className="absolute right-0 top-10 z-30 w-44 overflow-hidden rounded-md border border-line bg-surface py-1 shadow-card">
-        <button type="button" onClick={onCopyLink} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary">
+      </button>
+      {open && <div className="absolute right-0 top-10 z-30 w-44 overflow-hidden rounded-md border border-line bg-surface py-1 shadow-card" role="menu">
+        {area === "trash" ? (
+          <>
+            <button type="button" onClick={() => runAction(onRestore)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary" role="menuitem">
+              <RotateCcw className="h-4 w-4" />
+              Khôi phục
+            </button>
+            <button type="button" onClick={() => runAction(onDeleteForever)} disabled={permissions.canDelete === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-danger/10 disabled:pointer-events-none disabled:opacity-40" role="menuitem">
+              <Trash2 className="h-4 w-4" />
+              Xóa vĩnh viễn
+            </button>
+          </>
+        ) : (
+          <>
+        <button type="button" onClick={() => runAction(onCopyLink)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary" role="menuitem">
           <Link2 className="h-4 w-4" />
           Copy link
         </button>
-        <button type="button" onClick={onRename} disabled={permissions.canRename === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40">
+        <button type="button" onClick={() => runAction(onRename)} disabled={permissions.canRename === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40" role="menuitem">
           <Pencil className="h-4 w-4" />
           Đổi tên
         </button>
-        <button type="button" onClick={onMove} disabled={permissions.canMove === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40">
+        <button type="button" onClick={() => runAction(onMove)} disabled={permissions.canMove === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40" role="menuitem">
           <MoveRight className="h-4 w-4" />
           Di chuyển
         </button>
-        <button type="button" onClick={onTrash} disabled={permissions.canDelete === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-danger/10 disabled:pointer-events-none disabled:opacity-40">
+        <button type="button" onClick={() => runAction(onTrash)} disabled={permissions.canDelete === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-danger/10 disabled:pointer-events-none disabled:opacity-40" role="menuitem">
           <Trash2 className="h-4 w-4" />
           Xóa
         </button>
-      </div>
-    </details>
+          </>
+        )}
+      </div>}
+    </div>
   );
 };
 
 const WorkspaceItemCard = ({
   item,
+  area,
   selected,
   onSelect,
   onPreview,
@@ -419,8 +489,11 @@ const WorkspaceItemCard = ({
   onRename,
   onMove,
   onTrash,
+  onRestore,
+  onDeleteForever,
 }: {
   item: WorkspaceItem;
+  area: LibraryArea;
   selected: boolean;
   onSelect: () => void;
   onPreview: () => void;
@@ -428,8 +501,11 @@ const WorkspaceItemCard = ({
   onRename: () => void;
   onMove: () => void;
   onTrash: () => void;
+  onRestore: () => void;
+  onDeleteForever: () => void;
 }) => {
   const isFolder = item.type === "folder";
+  const isTrash = area === "trash";
   const ext = getExtension(item);
   const Icon = isFolder ? Folder : fileIconMap[ext] || File;
 
@@ -447,14 +523,18 @@ const WorkspaceItemCard = ({
           {selected ? <Check className="h-4 w-4" /> : <span className="h-3.5 w-3.5 rounded-sm border border-current" />}
         </button>
         <div className="absolute right-3 top-3 z-20 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-          <ItemActionDropdown item={item} onCopyLink={onCopyLink} onRename={onRename} onMove={onMove} onTrash={onTrash} />
+          <ItemActionDropdown item={item} area={area} onCopyLink={onCopyLink} onRename={onRename} onMove={onMove} onTrash={onTrash} onRestore={onRestore} onDeleteForever={onDeleteForever} />
         </div>
-        {isFolder ? (
+        {isFolder && !isTrash ? (
           <NavLink to={`/library/folders/${item.id}`} className="flex h-36 items-center justify-center bg-primary-soft">
             <Icon className="h-14 w-14 text-primary" />
           </NavLink>
+        ) : isFolder ? (
+          <div className="flex h-36 items-center justify-center bg-primary-soft">
+            <Icon className="h-14 w-14 text-primary" />
+          </div>
         ) : (
-          <button type="button" onClick={onPreview} className="flex h-36 w-full items-center justify-center overflow-hidden bg-canvas text-left">
+          <button type="button" onClick={isTrash ? onSelect : onPreview} className="flex h-36 w-full items-center justify-center overflow-hidden bg-canvas text-left">
             {item.thumbnailUrl ? (
               <img src={item.thumbnailUrl} alt={getItemName(item)} className="h-full w-full object-cover" loading="lazy" />
             ) : (
@@ -468,12 +548,16 @@ const WorkspaceItemCard = ({
       </div>
       <div className="p-4">
         <div className="flex items-start gap-2">
-          {isFolder ? (
+          {isFolder && !isTrash ? (
             <NavLink to={`/library/folders/${item.id}`} className="line-clamp-1 min-w-0 flex-1 font-bold text-ink hover:text-primary">
               {getItemName(item)}
             </NavLink>
+          ) : isFolder ? (
+            <button type="button" onClick={onSelect} className="line-clamp-1 min-w-0 flex-1 text-left font-bold text-ink hover:text-primary">
+              {getItemName(item)}
+            </button>
           ) : (
-            <button type="button" onClick={onPreview} className="line-clamp-1 min-w-0 flex-1 text-left font-bold text-ink hover:text-primary">
+            <button type="button" onClick={isTrash ? onSelect : onPreview} className="line-clamp-1 min-w-0 flex-1 text-left font-bold text-ink hover:text-primary">
               {getItemName(item)}
             </button>
           )}
@@ -484,7 +568,7 @@ const WorkspaceItemCard = ({
         </p>
         <div className="mt-4 flex items-center justify-between gap-2 text-xs text-ink-secondary">
           <span>{isFolder ? `${item.folderCount ?? 0} thư mục · ${item.documentCount ?? 0} file` : `${ext.toUpperCase()} · ${formatSize(item.size)}`}</span>
-          <span>{item.updatedAt ? formatDateToVN(item.updatedAt) : ""}</span>
+          <span>{isTrash ? (item.trashedAt ? formatDateToVN(item.trashedAt) : "--") : item.updatedAt ? formatDateToVN(item.updatedAt) : ""}</span>
         </div>
       </div>
     </article>
@@ -493,6 +577,7 @@ const WorkspaceItemCard = ({
 
 const WorkspaceItemList = ({
   items,
+  area,
   selectedIds,
   onToggle,
   onPreview,
@@ -500,8 +585,11 @@ const WorkspaceItemList = ({
   onRename,
   onMove,
   onTrash,
+  onRestore,
+  onDeleteForever,
 }: {
   items: WorkspaceItem[];
+  area: LibraryArea;
   selectedIds: string[];
   onToggle: (item: WorkspaceItem) => void;
   onPreview: (item: WorkspaceItem) => void;
@@ -509,6 +597,8 @@ const WorkspaceItemList = ({
   onRename: (item: WorkspaceItem) => void;
   onMove: (item: WorkspaceItem) => void;
   onTrash: (item: WorkspaceItem) => void;
+  onRestore: (item: WorkspaceItem) => void;
+  onDeleteForever: (item: WorkspaceItem) => void;
 }) => (
   <div className="overflow-x-auto rounded-lg border border-line bg-surface">
     <div className="grid min-w-[800px] grid-cols-[44px_1fr_120px_120px_150px_88px] gap-3 border-b border-line px-4 py-3 text-xs font-semibold uppercase text-ink-secondary">
@@ -516,7 +606,7 @@ const WorkspaceItemList = ({
       <span>Tên</span>
       <span>Loại</span>
       <span>Kích thước</span>
-      <span>Cập nhật</span>
+      <span>{area === "trash" ? "Đã xóa" : "Cập nhật"}</span>
       <span />
     </div>
     {items.map((item) => {
@@ -536,21 +626,25 @@ const WorkspaceItemList = ({
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
               <Icon className="h-4 w-4" />
             </span>
-            {item.type === "folder" ? (
+            {item.type === "folder" && area !== "trash" ? (
               <NavLink to={`/library/folders/${item.id}`} className="truncate font-semibold text-ink hover:text-primary">
                 {getItemName(item)}
               </NavLink>
+            ) : item.type === "folder" ? (
+              <button type="button" onClick={() => onToggle(item)} className="truncate text-left font-semibold text-ink hover:text-primary">
+                {getItemName(item)}
+              </button>
             ) : (
-              <button type="button" onClick={() => onPreview(item)} className="truncate text-left font-semibold text-ink hover:text-primary">
+              <button type="button" onClick={() => area === "trash" ? onToggle(item) : onPreview(item)} className="truncate text-left font-semibold text-ink hover:text-primary">
                 {getItemName(item)}
               </button>
             )}
           </div>
           <span className="self-center text-sm text-ink-secondary">{item.type === "folder" ? "Folder" : getExtension(item).toUpperCase()}</span>
           <span className="self-center text-sm text-ink-secondary">{item.type === "folder" ? formatSize(item.totalSize) : formatSize(item.size)}</span>
-          <span className="self-center text-sm text-ink-secondary">{item.updatedAt ? formatDateToVN(item.updatedAt) : "--"}</span>
+          <span className="self-center text-sm text-ink-secondary">{area === "trash" ? (item.trashedAt ? formatDateToVN(item.trashedAt) : "--") : item.updatedAt ? formatDateToVN(item.updatedAt) : "--"}</span>
           <div className="flex items-center justify-end opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-            <ItemActionDropdown item={item} onCopyLink={() => onCopyLink(item)} onRename={() => onRename(item)} onMove={() => onMove(item)} onTrash={() => onTrash(item)} />
+            <ItemActionDropdown item={item} area={area} onCopyLink={() => onCopyLink(item)} onRename={() => onRename(item)} onMove={() => onMove(item)} onTrash={() => onTrash(item)} onRestore={() => onRestore(item)} onDeleteForever={() => onDeleteForever(item)} />
           </div>
         </div>
       );
@@ -1050,8 +1144,9 @@ const SharedLinksView = ({ rows }: { rows: ShareLinkRow[] }) => {
 const MyLibraryPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const area = (searchParams.get("area") || (searchParams.get("tab") === "shared" ? "shared" : "my")) as LibraryArea;
+  const defaultSort = area === "trash" ? "deleted_desc" : "updated_desc";
   const [search, setSearch] = useState(searchParams.get("search") || "");
-  const [sort, setSort] = useState(searchParams.get("sort") || "updated_desc");
+  const [sort, setSort] = useState(searchParams.get("sort") || defaultSort);
   const [fileType, setFileType] = useState(searchParams.get("fileType") || "");
   const [viewMode, setViewMode] = useState<ViewMode>((searchParams.get("view") as ViewMode) || "grid");
   const [folder, setFolder] = useState<WorkspaceFolder | null>(null);
@@ -1064,6 +1159,8 @@ const MyLibraryPage: React.FC = () => {
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [previewItem, setPreviewItem] = useState<WorkspaceItem | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmActionState>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const querySearch = searchParams.get("search") || "";
@@ -1071,10 +1168,15 @@ const MyLibraryPage: React.FC = () => {
   const pageNumber = Number(searchParams.get("pageNumber") || 1);
   const folderPermissions = getPermissions(folder);
 
+  useEffect(() => {
+    const nextSort = searchParams.get("sort") || (area === "trash" ? "deleted_desc" : "updated_desc");
+    setSort((current) => (current === nextSort ? current : nextSort));
+  }, [area, searchParams]);
+
   const loadLibrary = async () => {
     setLoading(true);
     try {
-      const params = { search: querySearch, sort, fileType: queryFileType, pageNumber, pageSize: 50 };
+      const params = { search: querySearch, sort, ...(area !== "trash" ? { fileType: queryFileType } : {}), pageNumber, pageSize: 50 };
       if (area === "shared-links") {
         const response = await workspaceLibraryApi.getMyShareLinks(params);
         setShareLinks(response.shareLinks || []);
@@ -1145,6 +1247,7 @@ const MyLibraryPage: React.FC = () => {
         setSelectedKeys([]);
         setPreviewItem(null);
         setDialog(null);
+        setConfirmAction(null);
       }
       if (event.key === "/" && document.activeElement !== searchInputRef.current) {
         event.preventDefault();
@@ -1162,12 +1265,12 @@ const MyLibraryPage: React.FC = () => {
   });
 
   const setQuery = (next: Record<string, string>) => {
-    setSearchParams({ area, view: viewMode, sort, ...(querySearch ? { search: querySearch } : {}), ...(queryFileType ? { fileType: queryFileType } : {}), ...next });
+    setSearchParams({ area, view: viewMode, sort, ...(querySearch ? { search: querySearch } : {}), ...(area !== "trash" && queryFileType ? { fileType: queryFileType } : {}), ...next });
   };
 
   const submitSearch = (event: React.FormEvent) => {
     event.preventDefault();
-    setSearchParams({ area, ...(search.trim() ? { search: search.trim() } : {}), ...(fileType ? { fileType } : {}), view: viewMode, sort, pageNumber: "1" });
+    setSearchParams({ area, ...(search.trim() ? { search: search.trim() } : {}), ...(area !== "trash" && fileType ? { fileType } : {}), view: viewMode, sort, pageNumber: "1" });
   };
 
   const changeViewMode = (mode: ViewMode) => {
@@ -1177,7 +1280,7 @@ const MyLibraryPage: React.FC = () => {
 
   const changeSort = (value: string) => {
     setSort(value);
-    setSearchParams({ area, ...(querySearch ? { search: querySearch } : {}), ...(queryFileType ? { fileType: queryFileType } : {}), view: viewMode, sort: value, pageNumber: "1" });
+    setSearchParams({ area, ...(querySearch ? { search: querySearch } : {}), ...(area !== "trash" && queryFileType ? { fileType: queryFileType } : {}), view: viewMode, sort: value, pageNumber: "1" });
   };
 
   const toggleSelection = (item: WorkspaceItem) => {
@@ -1205,13 +1308,23 @@ const MyLibraryPage: React.FC = () => {
     }
   };
 
-  const trashItems = async (itemsToTrash: WorkspaceItem[]) => {
+  const runConfirmAction = async () => {
+    if (!confirmAction) return;
+    setConfirmLoading(true);
+    try {
+      await confirmAction.onConfirm();
+      setConfirmAction(null);
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
+
+  const performTrashItems = async (itemsToTrash: WorkspaceItem[]) => {
     if (itemsToTrash.length === 0) return;
-    if (!window.confirm(`Chuyển ${itemsToTrash.length} mục vào thùng rác?`)) return;
     try {
       const response = await workspaceLibraryApi.trashItems(toPayloadItems(itemsToTrash));
       if (response.failed?.length) {
-        toast.info(workspaceFailureMessage(response, "Một số mục chưa thể chuyển vào thùng rác."));
+        toast.info(workspaceBatchMessage(response, "trashed", "Đã chuyển vào thùng rác.", "Một số mục chưa thể chuyển vào thùng rác."));
       } else {
         toast.success("Đã chuyển vào thùng rác.");
       }
@@ -1221,17 +1334,22 @@ const MyLibraryPage: React.FC = () => {
     }
   };
 
-  const trashSelected = () => trashItems(selectedItems);
-
-  const moveSingleItem = (item: WorkspaceItem) => {
-    setSelectedKeys([`${item.type}-${item.id}`]);
-    setDialog({ type: "move", mode: "move", items: [item] });
+  const trashItems = (itemsToTrash: WorkspaceItem[]) => {
+    if (itemsToTrash.length === 0) return;
+    setConfirmAction({
+      title: "Chuyển vào thùng rác?",
+      message: `${itemsToTrash.length} mục sẽ được chuyển vào thùng rác. Bạn có thể khôi phục lại trong mục Thùng rác.`,
+      confirmLabel: "Chuyển vào thùng rác",
+      onConfirm: () => performTrashItems(itemsToTrash),
+    });
   };
 
-  const restoreSelected = async () => {
+  const trashSelected = () => trashItems(selectedItems);
+  const restoreItems = async (itemsToRestore: WorkspaceItem[]) => {
+    if (itemsToRestore.length === 0) return;
     try {
-      const response = await workspaceLibraryApi.restoreItems(toPayloadItems(selectedItems));
-      if (response.failed?.length) toast.info(workspaceFailureMessage(response, "Một số mục chưa thể khôi phục."));
+      const response = await workspaceLibraryApi.restoreItems(toPayloadItems(itemsToRestore));
+      if (response.failed?.length) toast.info(workspaceBatchMessage(response, "restored", "Đã khôi phục.", "Một số mục chưa thể khôi phục."));
       else toast.success("Đã khôi phục.");
       closeDialogAndReload();
     } catch (error: any) {
@@ -1239,17 +1357,36 @@ const MyLibraryPage: React.FC = () => {
     }
   };
 
-  const deleteForeverSelected = async () => {
-    if (!window.confirm(`Xóa vĩnh viễn ${selectedItems.length} mục?`)) return;
+  const performDeleteForeverItems = async (itemsToDelete: WorkspaceItem[]) => {
+    if (itemsToDelete.length === 0) return;
     try {
-      const response = await workspaceLibraryApi.deleteItemsForever(toPayloadItems(selectedItems));
-      if (response.failed?.length) toast.info(workspaceFailureMessage(response, "Một số mục chưa thể xóa vĩnh viễn."));
+      const response = await workspaceLibraryApi.deleteItemsForever(toPayloadItems(itemsToDelete));
+      if (response.failed?.length) toast.info(workspaceBatchMessage(response, "deleted", "Đã xóa vĩnh viễn.", "Một số mục chưa thể xóa vĩnh viễn."));
       else toast.success("Đã xóa vĩnh viễn.");
       closeDialogAndReload();
     } catch (error: any) {
       toast.error(apiMessage(error, "Không thể xóa vĩnh viễn."));
     }
   };
+
+  const deleteForeverItems = (itemsToDelete: WorkspaceItem[]) => {
+    if (itemsToDelete.length === 0) return;
+    setConfirmAction({
+      title: "Xóa vĩnh viễn?",
+      message: `${itemsToDelete.length} mục sẽ bị xóa vĩnh viễn và không thể khôi phục.`,
+      confirmLabel: "Xóa vĩnh viễn",
+      onConfirm: () => performDeleteForeverItems(itemsToDelete),
+    });
+  };
+
+  const moveSingleItem = (item: WorkspaceItem) => {
+    setSelectedKeys([`${item.type}-${item.id}`]);
+    setDialog({ type: "move", mode: "move", items: [item] });
+  };
+
+  const restoreSelected = () => restoreItems(selectedItems);
+
+  const deleteForeverSelected = () => deleteForeverItems(selectedItems);
 
   const favoriteSelected = async () => {
     if (selectedItems.length !== 1) return;
@@ -1286,12 +1423,14 @@ const MyLibraryPage: React.FC = () => {
                       : `${visibleItems.length} mục · ${visibleItems.filter((item) => item.type === "folder").length} thư mục · ${visibleItems.filter((item) => item.type === "document").length} tài liệu`}
                   </p>
                 </div>
-                <WorkspaceCreateDropdown
-                  canUpload={canCreate}
-                  canCreateFolder={canCreate}
-                  onUpload={() => setDialog({ type: "upload" })}
-                  onCreateFolder={() => setDialog({ type: "create-folder" })}
-                />
+                {canCreate && (
+                  <WorkspaceCreateDropdown
+                    canUpload={canCreate}
+                    canCreateFolder={canCreate}
+                    onUpload={() => setDialog({ type: "upload" })}
+                    onCreateFolder={() => setDialog({ type: "create-folder" })}
+                  />
+                )}
               </div>
               <form onSubmit={submitSearch} className="mt-4 flex max-w-3xl flex-col gap-2 sm:flex-row">
                 <label className="relative min-w-0 flex-1">
@@ -1302,23 +1441,39 @@ const MyLibraryPage: React.FC = () => {
                     onChange={(event) => setSearch(event.target.value)}
                     className="input-field pl-9"
                     placeholder="Tìm theo tên file, thư mục, loại file"
+                    aria-label="Tìm trong thư viện"
                   />
                 </label>
                 <select value={sort} onChange={(event) => changeSort(event.target.value)} className="input-field sm:w-44">
-                  <option value="updated_desc">Mới nhất</option>
-                  <option value="updated_asc">Cũ nhất</option>
+                  {area === "trash" ? (
+                    <>
+                      <option value="deleted_desc">Xóa mới nhất</option>
+                      <option value="deleted_asc">Xóa cũ nhất</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="updated_desc">Mới nhất</option>
+                      <option value="updated_asc">Cũ nhất</option>
+                    </>
+                  )}
                   <option value="name_asc">Tên A-Z</option>
                   <option value="name_desc">Tên Z-A</option>
-                  <option value="type">Loại</option>
-                  <option value="size_desc">Kích thước</option>
+                  {area !== "trash" && (
+                    <>
+                      <option value="type">Loại</option>
+                      <option value="size_desc">Kích thước</option>
+                    </>
+                  )}
                 </select>
-                <select value={fileType} onChange={(event) => setFileType(event.target.value)} className="input-field sm:w-40">
-                  <option value="">Tất cả loại</option>
-                  <option value="pdf">PDF</option>
-                  <option value="docx">Word</option>
-                  <option value="xlsx">Excel</option>
-                  <option value="image">Ảnh</option>
-                </select>
+                {area !== "trash" && (
+                  <select value={fileType} onChange={(event) => setFileType(event.target.value)} className="input-field sm:w-40">
+                    <option value="">Tất cả loại</option>
+                    <option value="pdf">PDF</option>
+                    <option value="docx">Word</option>
+                    <option value="xlsx">Excel</option>
+                    <option value="image">Ảnh</option>
+                  </select>
+                )}
                 <button type="submit" className="btn-secondary px-3">Tìm</button>
               </form>
             </div>
@@ -1348,10 +1503,7 @@ const MyLibraryPage: React.FC = () => {
 
             <div className="p-4">
               {loading ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-16">
-                  <RefreshCw className="h-7 w-7 animate-spin text-primary" />
-                  <p className="text-sm text-ink-secondary">Đang tải thư viện...</p>
-                </div>
+                <WorkspaceLoadingSkeleton />
               ) : area === "shared-links" ? (
                 <SharedLinksView rows={shareLinks} />
               ) : visibleItems.length === 0 ? (
@@ -1363,11 +1515,12 @@ const MyLibraryPage: React.FC = () => {
                   onUpload={() => setDialog({ type: "upload" })}
                 />
               ) : viewMode === "grid" ? (
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 overflow-scroll max-h-screen">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {visibleItems.map((item) => (
                     <WorkspaceItemCard
                       key={`${item.type}-${item.id}`}
                       item={item}
+                      area={area}
                       selected={selectedKeys.includes(`${item.type}-${item.id}`)}
                       onSelect={() => toggleSelection(item)}
                       onPreview={() => setPreviewItem(item)}
@@ -1375,12 +1528,15 @@ const MyLibraryPage: React.FC = () => {
                       onRename={() => setDialog({ type: "rename", item })}
                       onMove={() => moveSingleItem(item)}
                       onTrash={() => trashItems([item])}
+                      onRestore={() => restoreItems([item])}
+                      onDeleteForever={() => deleteForeverItems([item])}
                     />
                   ))}
                 </div>
               ) : (
                 <WorkspaceItemList
                   items={visibleItems}
+                  area={area}
                   selectedIds={selectedKeys}
                   onToggle={toggleSelection}
                   onPreview={setPreviewItem}
@@ -1388,6 +1544,8 @@ const MyLibraryPage: React.FC = () => {
                   onRename={(item) => setDialog({ type: "rename", item })}
                   onMove={moveSingleItem}
                   onTrash={(item) => trashItems([item])}
+                  onRestore={(item) => restoreItems([item])}
+                  onDeleteForever={(item) => deleteForeverItems([item])}
                 />
               )}
               <PaginationComponent
@@ -1409,6 +1567,17 @@ const MyLibraryPage: React.FC = () => {
       {dialog?.type === "move" && <MoveCopyDialog mode={dialog.mode} items={dialog.items} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
       {dialog?.type === "merge" && <MergeDialog items={dialog.items} parentFolderId={null} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
       {dialog?.type === "share" && <ShareDialog item={dialog.item} onClose={() => setDialog(null)} />}
+      {confirmAction && (
+        <WorkspaceConfirmDialog
+          title={confirmAction.title}
+          message={confirmAction.message}
+          confirmLabel={confirmAction.confirmLabel}
+          variant={confirmAction.variant}
+          loading={confirmLoading}
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={runConfirmAction}
+        />
+      )}
     </>
   );
 };

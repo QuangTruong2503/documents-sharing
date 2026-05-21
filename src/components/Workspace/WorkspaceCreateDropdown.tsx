@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, FolderPlus, Upload } from "lucide-react";
 
 interface WorkspaceCreateDropdownProps {
@@ -18,6 +18,7 @@ const WorkspaceCreateDropdown = ({
   label = "Thêm mới",
   className = "",
 }: WorkspaceCreateDropdownProps) => {
+  const menuId = useId();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const disabled = !canUpload && !canCreateFolder;
@@ -31,6 +32,14 @@ const WorkspaceCreateDropdown = ({
 
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const runAction = (action: () => void) => {
@@ -47,6 +56,7 @@ const WorkspaceCreateDropdown = ({
         className="btn-primary px-3 py-2"
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-controls={open ? menuId : undefined}
       >
         <Upload className="mr-2 h-4 w-4" />
         {label}
@@ -54,7 +64,7 @@ const WorkspaceCreateDropdown = ({
       </button>
 
       {open && (
-        <div className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-lg border border-line bg-surface py-1 shadow-card" role="menu">
+        <div id={menuId} className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-lg border border-line bg-surface py-1 shadow-card" role="menu">
           <button
             type="button"
             onClick={() => runAction(onUpload)}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useParams, useSearchParams } from "react-router-dom";
 import {
   Check,
@@ -31,6 +31,8 @@ import {
 import { toast } from "react-toastify";
 import PageTitle from "components/PageTitle.js";
 import WorkspaceCreateDropdown from "components/Workspace/WorkspaceCreateDropdown.tsx";
+import WorkspaceConfirmDialog from "components/Workspace/WorkspaceConfirmDialog.tsx";
+import WorkspaceLoadingSkeleton from "components/Workspace/WorkspaceLoadingSkeleton.tsx";
 import workspaceLibraryApi, {
   WorkspaceFolder,
   WorkspaceItem,
@@ -53,6 +55,15 @@ import { Badge, apiMessage, roleLabel } from "./FolderListPage.tsx";
 
 type ViewMode = "grid" | "list";
 type WorkspaceTab = "documents" | "members" | "invites" | "settings";
+type ConfirmActionState =
+  | {
+      title: string;
+      message: string;
+      confirmLabel: string;
+      variant?: "danger" | "primary";
+      onConfirm: () => Promise<void>;
+    }
+  | null;
 type DialogState =
   | { type: "create-folder" }
   | { type: "upload" }
@@ -150,17 +161,21 @@ const FolderWorkspaceSidebar = ({
       </div>
       <p className="mt-4 text-sm leading-6 text-ink-secondary">{folder.description || "Thư mục này chưa có mô tả."}</p>
       <div className="mt-5 grid gap-2">
-        <WorkspaceCreateDropdown
-          canUpload={permissions.canUpload !== false}
-          canCreateFolder={permissions.canCreateFolder !== false}
-          onUpload={onUpload}
-          onCreateFolder={onCreate}
-          className="w-full [&>button]:w-full [&>div]:left-0 [&>div]:right-auto"
-        />
-        <button type="button" onClick={onShare} disabled={!permissions.canShare && !permissions.canManageMembers} className="btn-secondary">
-          <Share2 className="mr-2 h-4 w-4" />
-          Share folder
-        </button>
+        {(permissions.canUpload !== false || permissions.canCreateFolder !== false) && (
+          <WorkspaceCreateDropdown
+            canUpload={permissions.canUpload !== false}
+            canCreateFolder={permissions.canCreateFolder !== false}
+            onUpload={onUpload}
+            onCreateFolder={onCreate}
+            className="w-full [&>button]:w-full [&>div]:left-0 [&>div]:right-auto"
+          />
+        )}
+        {(permissions.canShare || permissions.canManageMembers) && (
+          <button type="button" onClick={onShare} className="btn-secondary">
+            <Share2 className="mr-2 h-4 w-4" />
+            Share folder
+          </button>
+        )}
       </div>
       <nav className="mt-6 space-y-1 border-t border-line pt-4">
         {nav.map((item) => {
@@ -283,10 +298,24 @@ const DocumentsToolbar = ({
         </div>
       )}
       <div className="inline-flex w-fit rounded-md border border-line bg-canvas p-1">
-        <button type="button" onClick={() => onViewMode("grid")} className={`rounded px-2.5 py-2 ${viewMode === "grid" ? "bg-surface text-primary shadow-sm" : "text-ink-secondary"}`} title="Grid view">
+        <button
+          type="button"
+          onClick={() => onViewMode("grid")}
+          className={`rounded px-2.5 py-2 ${viewMode === "grid" ? "bg-surface text-primary shadow-sm" : "text-ink-secondary"}`}
+          title="Xem dạng lưới"
+          aria-label="Xem dạng lưới"
+          aria-pressed={viewMode === "grid"}
+        >
           <Grid3X3 className="h-4 w-4" />
         </button>
-        <button type="button" onClick={() => onViewMode("list")} className={`rounded px-2.5 py-2 ${viewMode === "list" ? "bg-surface text-primary shadow-sm" : "text-ink-secondary"}`} title="List view">
+        <button
+          type="button"
+          onClick={() => onViewMode("list")}
+          className={`rounded px-2.5 py-2 ${viewMode === "list" ? "bg-surface text-primary shadow-sm" : "text-ink-secondary"}`}
+          title="Xem dạng danh sách"
+          aria-label="Xem dạng danh sách"
+          aria-pressed={viewMode === "list"}
+        >
           <List className="h-4 w-4" />
         </button>
       </div>
@@ -308,31 +337,61 @@ const ItemActionDropdown = ({
   onTrash: () => void;
 }) => {
   const permissions = getPermissions(item);
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  const runAction = (action: () => void) => {
+    setOpen(false);
+    action();
+  };
 
   return (
-    <details className="group/menu relative">
-      <summary className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-md bg-surface/95 text-ink-secondary hover:text-primary [&::-webkit-details-marker]:hidden" title="Thao tác">
+    <div ref={menuRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex h-8 w-8 items-center justify-center rounded-md bg-surface/95 text-ink-secondary hover:text-primary"
+        title="Thao tác"
+        aria-label={`Mở thao tác cho ${getItemName(item)}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
         <MoreHorizontal className="h-4 w-4" />
-      </summary>
-      <div className="absolute right-0 top-10 z-30 w-44 overflow-hidden rounded-md border border-line bg-surface py-1 shadow-card">
-        <button type="button" onClick={onCopyLink} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary">
+      </button>
+      {open && <div className="absolute right-0 top-10 z-30 w-44 overflow-hidden rounded-md border border-line bg-surface py-1 shadow-card" role="menu">
+        <button type="button" onClick={() => runAction(onCopyLink)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary" role="menuitem">
           <Link2 className="h-4 w-4" />
           Copy link
         </button>
-        <button type="button" onClick={onRename} disabled={permissions.canRename === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40">
+        <button type="button" onClick={() => runAction(onRename)} disabled={permissions.canRename === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40" role="menuitem">
           <Pencil className="h-4 w-4" />
           Đổi tên
         </button>
-        <button type="button" onClick={onMove} disabled={permissions.canMove === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40">
+        <button type="button" onClick={() => runAction(onMove)} disabled={permissions.canMove === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40" role="menuitem">
           <MoveRight className="h-4 w-4" />
           Di chuyển
         </button>
-        <button type="button" onClick={onTrash} disabled={permissions.canDelete === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-danger/10 disabled:pointer-events-none disabled:opacity-40">
+        <button type="button" onClick={() => runAction(onTrash)} disabled={permissions.canDelete === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-danger/10 disabled:pointer-events-none disabled:opacity-40" role="menuitem">
           <Trash2 className="h-4 w-4" />
           Xóa
         </button>
-      </div>
-    </details>
+      </div>}
+    </div>
   );
 };
 
@@ -881,10 +940,85 @@ const ShareDialog = ({ item, onClose }: { item: WorkspaceItem; onClose: () => vo
   );
 };
 
+const MemberActionDropdown = ({
+  member,
+  onEdit,
+  onRemove,
+}: {
+  member: FolderMember;
+  onEdit: () => void;
+  onRemove: () => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  const runAction = (action: () => void) => {
+    setOpen(false);
+    action();
+  };
+
+  return (
+    <div ref={menuRef} className="relative justify-self-start md:justify-self-end">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex h-9 w-9 items-center justify-center rounded-md text-ink-secondary hover:bg-canvas hover:text-primary"
+        title="Thao tác thành viên"
+        aria-label={`Mở thao tác cho ${getMemberName(member)}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-10 z-50 w-52 overflow-hidden rounded-md border border-line bg-surface py-1 shadow-card" role="menu">
+          <button
+            type="button"
+            onClick={() => runAction(onEdit)}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary"
+            role="menuitem"
+          >
+            <Pencil className="h-4 w-4" />
+            Chỉnh sửa quyền
+          </button>
+          <button
+            type="button"
+            onClick={() => runAction(onRemove)}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"
+            role="menuitem"
+          >
+            <Trash2 className="h-4 w-4" />
+            Xóa khỏi thư mục
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const MembersPanel = ({ folderId }: { folderId: number }) => {
   const [members, setMembers] = useState<FolderMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState({ user_id: "", role: "viewer" });
+  const [editingMember, setEditingMember] = useState<{ member: FolderMember; role: string } | null>(null);
+  const [removingMember, setRemovingMember] = useState<FolderMember | null>(null);
+  const [savingRole, setSavingRole] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   const loadMembers = async () => {
     setLoading(true);
@@ -916,6 +1050,37 @@ const MembersPanel = ({ folderId }: { folderId: number }) => {
     }
   };
 
+  const updateMemberRole = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingMember) return;
+    setSavingRole(true);
+    try {
+      await foldersApi.updateFolderMemberRole(folderId, editingMember.member.user_id, editingMember.role);
+      toast.success("Đã cập nhật quyền thành viên.");
+      setEditingMember(null);
+      loadMembers();
+    } catch (error: any) {
+      toast.error(apiMessage(error, "Không thể cập nhật quyền thành viên."));
+    } finally {
+      setSavingRole(false);
+    }
+  };
+
+  const removeMember = async () => {
+    if (!removingMember) return;
+    setRemoving(true);
+    try {
+      await foldersApi.removeFolderMember(folderId, removingMember.user_id);
+      toast.success("Đã xóa thành viên khỏi thư mục.");
+      setRemovingMember(null);
+      loadMembers();
+    } catch (error: any) {
+      toast.error(apiMessage(error, "Không thể xóa thành viên."));
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   return (
     <div className="p-4">
       <form onSubmit={addMember} className="mb-4 grid gap-3 rounded-lg border border-line bg-canvas p-4 lg:grid-cols-[1fr_180px_auto] lg:items-end">
@@ -939,17 +1104,59 @@ const MembersPanel = ({ folderId }: { folderId: number }) => {
       ) : members.length === 0 ? (
         <div className="rounded-lg border border-dashed border-line p-10 text-center text-sm text-ink-secondary">Chưa có thành viên.</div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-line bg-surface">
+        <div className="overflow-visible rounded-lg border border-line bg-surface">
           {members.map((member) => (
-            <div key={member.user_id} className="grid gap-3 border-b border-line p-4 last:border-b-0 md:grid-cols-[1fr_180px] md:items-center">
+            <div key={member.user_id} className="relative grid gap-3 border-b border-line p-4 last:border-b-0 md:grid-cols-[1fr_180px_48px] md:items-center">
               <div>
                 <p className="font-semibold text-ink">{getMemberName(member)}</p>
                 <p className="text-xs text-ink-secondary">{member.user?.email || member.user_id}</p>
               </div>
               <Badge>{roleLabel[member.role] || member.role}</Badge>
+              <MemberActionDropdown
+                member={member}
+                onEdit={() => setEditingMember({ member, role: member.role })}
+                onRemove={() => setRemovingMember(member)}
+              />
             </div>
           ))}
         </div>
+      )}
+      {editingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <form onSubmit={updateMemberRole} className="w-full max-w-md rounded-lg border border-line bg-surface p-6 shadow-card" role="dialog" aria-modal="true" aria-labelledby="edit-member-role-title">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="edit-member-role-title" className="text-lg font-bold text-ink">Chỉnh sửa quyền</h2>
+                <p className="mt-1 text-sm text-ink-secondary">{getMemberName(editingMember.member)}</p>
+              </div>
+              <button type="button" onClick={() => setEditingMember(null)} disabled={savingRole} className="rounded-md p-2 text-ink-secondary hover:bg-canvas hover:text-ink disabled:pointer-events-none disabled:opacity-50" title="Đóng">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <label className="mt-5 block">
+              <span className="mb-1 block text-sm font-semibold text-ink">Quyền truy cập</span>
+              <select value={editingMember.role} onChange={(event) => setEditingMember({ ...editingMember, role: event.target.value })} className="input-field" autoFocus>
+                {folderRoles.map((role) => <option key={role} value={role}>{roleLabel[role] || role}</option>)}
+              </select>
+            </label>
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" onClick={() => setEditingMember(null)} disabled={savingRole} className="btn-secondary">Hủy</button>
+              <button type="submit" disabled={savingRole || editingMember.role === editingMember.member.role} className="btn-primary">
+                {savingRole ? "Đang lưu..." : "Lưu thay đổi"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      {removingMember && (
+        <WorkspaceConfirmDialog
+          title="Xóa thành viên?"
+          message={`${getMemberName(removingMember)} sẽ không còn quyền truy cập thư mục này.`}
+          confirmLabel="Xóa khỏi thư mục"
+          loading={removing}
+          onCancel={() => setRemovingMember(null)}
+          onConfirm={removeMember}
+        />
       )}
     </div>
   );
@@ -1063,6 +1270,8 @@ const FolderDetailPage: React.FC = () => {
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [previewItem, setPreviewItem] = useState<WorkspaceItem | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmActionState>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const folderPermissions = getPermissions(folder);
   const visibleItems = useMemo(() => items, [items]);
@@ -1109,6 +1318,7 @@ const FolderDetailPage: React.FC = () => {
         setSelectedKeys([]);
         setPreviewItem(null);
         setDialog(null);
+        setConfirmAction(null);
       }
       if (event.key === "Delete" && selectedItems.length > 0) {
         trashSelected();
@@ -1150,9 +1360,19 @@ const FolderDetailPage: React.FC = () => {
     }
   };
 
-  const trashItems = async (itemsToTrash: WorkspaceItem[]) => {
+  const runConfirmAction = async () => {
+    if (!confirmAction) return;
+    setConfirmLoading(true);
+    try {
+      await confirmAction.onConfirm();
+      setConfirmAction(null);
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
+
+  const performTrashItems = async (itemsToTrash: WorkspaceItem[]) => {
     if (itemsToTrash.length === 0) return;
-    if (!window.confirm(`Chuyển ${itemsToTrash.length} mục vào thùng rác?`)) return;
     try {
       const response = await workspaceLibraryApi.trashItems(toPayloadItems(itemsToTrash));
       if (response.failed?.length) toast.info(workspaceFailureMessage(response, "Một số mục chưa thể chuyển vào thùng rác."));
@@ -1161,6 +1381,16 @@ const FolderDetailPage: React.FC = () => {
     } catch (error: any) {
       toast.error(apiMessage(error, "Không thể xóa mục đã chọn."));
     }
+  };
+
+  const trashItems = (itemsToTrash: WorkspaceItem[]) => {
+    if (itemsToTrash.length === 0) return;
+    setConfirmAction({
+      title: "Chuyển vào thùng rác?",
+      message: `${itemsToTrash.length} mục trong thư mục này sẽ được chuyển vào thùng rác. Bạn có thể khôi phục lại trong mục Thùng rác.`,
+      confirmLabel: "Chuyển vào thùng rác",
+      onConfirm: () => performTrashItems(itemsToTrash),
+    });
   };
 
   const trashSelected = () => trashItems(selectedItems);
@@ -1172,9 +1402,26 @@ const FolderDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-16">
-        <RefreshCw className="h-7 w-7 animate-spin text-primary" />
-        <p className="text-sm text-ink-secondary">Đang tải thư mục...</p>
+      <div className="mx-auto max-w-7xl">
+        <div className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
+          <div className="hidden rounded-lg border border-line bg-surface p-4 lg:block">
+            <div className="flex items-start gap-3">
+              <div className="h-12 w-12 animate-pulse rounded-md bg-line" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-3/4 animate-pulse rounded bg-line" />
+                <div className="h-3 w-20 animate-pulse rounded bg-line" />
+              </div>
+            </div>
+            <div className="mt-6 space-y-2">
+              <div className="h-9 animate-pulse rounded bg-line" />
+              <div className="h-9 animate-pulse rounded bg-line" />
+              <div className="h-9 animate-pulse rounded bg-line" />
+            </div>
+          </div>
+          <section className="rounded-lg border border-line bg-surface p-4">
+            <WorkspaceLoadingSkeleton />
+          </section>
+        </div>
       </div>
     );
   }
@@ -1235,7 +1482,7 @@ const FolderDetailPage: React.FC = () => {
                 <form onSubmit={submitSearch} className="mt-4 flex max-w-3xl flex-col gap-2 sm:flex-row">
                   <label className="relative min-w-0 flex-1">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral" />
-                    <input value={search} onChange={(event) => setSearch(event.target.value)} className="input-field pl-9" placeholder="Tìm trong thư mục hiện tại" />
+                    <input value={search} onChange={(event) => setSearch(event.target.value)} className="input-field pl-9" placeholder="Tìm trong thư mục hiện tại" aria-label="Tìm trong thư mục hiện tại" />
                   </label>
                   <select
                     value={sort}
@@ -1363,6 +1610,17 @@ const FolderDetailPage: React.FC = () => {
       {dialog?.type === "move" && <MoveCopyDialog mode={dialog.mode} items={dialog.items} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
       {dialog?.type === "merge" && <MergeDialog items={dialog.items} parentFolderId={numericFolderId} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
       {dialog?.type === "share" && <ShareDialog item={dialog.item} onClose={() => setDialog(null)} />}
+      {confirmAction && (
+        <WorkspaceConfirmDialog
+          title={confirmAction.title}
+          message={confirmAction.message}
+          confirmLabel={confirmAction.confirmLabel}
+          variant={confirmAction.variant}
+          loading={confirmLoading}
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={runConfirmAction}
+        />
+      )}
     </>
   );
 };

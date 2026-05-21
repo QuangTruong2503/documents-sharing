@@ -41,6 +41,7 @@ export interface WorkspaceItem {
   isShared?: boolean;
   permission?: "owner" | "editor" | "viewer" | string;
   permissions?: WorkspacePermissions;
+  trashedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }
