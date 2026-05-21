@@ -42,8 +42,91 @@ export function normalizeDocument(document = {}) {
   };
 }
 
+function mapWorkspaceFolder(folder = {}) {
+  return {
+    folder_id: folder.id,
+    name: folder.name,
+    description: folder.description ?? null,
+    visibility: folder.isShared ? "shared" : "private",
+    created_at: folder.createdAt,
+    updated_at: folder.updatedAt,
+    document_count: folder.documentCount ?? 0,
+    member_count: folder.isShared ? 1 : 0,
+  };
+}
+
+function mapWorkspacePermissions(permissions = {}, role = "") {
+  const roleDefaults =
+    role === "owner"
+      ? {
+          canView: true,
+          canDownload: true,
+          canUpload: true,
+          canCreateFolder: true,
+          canRename: true,
+          canMove: true,
+          canCopy: true,
+          canShare: true,
+          canDelete: true,
+          canManageMembers: true,
+        }
+      : role === "editor"
+        ? {
+            canView: true,
+            canDownload: true,
+            canUpload: true,
+            canCreateFolder: true,
+            canRename: true,
+            canMove: true,
+            canCopy: true,
+            canShare: true,
+            canDelete: false,
+            canManageMembers: false,
+          }
+        : role === "viewer"
+          ? { canView: true, canDownload: true }
+          : {};
+  const effective = { ...roleDefaults, ...permissions };
+  return {
+    can_view: effective.canView ?? false,
+    can_comment: effective.canView ?? false,
+    can_add_document: effective.canUpload ?? false,
+    can_remove_document: effective.canDelete ?? false,
+    can_edit_folder: effective.canRename ?? false,
+    can_manage_members: effective.canManageMembers ?? effective.canShare ?? false,
+    can_delete_folder: effective.canDelete ?? false,
+  };
+}
+
+function mapWorkspaceDocumentItem(item = {}) {
+  return {
+    folder_id: item.parentFolderId,
+    document_id: item.id,
+    added_at: item.updatedAt || item.createdAt,
+    document: {
+      document_id: item.id,
+      title: item.title || item.name,
+      description: item.description ?? null,
+      thumbnail_url: item.thumbnailUrl,
+      file_url: item.downloadUrl,
+      file_type: item.extension || item.mimeType,
+      file_size: item.size,
+      uploaded_at: item.createdAt,
+      uploader: item.ownerName ? { username: item.ownerName, full_name: item.ownerName } : null,
+    },
+  };
+}
+
 const foldersApi = {
-  createFolder: (payload) => axiosInstance.post("folders", payload).then((response) => response.data?.folder ?? response.data),
+  createFolder: (payload) =>
+    axiosInstance
+      .post("folders", {
+        name: payload.name,
+        description: payload.description ?? "",
+        color: payload.color ?? null,
+        parentFolderId: payload.parentFolderId ?? payload.parent_folder_id ?? null,
+      })
+      .then((response) => response.data?.folder ?? response.data),
   getMyFolders: (params = {}) =>
     axiosInstance
       .get("folders/my", { params: cleanParams(params) })
@@ -52,20 +135,28 @@ const foldersApi = {
     axiosInstance
       .get("folders/shared-with-me", { params: cleanParams(params) })
       .then((response) => normalizePagedResponse(response.data)),
-  getFolderDetail: (folderId) => axiosInstance.get(`folders/${folderId}`).then((response) => response.data),
+  getFolderDetail: (folderId) =>
+    axiosInstance.get(`folders/${folderId}/items`, { params: { pageNumber: 1, pageSize: 1 } }).then((response) => {
+      const folder = response.data?.folder ?? {};
+      return {
+        folder: mapWorkspaceFolder(folder),
+        permissions: mapWorkspacePermissions(folder.permissions, folder.permission),
+        current_user_role: folder.permission,
+      };
+    }),
   updateFolder: (folderId, payload) =>
     axiosInstance.patch(`folders/${folderId}`, payload).then((response) => response.data?.folder ?? response.data),
   deleteFolder: (folderId) => axiosInstance.delete(`folders/${folderId}`),
 
   getFolderDocuments: (folderId, params = {}) =>
     axiosInstance
-      .get(`folders/${folderId}/documents`, { params: cleanParams(params) })
+      .get(`folders/${folderId}/items`, { params: cleanParams({ ...params, sort: params.sort || "updated_desc" }) })
       .then((response) => ({
-        ...normalizePagedResponse(response.data),
-        data: normalizePagedResponse(response.data).data.map((item) => ({
-          ...item,
-          document: normalizeDocument(item.document ?? item.Document ?? item),
-        })),
+        success: true,
+        data: (response.data?.items || [])
+          .filter((item) => item.type === "document")
+          .map(mapWorkspaceDocumentItem),
+        pagination: normalizePagination(response.data?.pagination),
       })),
   addDocumentToFolder: (folderId, documentId) =>
     axiosInstance.post(`folders/${folderId}/documents`, { document_id: Number(documentId) }),

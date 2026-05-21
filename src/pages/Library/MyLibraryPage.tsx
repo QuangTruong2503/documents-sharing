@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
+import { NavLink, useSearchParams } from "react-router-dom";
 import {
   Check,
   Clock3,
@@ -8,16 +8,18 @@ import {
   Eye,
   File,
   FileText,
-  Filter,
   Folder,
   FolderOpen,
   Grid3X3,
+  Heart,
   Image,
   Link2,
   List,
   MoreHorizontal,
-  Plus,
+  MoveRight,
+  Pencil,
   RefreshCw,
+  RotateCcw,
   Search,
   Share2,
   Star,
@@ -29,45 +31,59 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import PageTitle from "components/PageTitle.js";
-import documentsApi from "api/documentsApi.js";
-import foldersApi from "api/foldersApi.js";
+import workspaceLibraryApi, {
+  WorkspaceFolder,
+  WorkspaceItem,
+  WorkspaceItemType,
+  WorkspacePermissions,
+} from "api/workspaceLibraryApi.ts";
+import PaginationComponent from "components/Pagination/Pagination.tsx";
+import WorkspaceCreateDropdown from "components/Workspace/WorkspaceCreateDropdown.tsx";
 import { formatDateToVN } from "utils/formatDateToVN";
-import { FolderFormDialog, apiMessage } from "pages/Folders/FolderListPage.tsx";
-
-interface FolderItem {
-  folder_id: number;
-  name: string;
-  description: string | null;
-  visibility: "private" | "shared" | "public";
-  created_at?: string;
-  updated_at?: string;
-  document_count?: number;
-  member_count?: number;
-  current_user_role?: string;
-  role?: string;
-  owner?: { username?: string; Username?: string; full_name?: string | null } | null;
-}
-
-interface DocumentItem {
-  document_id: number;
-  title?: string;
-  Title?: string;
-  description?: string | null;
-  Description?: string | null;
-  thumbnail_url?: string;
-  file_type?: string | null;
-  file_size?: number;
-  uploaded_at?: string;
-  file_url?: string;
-  is_public?: boolean;
-  uploader?: { username?: string; full_name?: string | null } | null;
-}
+import {
+  canEvery,
+  defaultWorkspacePagination,
+  downloadWorkspaceDocument,
+  normalizeWorkspacePagination,
+  toDateTimeLocalValue,
+  WorkspacePagination,
+  workspaceFailureMessage,
+} from "utils/workspaceLibraryHelpers.ts";
+import { apiMessage } from "pages/Folders/FolderListPage.tsx";
 
 type ViewMode = "grid" | "list";
-type LibraryArea = "my" | "shared" | "recent" | "favorites" | "shared-links" | "trash";
-type LibraryItem =
-  | { key: string; itemType: "folder"; id: number; name: string; updatedAt?: string; folder: FolderItem }
-  | { key: string; itemType: "document"; id: number; name: string; updatedAt?: string; document: DocumentItem };
+type LibraryArea = "my" | "shared" | "team" | "recent" | "favorites" | "shared-links" | "trash";
+type DialogState =
+  | { type: "create-folder" }
+  | { type: "upload" }
+  | { type: "rename"; item: WorkspaceItem }
+  | { type: "move"; mode: "move" | "copy"; items: WorkspaceItem[] }
+  | { type: "merge"; items: WorkspaceItem[] }
+  | { type: "share"; item: WorkspaceItem }
+  | null;
+
+interface WorkspaceListResponse {
+  folder?: WorkspaceFolder;
+  items?: WorkspaceItem[];
+  pagination?: WorkspacePagination;
+  counts?: Record<string, number>;
+  storage?: { usedBytes?: number; limitBytes?: number };
+  message?: string;
+}
+
+interface ShareLinkRow {
+  id: string;
+  itemId: number;
+  itemType: WorkspaceItemType;
+  itemName?: string | null;
+  shareUrl: string;
+  access: string;
+  permission: string;
+  views?: number;
+  downloads?: number;
+  expiresAt?: string | null;
+  createdAt?: string;
+}
 
 const navItems = [
   { key: "my", label: "Tài liệu của tôi", icon: FolderOpen, href: "/library" },
@@ -91,11 +107,23 @@ const fileIconMap: Record<string, React.ElementType> = {
   gif: Image,
 };
 
-const normalizeText = (value?: string | null) => (value || "").toLowerCase().trim();
+const defaultPermissions: WorkspacePermissions = {
+  canView: true,
+  canDownload: true,
+  canUpload: false,
+  canCreateFolder: false,
+  canRename: false,
+  canMove: false,
+  canCopy: false,
+  canShare: false,
+  canDelete: false,
+  canManageMembers: false,
+};
 
-const getDocumentTitle = (document: DocumentItem) => document.title || document.Title || "Tài liệu chưa có tiêu đề";
-const getDocumentDescription = (document: DocumentItem) => document.description || document.Description || "Không có mô tả.";
-const getFileType = (document: DocumentItem) => (document.file_type || "file").replace(".", "").toLowerCase();
+const getItemName = (item: WorkspaceItem) => item.title || item.name || `${item.type} #${item.id}`;
+const getExtension = (item: WorkspaceItem) => (item.extension || item.mimeType || "file").replace(".", "").toLowerCase();
+const getPermissions = (item?: WorkspaceItem | WorkspaceFolder | null) => ({ ...defaultPermissions, ...(item?.permissions || {}) });
+const toPayloadItems = (items: WorkspaceItem[]) => items.map((item) => ({ id: item.id, type: item.type }));
 
 const formatSize = (size?: number) => {
   if (!size) return "--";
@@ -103,180 +131,257 @@ const formatSize = (size?: number) => {
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
 };
 
-const itemMatches = (item: LibraryItem, query: string) => {
-  if (!query) return true;
-  const needle = normalizeText(query);
-  if (item.itemType === "folder") {
-    return `${item.folder.name} ${item.folder.description || ""}`.toLowerCase().includes(needle);
-  }
-  return `${getDocumentTitle(item.document)} ${getDocumentDescription(item.document)} ${getFileType(item.document)}`
-    .toLowerCase()
-    .includes(needle);
+const formatBytes = (bytes?: number) => {
+  if (!bytes) return "0 B";
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 };
 
-const EmptyState = ({ area, canCreate, onCreate }: { area: LibraryArea; canCreate: boolean; onCreate: () => void }) => {
+const EmptyState = ({ area, canCreate, canUpload, onCreate, onUpload }: { area: LibraryArea; canCreate: boolean; canUpload: boolean; onCreate: () => void; onUpload: () => void }) => {
   const copy =
     area === "trash"
       ? ["Thùng rác đang trống", "Các tài liệu đã xóa sẽ xuất hiện ở đây."]
       : area === "shared"
         ? ["Chưa có nội dung được chia sẻ", "Folder hoặc tài liệu được mời truy cập sẽ nằm tại đây."]
-        : ["Thư mục này đang trống", "Kéo thả file vào đây hoặc tạo thư mục đầu tiên."];
+        : area === "shared-links"
+          ? ["Chưa có liên kết chia sẻ", "Các link bạn tạo sẽ xuất hiện ở đây."]
+          : ["Thư mục này đang trống", "Kéo thả file vào đây hoặc tạo thư mục đầu tiên."];
 
   return (
     <div className="rounded-lg border border-dashed border-line bg-surface px-5 py-14 text-center">
       <FolderOpen className="mx-auto h-10 w-10 text-neutral" />
       <h2 className="mt-4 text-lg font-bold text-ink">{copy[0]}</h2>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-secondary">{copy[1]}</p>
-      {canCreate && (
-        <div className="mt-6 flex justify-center gap-2">
-          <NavLink to="/upload-document" className="btn-primary">
-            <Upload className="mr-2 h-4 w-4" />
-            Tải lên
-          </NavLink>
-          <button type="button" onClick={onCreate} className="btn-secondary">
-            <Plus className="mr-2 h-4 w-4" />
-            Thư mục mới
-          </button>
+      {(canCreate || canUpload) && (
+        <div className="mt-6 flex justify-center">
+          <WorkspaceCreateDropdown
+            canUpload={canUpload}
+            canCreateFolder={canCreate}
+            onUpload={onUpload}
+            onCreateFolder={onCreate}
+          />
         </div>
       )}
     </div>
   );
 };
 
-const LibrarySidebar = ({ activeArea, counts }: { activeArea: string; counts: Record<string, number> }) => (
-  <aside className="rounded-lg border border-line bg-surface p-3 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)]">
-    <div className="mb-4 flex items-center gap-2 px-2">
-      <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-white">
-        <FolderOpen className="h-5 w-5" />
-      </span>
-      <div>
-        <p className="text-sm font-bold text-ink">DocShare</p>
-        <p className="text-xs text-ink-secondary">File workspace</p>
-      </div>
-    </div>
+const LibrarySidebar = ({
+  activeArea,
+  counts,
+  storage,
+}: {
+  activeArea: string;
+  counts: Record<string, number>;
+  storage: { usedBytes?: number; limitBytes?: number };
+}) => {
+  const storagePercent = storage.limitBytes ? Math.min(100, Math.round(((storage.usedBytes || 0) / storage.limitBytes) * 100)) : 0;
 
-    <nav className="space-y-1">
-      {navItems.map((item) => {
-        const Icon = item.icon;
-        const active = activeArea === item.key;
-        return (
-          <NavLink
-            key={item.key}
-            to={item.href}
-            className={`flex items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium transition ${
-              active ? "bg-primary-soft text-primary" : "text-ink-secondary hover:bg-canvas hover:text-ink"
-            }`}
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{item.label}</span>
-            </span>
-            {counts[item.key] > 0 && <span className="text-xs">{counts[item.key]}</span>}
-          </NavLink>
-        );
-      })}
-    </nav>
-
-    <div className="mt-6 rounded-md border border-line bg-canvas p-3">
-      <div className="flex items-center justify-between text-xs font-semibold text-ink-secondary">
-        <span>Dung lượng</span>
-        <span>42%</span>
+  return (
+    <aside className="rounded-lg border border-line bg-surface p-3 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)]">
+      <div className="mb-4 flex items-center gap-2 px-2">
+        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-white">
+          <FolderOpen className="h-5 w-5" />
+        </span>
+        <div>
+          <p className="text-sm font-bold text-ink">DocShare</p>
+          <p className="text-xs text-ink-secondary">File workspace</p>
+        </div>
       </div>
-      <div className="mt-2 h-2 rounded-full bg-line">
-        <div className="h-2 w-[42%] rounded-full bg-primary" />
-      </div>
-      <p className="mt-2 text-xs text-ink-secondary">Đang dùng 4.2 GB / 10 GB</p>
-    </div>
-  </aside>
-);
 
-const Toolbar = ({
-  selectedCount,
+      <nav className="space-y-1">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const active = activeArea === item.key;
+          return (
+            <NavLink
+              key={item.key}
+              to={item.href}
+              className={`flex items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium transition ${
+                active ? "bg-primary-soft text-primary" : "text-ink-secondary hover:bg-canvas hover:text-ink"
+              }`}
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </span>
+              {counts[item.key] > 0 && <span className="text-xs">{counts[item.key]}</span>}
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      <div className="mt-6 rounded-md border border-line bg-canvas p-3">
+        <div className="flex items-center justify-between text-xs font-semibold text-ink-secondary">
+          <span>Dung lượng</span>
+          <span>{storagePercent}%</span>
+        </div>
+        <div className="mt-2 h-2 rounded-full bg-line">
+          <div className="h-2 rounded-full bg-primary" style={{ width: `${storagePercent}%` }} />
+        </div>
+        <p className="mt-2 text-xs text-ink-secondary">
+          Đang dùng {formatBytes(storage.usedBytes)} / {formatBytes(storage.limitBytes)}
+        </p>
+      </div>
+    </aside>
+  );
+};
+
+const WorkspaceToolbar = ({
+  selectedItems,
+  area,
+  folderPermissions,
   viewMode,
   onViewMode,
   onClear,
-  onDelete,
+  onCreate,
+  onUpload,
+  onRename,
+  onMove,
+  onCopy,
+  onMerge,
+  onShare,
+  onFavorite,
+  onTrash,
+  onRestore,
+  onDeleteForever,
 }: {
-  selectedCount: number;
+  selectedItems: WorkspaceItem[];
+  area: LibraryArea;
+  folderPermissions: WorkspacePermissions;
   viewMode: ViewMode;
   onViewMode: (mode: ViewMode) => void;
   onClear: () => void;
-  onDelete: () => void;
-}) => (
-  <div className="flex flex-col gap-3 border-b border-line bg-surface px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-    {selectedCount > 0 ? (
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold text-ink">{selectedCount} mục đã chọn</span>
-        <button type="button" className="btn-secondary px-3 py-2">
-          <Download className="mr-2 h-4 w-4" />
-          Tải xuống
-        </button>
-        <button type="button" className="btn-secondary px-3 py-2">
-          <Copy className="mr-2 h-4 w-4" />
-          Sao chép
-        </button>
-        <button type="button" className="btn-secondary px-3 py-2">
-          <Share2 className="mr-2 h-4 w-4" />
-          Chia sẻ
-        </button>
-        <button type="button" onClick={onDelete} className="btn-secondary border-danger px-3 py-2 text-danger hover:border-danger hover:text-danger">
-          <Trash2 className="mr-2 h-4 w-4" />
-          Xóa
-        </button>
-        <button type="button" onClick={onClear} className="btn-secondary px-3 py-2" title="Bỏ chọn">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-    ) : (
-      <div className="flex flex-wrap items-center gap-2">
-        <NavLink to="/upload-document" className="btn-primary px-3 py-2">
-          <Upload className="mr-2 h-4 w-4" />
-          Tải lên
-        </NavLink>
-        <button type="button" className="btn-secondary px-3 py-2">
-          <Filter className="mr-2 h-4 w-4" />
-          Lọc
-        </button>
-        <button type="button" className="btn-secondary px-3 py-2">
-          Mới nhất
-        </button>
-      </div>
-    )}
-    <div className="inline-flex w-fit rounded-md border border-line bg-canvas p-1">
-      <button
-        type="button"
-        onClick={() => onViewMode("grid")}
-        className={`rounded px-2.5 py-2 ${viewMode === "grid" ? "bg-surface text-primary shadow-sm" : "text-ink-secondary"}`}
-        title="Grid view"
-      >
-        <Grid3X3 className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        onClick={() => onViewMode("list")}
-        className={`rounded px-2.5 py-2 ${viewMode === "list" ? "bg-surface text-primary shadow-sm" : "text-ink-secondary"}`}
-        title="List view"
-      >
-        <List className="h-4 w-4" />
-      </button>
-    </div>
-  </div>
-);
+  onCreate: () => void;
+  onUpload: () => void;
+  onRename: () => void;
+  onMove: () => void;
+  onCopy: () => void;
+  onMerge: () => void;
+  onShare: () => void;
+  onFavorite: () => void;
+  onTrash: () => void;
+  onRestore: () => void;
+  onDeleteForever: () => void;
+}) => {
+  const selectedCount = selectedItems.length;
+  const single = selectedCount === 1;
+  const allDocuments = selectedItems.length > 0 && selectedItems.every((item) => item.type === "document");
+  const canCreate = area === "my" && folderPermissions.canCreateFolder !== false;
+  const canUpload = area === "my" && folderPermissions.canUpload !== false;
+  const canRename = single && selectedItems[0].permissions?.canRename !== false;
+  const canMove = canEvery(selectedItems, "canMove");
+  const canCopy = canEvery(selectedItems, "canCopy");
+  const canShare = single && selectedItems[0].permissions?.canShare !== false;
+  const canDelete = canEvery(selectedItems, "canDelete");
 
-const LibraryItemCard = ({
+  return (
+    <div className="flex flex-col gap-3 border-b border-line bg-surface px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+      {selectedCount > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-ink">{selectedCount} mục đã chọn</span>
+          {single && (
+            <button type="button" onClick={onRename} disabled={!canRename} className="btn-secondary px-3 py-2">
+              <Pencil className="mr-2 h-4 w-4" />
+              Đổi tên
+            </button>
+          )}
+          <button type="button" onClick={onMove} disabled={!canMove} className="btn-secondary px-3 py-2">
+            <MoveRight className="mr-2 h-4 w-4" />
+            Di chuyển
+          </button>
+          <button type="button" onClick={onCopy} disabled={!canCopy} className="btn-secondary px-3 py-2">
+            <Copy className="mr-2 h-4 w-4" />
+            Sao chép
+          </button>
+          {allDocuments && selectedCount > 1 && (
+            <button type="button" onClick={onMerge} className="btn-secondary px-3 py-2">
+              <Folder className="mr-2 h-4 w-4" />
+              Gom vào thư mục
+            </button>
+          )}
+          {single && (
+            <button type="button" onClick={onShare} disabled={!canShare} className="btn-secondary px-3 py-2">
+              <Share2 className="mr-2 h-4 w-4" />
+              Chia sẻ
+            </button>
+          )}
+          {single && (
+            <button type="button" onClick={onFavorite} className="btn-secondary px-3 py-2">
+              <Heart className="mr-2 h-4 w-4" />
+              Yêu thích
+            </button>
+          )}
+          {area === "trash" ? (
+            <>
+              <button type="button" onClick={onRestore} className="btn-secondary px-3 py-2">
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Khôi phục
+              </button>
+              <button type="button" onClick={onDeleteForever} disabled={!canDelete} className="btn-secondary border-danger px-3 py-2 text-danger hover:border-danger hover:text-danger">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Xóa vĩnh viễn
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={onTrash} disabled={!canDelete} className="btn-secondary border-danger px-3 py-2 text-danger hover:border-danger hover:text-danger">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Xóa
+            </button>
+          )}
+          <button type="button" onClick={onClear} className="btn-secondary px-3 py-2" title="Bỏ chọn">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <WorkspaceCreateDropdown
+            canUpload={canUpload}
+            canCreateFolder={canCreate}
+            onUpload={onUpload}
+            onCreateFolder={onCreate}
+          />
+        </div>
+      )}
+      <div className="inline-flex w-fit rounded-md border border-line bg-canvas p-1">
+        <button
+          type="button"
+          onClick={() => onViewMode("grid")}
+          className={`rounded px-2.5 py-2 ${viewMode === "grid" ? "bg-surface text-primary shadow-sm" : "text-ink-secondary"}`}
+          title="Grid view"
+        >
+          <Grid3X3 className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onViewMode("list")}
+          className={`rounded px-2.5 py-2 ${viewMode === "list" ? "bg-surface text-primary shadow-sm" : "text-ink-secondary"}`}
+          title="List view"
+        >
+          <List className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const WorkspaceItemCard = ({
   item,
   selected,
   onSelect,
   onPreview,
+  onMenu,
 }: {
-  item: LibraryItem;
+  item: WorkspaceItem;
   selected: boolean;
   onSelect: () => void;
   onPreview: () => void;
+  onMenu: () => void;
 }) => {
-  const isFolder = item.itemType === "folder";
-  const fileType = isFolder ? "" : getFileType(item.document);
-  const Icon = isFolder ? Folder : fileIconMap[fileType] || File;
+  const isFolder = item.type === "folder";
+  const ext = getExtension(item);
+  const Icon = isFolder ? Folder : fileIconMap[ext] || File;
 
   return (
     <article className={`rounded-lg border bg-surface transition hover:-translate-y-0.5 hover:shadow-card ${selected ? "border-primary ring-2 ring-primary/20" : "border-line"}`}>
@@ -291,7 +396,7 @@ const LibraryItemCard = ({
         >
           {selected ? <Check className="h-4 w-4" /> : <span className="h-3.5 w-3.5 rounded-sm border border-current" />}
         </button>
-        <button type="button" className="absolute right-3 top-3 z-10 rounded-md bg-surface/95 p-2 text-ink-secondary hover:text-primary" title="Thêm">
+        <button type="button" onClick={onMenu} className="absolute right-3 top-3 z-10 rounded-md bg-surface/95 p-2 text-ink-secondary hover:text-primary" title="Thao tác">
           <MoreHorizontal className="h-4 w-4" />
         </button>
         {isFolder ? (
@@ -300,32 +405,35 @@ const LibraryItemCard = ({
           </NavLink>
         ) : (
           <button type="button" onClick={onPreview} className="flex h-36 w-full items-center justify-center overflow-hidden bg-canvas text-left">
-            {item.document.thumbnail_url ? (
-              <img src={item.document.thumbnail_url} alt={item.name} className="h-full w-full object-cover" loading="lazy" />
+            {item.thumbnailUrl ? (
+              <img src={item.thumbnailUrl} alt={getItemName(item)} className="h-full w-full object-cover" loading="lazy" />
             ) : (
               <span className="flex flex-col items-center gap-2 text-sm text-ink-secondary">
                 <Icon className="h-10 w-10 text-primary" />
-                {fileType.toUpperCase()}
+                {ext.toUpperCase()}
               </span>
             )}
           </button>
         )}
       </div>
       <div className="p-4">
-        {isFolder ? (
-          <NavLink to={`/library/folders/${item.id}`} className="line-clamp-1 font-bold text-ink hover:text-primary">
-            {item.name}
-          </NavLink>
-        ) : (
-          <button type="button" onClick={onPreview} className="line-clamp-1 w-full text-left font-bold text-ink hover:text-primary">
-            {item.name}
-          </button>
-        )}
+        <div className="flex items-start gap-2">
+          {isFolder ? (
+            <NavLink to={`/library/folders/${item.id}`} className="line-clamp-1 min-w-0 flex-1 font-bold text-ink hover:text-primary">
+              {getItemName(item)}
+            </NavLink>
+          ) : (
+            <button type="button" onClick={onPreview} className="line-clamp-1 min-w-0 flex-1 text-left font-bold text-ink hover:text-primary">
+              {getItemName(item)}
+            </button>
+          )}
+          {item.isFavorite && <Star className="h-4 w-4 shrink-0 fill-warning text-warning" />}
+        </div>
         <p className="mt-1 line-clamp-2 min-h-10 text-sm leading-5 text-ink-secondary">
-          {isFolder ? item.folder.description || `${item.folder.document_count ?? 0} tài liệu` : getDocumentDescription(item.document)}
+          {isFolder ? item.description || `${item.childrenCount ?? 0} mục` : item.description || "Không có mô tả."}
         </p>
         <div className="mt-4 flex items-center justify-between gap-2 text-xs text-ink-secondary">
-          <span>{isFolder ? `${item.folder.member_count ?? 0} thành viên` : `${fileType.toUpperCase()} · ${formatSize(item.document.file_size)}`}</span>
+          <span>{isFolder ? `${item.folderCount ?? 0} thư mục · ${item.documentCount ?? 0} file` : `${ext.toUpperCase()} · ${formatSize(item.size)}`}</span>
           <span>{item.updatedAt ? formatDateToVN(item.updatedAt) : ""}</span>
         </div>
       </div>
@@ -333,33 +441,36 @@ const LibraryItemCard = ({
   );
 };
 
-const LibraryItemList = ({
+const WorkspaceItemList = ({
   items,
-  selectedKeys,
+  selectedIds,
   onToggle,
   onPreview,
+  onMenu,
 }: {
-  items: LibraryItem[];
-  selectedKeys: string[];
-  onToggle: (key: string) => void;
-  onPreview: (item: LibraryItem) => void;
+  items: WorkspaceItem[];
+  selectedIds: string[];
+  onToggle: (item: WorkspaceItem) => void;
+  onPreview: (item: WorkspaceItem) => void;
+  onMenu: (item: WorkspaceItem) => void;
 }) => (
-  <div className="overflow-hidden rounded-lg border border-line bg-surface">
-    <div className="grid grid-cols-[44px_1fr_120px_140px_48px] gap-3 border-b border-line px-4 py-3 text-xs font-semibold uppercase text-ink-secondary">
+  <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+    <div className="grid min-w-[760px] grid-cols-[44px_1fr_120px_120px_150px_48px] gap-3 border-b border-line px-4 py-3 text-xs font-semibold uppercase text-ink-secondary">
       <span />
       <span>Tên</span>
       <span>Loại</span>
+      <span>Kích thước</span>
       <span>Cập nhật</span>
       <span />
     </div>
     {items.map((item) => {
-      const selected = selectedKeys.includes(item.key);
-      const Icon = item.itemType === "folder" ? Folder : fileIconMap[getFileType(item.document)] || File;
+      const selected = selectedIds.includes(`${item.type}-${item.id}`);
+      const Icon = item.type === "folder" ? Folder : fileIconMap[getExtension(item)] || File;
       return (
-        <div key={item.key} className="grid grid-cols-[44px_1fr_120px_140px_48px] gap-3 border-b border-line px-4 py-3 last:border-b-0 hover:bg-canvas">
+        <div key={`${item.type}-${item.id}`} className="grid min-w-[760px] grid-cols-[44px_1fr_120px_120px_150px_48px] gap-3 border-b border-line px-4 py-3 last:border-b-0 hover:bg-canvas">
           <button
             type="button"
-            onClick={() => onToggle(item.key)}
+            onClick={() => onToggle(item)}
             className={`flex h-8 w-8 items-center justify-center rounded-md border ${selected ? "border-primary bg-primary text-white" : "border-line text-ink-secondary"}`}
             aria-label={selected ? "Bỏ chọn mục" : "Chọn mục"}
           >
@@ -369,19 +480,20 @@ const LibraryItemList = ({
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
               <Icon className="h-4 w-4" />
             </span>
-            {item.itemType === "folder" ? (
+            {item.type === "folder" ? (
               <NavLink to={`/library/folders/${item.id}`} className="truncate font-semibold text-ink hover:text-primary">
-                {item.name}
+                {getItemName(item)}
               </NavLink>
             ) : (
               <button type="button" onClick={() => onPreview(item)} className="truncate text-left font-semibold text-ink hover:text-primary">
-                {item.name}
+                {getItemName(item)}
               </button>
             )}
           </div>
-          <span className="self-center text-sm text-ink-secondary">{item.itemType === "folder" ? "Folder" : getFileType(item.document).toUpperCase()}</span>
+          <span className="self-center text-sm text-ink-secondary">{item.type === "folder" ? "Folder" : getExtension(item).toUpperCase()}</span>
+          <span className="self-center text-sm text-ink-secondary">{item.type === "folder" ? formatSize(item.totalSize) : formatSize(item.size)}</span>
           <span className="self-center text-sm text-ink-secondary">{item.updatedAt ? formatDateToVN(item.updatedAt) : "--"}</span>
-          <button type="button" className="rounded-md p-2 text-ink-secondary hover:text-primary" title="Thêm">
+          <button type="button" onClick={() => onMenu(item)} className="rounded-md p-2 text-ink-secondary hover:text-primary" title="Thao tác">
             <MoreHorizontal className="h-4 w-4" />
           </button>
         </div>
@@ -390,18 +502,45 @@ const LibraryItemList = ({
   </div>
 );
 
-const PreviewDrawer = ({ item, onClose }: { item: LibraryItem | null; onClose: () => void }) => {
-  if (!item || item.itemType !== "document") return null;
-  const document = item.document;
-  const type = getFileType(document);
-  const Icon = fileIconMap[type] || FileText;
+const PreviewDrawer = ({ item, onClose, onShare }: { item: WorkspaceItem | null; onClose: () => void; onShare: (item: WorkspaceItem) => void }) => {
+  const [preview, setPreview] = useState<any>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  useEffect(() => {
+    if (!item || item.type !== "document") {
+      setPreview(null);
+      return;
+    }
+    workspaceLibraryApi
+      .getDocumentPreview(item.id)
+      .then((response) => setPreview(response))
+      .catch(() => setPreview(null));
+  }, [item]);
+
+  if (!item || item.type !== "document") return null;
+  const document = preview?.document || item;
+  const metadata = preview?.metadata;
+  const ext = getExtension(document);
+  const Icon = fileIconMap[ext] || FileText;
+  const canDownload = document.allowDownload !== false && document.permissions?.canDownload !== false;
+
+  const download = async () => {
+    setDownloading(true);
+    try {
+      await downloadWorkspaceDocument(document);
+    } catch (error: any) {
+      toast.error(apiMessage(error, "Không thể tải tài liệu."));
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-md border-l border-line bg-surface shadow-card lg:absolute lg:inset-y-0 lg:right-0">
       <div className="flex items-center justify-between border-b border-line p-4">
         <div className="min-w-0">
-          <p className="truncate font-bold text-ink">{item.name}</p>
-          <p className="text-xs text-ink-secondary">{type.toUpperCase()} · {formatSize(document.file_size)}</p>
+          <p className="truncate font-bold text-ink">{getItemName(document)}</p>
+          <p className="text-xs text-ink-secondary">{ext.toUpperCase()} · {formatSize(document.size)}</p>
         </div>
         <button type="button" onClick={onClose} className="rounded-md p-2 text-ink-secondary hover:bg-canvas hover:text-ink" title="Đóng">
           <X className="h-5 w-5" />
@@ -409,44 +548,37 @@ const PreviewDrawer = ({ item, onClose }: { item: LibraryItem | null; onClose: (
       </div>
       <div className="p-4">
         <div className="flex h-72 items-center justify-center overflow-hidden rounded-lg border border-line bg-canvas">
-          {document.thumbnail_url ? (
-            <img src={document.thumbnail_url} alt={item.name} className="h-full w-full object-contain" />
+          {document.thumbnailUrl ? (
+            <img src={document.thumbnailUrl} alt={getItemName(document)} className="h-full w-full object-contain" />
           ) : (
             <div className="text-center text-ink-secondary">
               <Icon className="mx-auto h-14 w-14 text-primary" />
-              <p className="mt-3 text-sm">Chưa có preview</p>
+              <p className="mt-3 text-sm">{document.status === "processing" ? "Đang xử lý preview" : "Chưa có preview"}</p>
             </div>
           )}
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <NavLink to={`/document/${document.document_id}`} className="btn-primary">
+          <NavLink to={`/document/${item.id}`} className="btn-primary">
             <Eye className="mr-2 h-4 w-4" />
             Chi tiết
           </NavLink>
-          {document.file_url ? (
-            <a href={document.file_url} className="btn-secondary">
-              <Download className="mr-2 h-4 w-4" />
-              Tải xuống
-            </a>
-          ) : (
-            <button type="button" className="btn-secondary">
-              <Share2 className="mr-2 h-4 w-4" />
-              Chia sẻ
-            </button>
-          )}
+          <button type="button" onClick={download} disabled={!canDownload || downloading} className="btn-secondary">
+            {downloading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            Tải xuống
+          </button>
         </div>
         <dl className="mt-5 space-y-3 text-sm">
           <div>
             <dt className="font-semibold text-ink">Mô tả</dt>
-            <dd className="mt-1 text-ink-secondary">{getDocumentDescription(document)}</dd>
+            <dd className="mt-1 text-ink-secondary">{document.description || "Không có mô tả."}</dd>
           </div>
           <div>
-            <dt className="font-semibold text-ink">Ngày tải lên</dt>
-            <dd className="mt-1 text-ink-secondary">{document.uploaded_at ? formatDateToVN(document.uploaded_at) : "--"}</dd>
+            <dt className="font-semibold text-ink">Chủ sở hữu</dt>
+            <dd className="mt-1 text-ink-secondary">{metadata?.ownerName || item.ownerName || "--"}</dd>
           </div>
           <div>
             <dt className="font-semibold text-ink">Trạng thái</dt>
-            <dd className="mt-1 text-ink-secondary">{document.is_public === false ? "Riêng tư" : "Có thể chia sẻ"}</dd>
+            <dd className="mt-1 text-ink-secondary">{document.status || "ready"}</dd>
           </div>
         </dl>
       </div>
@@ -454,35 +586,470 @@ const PreviewDrawer = ({ item, onClose }: { item: LibraryItem | null; onClose: (
   );
 };
 
+const CreateFolderDialog = ({ parentFolderId, onClose, onDone }: { parentFolderId: number | null; onClose: () => void; onDone: () => void }) => {
+  const [form, setForm] = useState({ name: "", description: "" });
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!form.name.trim()) return;
+    setSaving(true);
+    try {
+      await workspaceLibraryApi.createFolder({
+        name: form.name.trim(),
+        description: form.description.trim(),
+        parentFolderId,
+        color: null,
+      });
+      toast.success("Đã tạo thư mục.");
+      onDone();
+    } catch (error: any) {
+      toast.error(apiMessage(error, "Không thể tạo thư mục."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <form onSubmit={submit} className="w-full max-w-lg rounded-lg border border-line bg-surface p-6 shadow-card">
+        <h2 className="text-xl font-bold text-ink">Tạo thư mục</h2>
+        <p className="mt-1 text-sm text-ink-secondary">{parentFolderId ? "Thư mục mới sẽ nằm trong folder hiện tại." : "Thư mục mới sẽ nằm ở thư viện gốc."}</p>
+        <label className="mt-5 block">
+          <span className="mb-1 block text-sm font-semibold text-ink">Tên thư mục</span>
+          <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="input-field" autoFocus />
+        </label>
+        <label className="mt-4 block">
+          <span className="mb-1 block text-sm font-semibold text-ink">Mô tả</span>
+          <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="input-field min-h-24" />
+        </label>
+        <div className="mt-6 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn-secondary">Hủy</button>
+          <button type="submit" disabled={saving || !form.name.trim()} className="btn-primary">{saving ? "Đang tạo..." : "Tạo"}</button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+const UploadDialog = ({ parentFolderId, onClose, onDone }: { parentFolderId: number | null; onClose: () => void; onDone: () => void }) => {
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (files.length === 0) return;
+    setUploading(true);
+    try {
+      const response = await workspaceLibraryApi.uploadDocuments(files, parentFolderId);
+      if (response.failed?.length) {
+        toast.warning(`${response.documents?.length || 0} file tải lên thành công, ${response.failed.length} file lỗi.`);
+      } else {
+        toast.success("Đã tải file lên.");
+      }
+      onDone();
+    } catch (error: any) {
+      toast.error(apiMessage(error, "Không thể tải file lên."));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <form onSubmit={submit} className="w-full max-w-xl rounded-lg border border-line bg-surface p-6 shadow-card">
+        <h2 className="text-xl font-bold text-ink">Tải tài liệu</h2>
+        <p className="mt-1 text-sm text-ink-secondary">{parentFolderId ? "File sẽ được tải vào folder hiện tại." : "File sẽ được tải vào thư viện gốc."}</p>
+        <label className="mt-5 block rounded-lg border border-dashed border-line bg-canvas p-6 text-center">
+          <Upload className="mx-auto h-8 w-8 text-primary" />
+          <span className="mt-2 block text-sm font-semibold text-ink">Chọn một hoặc nhiều file</span>
+          <input type="file" multiple className="mt-4 block w-full text-sm text-ink-secondary" onChange={(event) => setFiles(Array.from(event.target.files || []))} />
+        </label>
+        {files.length > 0 && <p className="mt-3 text-sm text-ink-secondary">{files.length} file đã chọn</p>}
+        <div className="mt-6 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn-secondary">Hủy</button>
+          <button type="submit" disabled={uploading || files.length === 0} className="btn-primary">
+            {uploading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+            {uploading ? "Đang tải..." : "Tải lên"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+const RenameDialog = ({ item, onClose, onDone }: { item: WorkspaceItem; onClose: () => void; onDone: () => void }) => {
+  const [name, setName] = useState(getItemName(item));
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      await workspaceLibraryApi.renameItem(item.id, { type: item.type, name: name.trim() });
+      toast.success("Đã đổi tên.");
+      onDone();
+    } catch (error: any) {
+      toast.error(apiMessage(error, "Không thể đổi tên."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <form onSubmit={submit} className="w-full max-w-md rounded-lg border border-line bg-surface p-6 shadow-card">
+        <h2 className="text-xl font-bold text-ink">Đổi tên</h2>
+        <input value={name} onChange={(event) => setName(event.target.value)} className="input-field mt-5" autoFocus />
+        <div className="mt-6 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn-secondary">Hủy</button>
+          <button type="submit" disabled={saving || !name.trim()} className="btn-primary">{saving ? "Đang lưu..." : "Lưu"}</button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+const MoveCopyDialog = ({
+  mode,
+  items,
+  onClose,
+  onDone,
+}: {
+  mode: "move" | "copy";
+  items: WorkspaceItem[];
+  onClose: () => void;
+  onDone: () => void;
+}) => {
+  const [nodes, setNodes] = useState<any[]>([]);
+  const [targetFolderId, setTargetFolderId] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    workspaceLibraryApi
+      .getFolderTree({ root: "my", includeShared: true })
+      .then((response) => setNodes(response.nodes || []))
+      .catch((error) => toast.error(apiMessage(error, "Không tải được cây thư mục.")));
+  }, []);
+
+  const flatNodes = useMemo(() => {
+    const rows: Array<{ id: number; name: string; depth: number; canReceiveItems: boolean }> = [];
+    const walk = (list: any[], depth: number) => {
+      list.forEach((node) => {
+        rows.push({ id: node.id, name: node.name, depth, canReceiveItems: node.canReceiveItems !== false });
+        walk(node.children || [], depth + 1);
+      });
+    };
+    walk(nodes, 0);
+    return rows;
+  }, [nodes]);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const payload = { items: toPayloadItems(items), targetFolderId };
+      const response = mode === "move" ? await workspaceLibraryApi.moveItems(payload) : await workspaceLibraryApi.copyItems(payload);
+      if (response.failed?.length) {
+        toast.info(workspaceFailureMessage(response, "Một số mục chưa xử lý được."));
+      } else {
+        toast.success(mode === "move" ? "Đã di chuyển." : "Đã sao chép.");
+      }
+      onDone();
+    } catch (error: any) {
+      toast.error(apiMessage(error, mode === "move" ? "Không thể di chuyển." : "Không thể sao chép."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <form onSubmit={submit} className="w-full max-w-lg rounded-lg border border-line bg-surface p-6 shadow-card">
+        <h2 className="text-xl font-bold text-ink">{mode === "move" ? "Di chuyển" : "Sao chép"} {items.length} mục</h2>
+        <div className="mt-5 max-h-80 overflow-auto rounded-lg border border-line">
+          <label className="flex cursor-pointer items-center gap-3 border-b border-line p-3 text-sm hover:bg-canvas">
+            <input type="radio" checked={targetFolderId === null} onChange={() => setTargetFolderId(null)} />
+            <span className="font-medium text-ink">Tài liệu của tôi</span>
+          </label>
+          {flatNodes.map((node) => (
+            <label key={node.id} className={`flex cursor-pointer items-center gap-3 border-b border-line p-3 text-sm last:border-b-0 ${node.canReceiveItems ? "hover:bg-canvas" : "opacity-50"}`}>
+              <input type="radio" checked={targetFolderId === node.id} disabled={!node.canReceiveItems} onChange={() => setTargetFolderId(node.id)} />
+              <span style={{ paddingLeft: node.depth * 18 }} className="font-medium text-ink">{node.name}</span>
+            </label>
+          ))}
+        </div>
+        <div className="mt-6 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn-secondary">Hủy</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? "Đang xử lý..." : "Xác nhận"}</button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+const MergeDialog = ({ items, parentFolderId, onClose, onDone }: { items: WorkspaceItem[]; parentFolderId: number | null; onClose: () => void; onDone: () => void }) => {
+  const [name, setName] = useState("Tài liệu mới");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      await workspaceLibraryApi.mergeDocumentsIntoFolder({
+        name: name.trim(),
+        parentFolderId,
+        items: items.filter((item) => item.type === "document").map((item) => ({ id: item.id, type: "document" })),
+      });
+      toast.success("Đã gom vào thư mục mới.");
+      onDone();
+    } catch (error: any) {
+      toast.error(apiMessage(error, "Không thể gom tài liệu."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <form onSubmit={submit} className="w-full max-w-md rounded-lg border border-line bg-surface p-6 shadow-card">
+        <h2 className="text-xl font-bold text-ink">Gom vào thư mục</h2>
+        <p className="mt-1 text-sm text-ink-secondary">{items.length} tài liệu sẽ được chuyển vào folder mới.</p>
+        <input value={name} onChange={(event) => setName(event.target.value)} className="input-field mt-5" autoFocus />
+        <div className="mt-6 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn-secondary">Hủy</button>
+          <button type="submit" disabled={saving || !name.trim()} className="btn-primary">{saving ? "Đang tạo..." : "Gom"}</button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+const ShareDialog = ({ item, onClose }: { item: WorkspaceItem; onClose: () => void }) => {
+  const [settings, setSettings] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+  const [disabling, setDisabling] = useState(false);
+  const [form, setForm] = useState({
+    access: "anyone_with_link",
+    permission: "viewer",
+    allowDownload: true,
+    password: "",
+    expiresAt: "",
+  });
+
+  useEffect(() => {
+    workspaceLibraryApi
+      .getShareLinkSettings({ itemId: item.id, itemType: item.type })
+      .then((response) => {
+        if (response.shareLink) {
+          setSettings(response.shareLink);
+          setForm({
+            access: response.shareLink.access || "anyone_with_link",
+            permission: response.shareLink.permission || "viewer",
+            allowDownload: response.shareLink.allowDownload !== false,
+            password: "",
+            expiresAt: toDateTimeLocalValue(response.shareLink.expiresAt),
+          });
+        }
+      })
+      .catch(() => undefined);
+  }, [item]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const response = await workspaceLibraryApi.createShareLink({
+        itemId: item.id,
+        itemType: item.type,
+        access: form.access,
+        permission: form.permission,
+        allowDownload: form.allowDownload,
+        password: form.password || null,
+        expiresAt: form.expiresAt || null,
+        maxViews: null,
+        maxDownloads: null,
+      });
+      setSettings(response.shareLink);
+      toast.success("Đã tạo liên kết chia sẻ.");
+    } catch (error: any) {
+      toast.error(apiMessage(error, "Không thể tạo link chia sẻ."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const copyLink = async () => {
+    if (!settings?.shareUrl) {
+      await save();
+      return;
+    }
+    await navigator.clipboard.writeText(settings.shareUrl);
+    toast.success("Đã sao chép liên kết.");
+  };
+
+  const disableLink = async () => {
+    if (!settings?.id) return;
+    setDisabling(true);
+    try {
+      await workspaceLibraryApi.disableShareLink(settings.id);
+      setSettings(null);
+      toast.success("Đã tắt liên kết chia sẻ.");
+    } catch (error: any) {
+      toast.error(apiMessage(error, "Không thể tắt liên kết chia sẻ."));
+    } finally {
+      setDisabling(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-xl rounded-lg border border-line bg-surface p-6 shadow-card">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-ink">Chia sẻ "{getItemName(item)}"</h2>
+            <p className="mt-1 text-sm text-ink-secondary">Tạo link chia sẻ cho {item.type === "folder" ? "thư mục" : "tài liệu"}.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-md p-2 text-ink-secondary hover:bg-canvas">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <label>
+            <span className="mb-1 block text-sm font-semibold text-ink">General access</span>
+            <select value={form.access} onChange={(event) => setForm({ ...form, access: event.target.value })} className="input-field">
+              <option value="restricted">Restricted</option>
+              <option value="anyone_with_link">Anyone with link</option>
+            </select>
+          </label>
+          <label>
+            <span className="mb-1 block text-sm font-semibold text-ink">Permission</span>
+            <select value={form.permission} onChange={(event) => setForm({ ...form, permission: event.target.value })} className="input-field">
+              <option value="viewer">Viewer</option>
+              <option value="editor">Editor</option>
+            </select>
+          </label>
+        </div>
+        <label className="mt-4 flex items-center gap-3 rounded-md border border-line p-3 text-sm text-ink-secondary">
+          <input type="checkbox" checked={form.allowDownload} onChange={(event) => setForm({ ...form, allowDownload: event.target.checked })} />
+          <span>Allow download</span>
+        </label>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label>
+            <span className="mb-1 block text-sm font-semibold text-ink">Password</span>
+            <input value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="input-field" placeholder="Không bắt buộc" />
+          </label>
+          <label>
+            <span className="mb-1 block text-sm font-semibold text-ink">Expiration date</span>
+            <input type="datetime-local" value={form.expiresAt} onChange={(event) => setForm({ ...form, expiresAt: event.target.value })} className="input-field" />
+          </label>
+        </div>
+        <div className="mt-5 rounded-md border border-line bg-canvas p-3 text-sm text-ink-secondary">
+          {settings?.shareUrl || "Chưa có link. Bấm tạo link để lấy liên kết."}
+        </div>
+        <div className="mt-6 flex justify-end gap-2">
+          {settings?.id && (
+            <button type="button" onClick={disableLink} disabled={disabling} className="btn-secondary border-danger text-danger hover:border-danger hover:text-danger">
+              {disabling ? "Đang tắt..." : "Tắt link"}
+            </button>
+          )}
+          <button type="button" onClick={save} disabled={saving} className="btn-secondary">{saving ? "Đang lưu..." : "Tạo/Cập nhật link"}</button>
+          <button type="button" onClick={copyLink} className="btn-primary">Sao chép liên kết</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SharedLinksView = ({ rows }: { rows: ShareLinkRow[] }) => {
+  if (rows.length === 0) {
+    return <EmptyState area="shared-links" canCreate={false} canUpload={false} onCreate={() => undefined} onUpload={() => undefined} />;
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+      <div className="grid min-w-[760px] grid-cols-[1fr_120px_110px_110px_170px] gap-3 border-b border-line px-4 py-3 text-xs font-semibold uppercase text-ink-secondary">
+        <span>Tên</span>
+        <span>Loại</span>
+        <span>Lượt xem</span>
+        <span>Tải xuống</span>
+        <span>Tạo ngày</span>
+      </div>
+      {rows.map((row) => (
+        <div key={row.id} className="grid min-w-[760px] grid-cols-[1fr_120px_110px_110px_170px] gap-3 border-b border-line px-4 py-3 last:border-b-0">
+          <a href={row.shareUrl} target="_blank" rel="noreferrer" className="truncate font-semibold text-ink hover:text-primary">
+            {row.itemName || row.shareUrl}
+          </a>
+          <span className="text-sm text-ink-secondary">{row.itemType}</span>
+          <span className="text-sm text-ink-secondary">{row.views ?? 0}</span>
+          <span className="text-sm text-ink-secondary">{row.downloads ?? 0}</span>
+          <span className="text-sm text-ink-secondary">{row.createdAt ? formatDateToVN(row.createdAt) : "--"}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const MyLibraryPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const area = (searchParams.get("area") || (searchParams.get("tab") === "shared" ? "shared" : "my")) as LibraryArea;
   const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [sort, setSort] = useState(searchParams.get("sort") || "updated_desc");
+  const [fileType, setFileType] = useState(searchParams.get("fileType") || "");
   const [viewMode, setViewMode] = useState<ViewMode>((searchParams.get("view") as ViewMode) || "grid");
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
-  const [folders, setFolders] = useState<FolderItem[]>([]);
-  const [sharedFolders, setSharedFolders] = useState<FolderItem[]>([]);
+  const [folder, setFolder] = useState<WorkspaceFolder | null>(null);
+  const [items, setItems] = useState<WorkspaceItem[]>([]);
+  const [shareLinks, setShareLinks] = useState<ShareLinkRow[]>([]);
+  const [pagination, setPagination] = useState<WorkspacePagination>(defaultWorkspacePagination);
+  const [workspaceCounts, setWorkspaceCounts] = useState<Record<string, number>>({});
+  const [storage, setStorage] = useState<{ usedBytes?: number; limitBytes?: number }>({});
   const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-  const [previewItem, setPreviewItem] = useState<LibraryItem | null>(null);
-  const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [previewItem, setPreviewItem] = useState<WorkspaceItem | null>(null);
+  const [dialog, setDialog] = useState<DialogState>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const querySearch = searchParams.get("search") || "";
+  const queryFileType = searchParams.get("fileType") || "";
+  const pageNumber = Number(searchParams.get("pageNumber") || 1);
+  const folderPermissions = getPermissions(folder);
 
   const loadLibrary = async () => {
     setLoading(true);
     try {
-      const [documentResponse, myFolderResponse, sharedFolderResponse] = await Promise.all([
-        documentsApi.getMyUploadedDocument({ pageNumber: 1, sortBy: "date" }),
-        foldersApi.getMyFolders({ search: querySearch, pageNumber: 1, pageSize: 48 }),
-        foldersApi.getSharedFolders({ search: querySearch, pageNumber: 1, pageSize: 48 }),
-      ]);
-      setDocuments(documentResponse.data?.data || []);
-      setFolders(myFolderResponse.data);
-      setSharedFolders(sharedFolderResponse.data);
+      const params = { search: querySearch, sort, fileType: queryFileType, pageNumber, pageSize: 50 };
+      if (area === "shared-links") {
+        const response = await workspaceLibraryApi.getMyShareLinks(params);
+        setShareLinks(response.shareLinks || []);
+        setPagination(normalizeWorkspacePagination(response.pagination));
+        setItems([]);
+        setFolder(null);
+        setWorkspaceCounts({});
+        setStorage({});
+        return;
+      }
+
+      const response: WorkspaceListResponse =
+        area === "shared"
+          ? await workspaceLibraryApi.getSharedWithMe(params)
+          : area === "recent"
+            ? await workspaceLibraryApi.getRecent(params)
+            : area === "favorites"
+              ? await workspaceLibraryApi.getFavorites(params)
+              : area === "trash"
+                ? await workspaceLibraryApi.getTrash(params)
+                : area === "team"
+                  ? await workspaceLibraryApi.getTeam(params)
+                  : await workspaceLibraryApi.getMyLibrary(params);
+
+      setFolder(response.folder || null);
+      setItems(response.items || []);
+      setShareLinks([]);
+      setPagination(normalizeWorkspacePagination(response.pagination));
+      setWorkspaceCounts(response.counts || {});
+      setStorage(response.storage || {});
+      if (response.message) toast.info(response.message);
     } catch (error: any) {
       toast.error(apiMessage(error, "Không tải được thư viện."));
     } finally {
@@ -493,107 +1060,135 @@ const MyLibraryPage: React.FC = () => {
   useEffect(() => {
     loadLibrary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [querySearch]);
+  }, [area, querySearch, queryFileType, pageNumber, sort]);
+
+  const visibleItems = useMemo(() => items, [items]);
+  const selectedItems = useMemo(
+    () => visibleItems.filter((item) => selectedKeys.includes(`${item.type}-${item.id}`)),
+    [selectedKeys, visibleItems]
+  );
+  const activeLabel = navItems.find((item) => item.key === area)?.label || "Tài liệu của tôi";
+  const canCreate = area === "my";
+
+  const counts = {
+    my: (workspaceCounts.folders || 0) + (workspaceCounts.documents || 0),
+    shared: workspaceCounts.shared || 0,
+    recent: area === "recent" ? visibleItems.length : 0,
+    favorites: workspaceCounts.favorites || 0,
+    "shared-links": shareLinks.length,
+    trash: workspaceCounts.trash || 0,
+  };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a" && area !== "shared-links") {
         event.preventDefault();
-        setSelectedKeys(visibleItems.map((item) => item.key));
+        setSelectedKeys(visibleItems.map((item) => `${item.type}-${item.id}`));
       }
       if (event.key === "Escape") {
         setSelectedKeys([]);
         setPreviewItem(null);
+        setDialog(null);
       }
       if (event.key === "/" && document.activeElement !== searchInputRef.current) {
         event.preventDefault();
         searchInputRef.current?.focus();
+      }
+      if (event.key === "Delete" && selectedItems.length > 0 && area !== "trash") {
+        trashSelected();
+      }
+      if (event.key === "F2" && selectedItems.length === 1) {
+        setDialog({ type: "rename", item: selectedItems[0] });
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   });
 
-  const allItems = useMemo<LibraryItem[]>(() => {
-    const folderSource = area === "shared" ? sharedFolders : area === "my" ? folders : area === "recent" ? [...folders, ...sharedFolders] : [];
-    const folderItems = folderSource.map((folder) => ({
-      key: `folder-${folder.folder_id}`,
-      itemType: "folder" as const,
-      id: folder.folder_id,
-      name: folder.name,
-      updatedAt: folder.updated_at || folder.created_at,
-      folder,
-    }));
-    const documentItems = area === "my" || area === "recent"
-      ? documents.map((document) => ({
-          key: `document-${document.document_id}`,
-          itemType: "document" as const,
-          id: document.document_id,
-          name: getDocumentTitle(document),
-          updatedAt: document.uploaded_at,
-          document,
-        }))
-      : [];
-    return [...folderItems, ...documentItems].sort((a, b) => Date.parse(b.updatedAt || "") - Date.parse(a.updatedAt || ""));
-  }, [area, documents, folders, sharedFolders]);
-
-  const visibleItems = useMemo(() => allItems.filter((item) => itemMatches(item, querySearch)), [allItems, querySearch]);
-  const selectedDocuments = selectedKeys
-    .filter((key) => key.startsWith("document-"))
-    .map((key) => Number(key.replace("document-", "")));
-  const activeLabel = navItems.find((item) => item.key === area)?.label || "Tài liệu của tôi";
-  const canCreate = area === "my";
-
-  const counts = {
-    my: folders.length + documents.length,
-    shared: sharedFolders.length,
-    recent: folders.length + sharedFolders.length + documents.length,
-    favorites: 0,
-    "shared-links": 0,
-    trash: 0,
+  const setQuery = (next: Record<string, string>) => {
+    setSearchParams({ area, view: viewMode, sort, ...(querySearch ? { search: querySearch } : {}), ...(queryFileType ? { fileType: queryFileType } : {}), ...next });
   };
 
   const submitSearch = (event: React.FormEvent) => {
     event.preventDefault();
-    setSearchParams({ area, search: search.trim(), view: viewMode });
+    setSearchParams({ area, ...(search.trim() ? { search: search.trim() } : {}), ...(fileType ? { fileType } : {}), view: viewMode, sort, pageNumber: "1" });
   };
 
   const changeViewMode = (mode: ViewMode) => {
     setViewMode(mode);
-    setSearchParams({ area, ...(querySearch ? { search: querySearch } : {}), view: mode });
+    setQuery({ view: mode });
   };
 
-  const createFolder = async (payload: any) => {
-    const folder = await foldersApi.createFolder(payload);
-    toast.success("Đã tạo thư mục.");
-    setShowCreateFolder(false);
-    if (folder?.folder_id) {
-      navigate(`/library/folders/${folder.folder_id}`);
-    } else {
-      loadLibrary();
-    }
+  const changeSort = (value: string) => {
+    setSort(value);
+    setSearchParams({ area, ...(querySearch ? { search: querySearch } : {}), ...(queryFileType ? { fileType: queryFileType } : {}), view: viewMode, sort: value, pageNumber: "1" });
   };
 
-  const toggleSelection = (key: string) => {
-    setSelectedKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
+  const toggleSelection = (item: WorkspaceItem) => {
+    const key = `${item.type}-${item.id}`;
+    setSelectedKeys((current) => current.includes(key) ? current.filter((itemKey) => itemKey !== key) : [...current, key]);
   };
 
-  const deleteSelected = async () => {
-    if (selectedDocuments.length === 0) {
-      toast.info("Hiện tại chỉ hỗ trợ xóa hàng loạt tài liệu.");
-      return;
-    }
-    if (!window.confirm(`Chuyển ${selectedDocuments.length} tài liệu vào thùng rác?`)) return;
-    setDeleting(true);
+  const closeDialogAndReload = () => {
+    setDialog(null);
+    setSelectedKeys([]);
+    loadLibrary();
+  };
+
+  const openSingleAction = (type: "rename" | "share") => {
+    if (selectedItems.length !== 1) return;
+    setDialog({ type, item: selectedItems[0] } as DialogState);
+  };
+
+  const trashSelected = async () => {
+    if (selectedItems.length === 0) return;
+    if (!window.confirm(`Chuyển ${selectedItems.length} mục vào thùng rác?`)) return;
     try {
-      await documentsApi.deleteDocuments(selectedDocuments);
-      toast.success("Đã chuyển vào thùng rác.");
-      setDocuments((current) => current.filter((document) => !selectedDocuments.includes(document.document_id)));
-      setSelectedKeys((current) => current.filter((key) => !key.startsWith("document-")));
+      const response = await workspaceLibraryApi.trashItems(toPayloadItems(selectedItems));
+      if (response.failed?.length) {
+        toast.info(workspaceFailureMessage(response, "Một số mục chưa thể chuyển vào thùng rác."));
+      } else {
+        toast.success("Đã chuyển vào thùng rác.");
+      }
+      closeDialogAndReload();
     } catch (error: any) {
-      toast.error(apiMessage(error, "Không thể xóa tài liệu đã chọn."));
-    } finally {
-      setDeleting(false);
+      toast.error(apiMessage(error, "Không thể xóa mục đã chọn."));
+    }
+  };
+
+  const restoreSelected = async () => {
+    try {
+      const response = await workspaceLibraryApi.restoreItems(toPayloadItems(selectedItems));
+      if (response.failed?.length) toast.info(workspaceFailureMessage(response, "Một số mục chưa thể khôi phục."));
+      else toast.success("Đã khôi phục.");
+      closeDialogAndReload();
+    } catch (error: any) {
+      toast.error(apiMessage(error, "Không thể khôi phục."));
+    }
+  };
+
+  const deleteForeverSelected = async () => {
+    if (!window.confirm(`Xóa vĩnh viễn ${selectedItems.length} mục?`)) return;
+    try {
+      const response = await workspaceLibraryApi.deleteItemsForever(toPayloadItems(selectedItems));
+      if (response.failed?.length) toast.info(workspaceFailureMessage(response, "Một số mục chưa thể xóa vĩnh viễn."));
+      else toast.success("Đã xóa vĩnh viễn.");
+      closeDialogAndReload();
+    } catch (error: any) {
+      toast.error(apiMessage(error, "Không thể xóa vĩnh viễn."));
+    }
+  };
+
+  const favoriteSelected = async () => {
+    if (selectedItems.length !== 1) return;
+    const item = selectedItems[0];
+    try {
+      const response = await workspaceLibraryApi.setFavorite(item.id, { type: item.type, favorite: !item.isFavorite });
+      if (response.message) toast.info(response.message);
+      else toast.success(item.isFavorite ? "Đã bỏ yêu thích." : "Đã thêm vào yêu thích.");
+      loadLibrary();
+    } catch (error: any) {
+      toast.error(apiMessage(error, "Không thể cập nhật yêu thích."));
     }
   };
 
@@ -602,7 +1197,7 @@ const MyLibraryPage: React.FC = () => {
       <PageTitle title="Tài liệu của tôi" description="Không gian quản lý tài liệu và thư mục DocShare." />
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
-          <LibrarySidebar activeArea={area} counts={counts} />
+          <LibrarySidebar activeArea={area} counts={counts} storage={storage} />
           <section className="relative overflow-hidden rounded-lg border border-line bg-surface">
             <div className="border-b border-line bg-surface px-4 py-4">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -614,21 +1209,19 @@ const MyLibraryPage: React.FC = () => {
                   </div>
                   <h1 className="text-3xl font-bold text-ink">{activeLabel}</h1>
                   <p className="mt-2 text-sm text-ink-secondary">
-                    {visibleItems.length} mục · {folders.length + sharedFolders.length} thư mục · {documents.length} tài liệu
+                    {area === "shared-links"
+                      ? `${shareLinks.length} liên kết`
+                      : `${visibleItems.length} mục · ${visibleItems.filter((item) => item.type === "folder").length} thư mục · ${visibleItems.filter((item) => item.type === "document").length} tài liệu`}
                   </p>
                 </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <button type="button" onClick={() => setShowCreateFolder(true)} disabled={!canCreate} className="btn-secondary">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Thư mục mới
-                  </button>
-                  <NavLink to="/upload-document" className="btn-primary">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Tải lên
-                  </NavLink>
-                </div>
+                <WorkspaceCreateDropdown
+                  canUpload={canCreate}
+                  canCreateFolder={canCreate}
+                  onUpload={() => setDialog({ type: "upload" })}
+                  onCreateFolder={() => setDialog({ type: "create-folder" })}
+                />
               </div>
-              <form onSubmit={submitSearch} className="mt-4 flex max-w-2xl gap-2">
+              <form onSubmit={submitSearch} className="mt-4 flex max-w-3xl flex-col gap-2 sm:flex-row">
                 <label className="relative min-w-0 flex-1">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral" />
                   <input
@@ -639,17 +1232,46 @@ const MyLibraryPage: React.FC = () => {
                     placeholder="Tìm theo tên file, thư mục, loại file"
                   />
                 </label>
+                <select value={sort} onChange={(event) => changeSort(event.target.value)} className="input-field sm:w-44">
+                  <option value="updated_desc">Mới nhất</option>
+                  <option value="updated_asc">Cũ nhất</option>
+                  <option value="name_asc">Tên A-Z</option>
+                  <option value="name_desc">Tên Z-A</option>
+                  <option value="type">Loại</option>
+                  <option value="size_desc">Kích thước</option>
+                </select>
+                <select value={fileType} onChange={(event) => setFileType(event.target.value)} className="input-field sm:w-40">
+                  <option value="">Tất cả loại</option>
+                  <option value="pdf">PDF</option>
+                  <option value="docx">Word</option>
+                  <option value="xlsx">Excel</option>
+                  <option value="image">Ảnh</option>
+                </select>
                 <button type="submit" className="btn-secondary px-3">Tìm</button>
               </form>
             </div>
 
-            <Toolbar
-              selectedCount={selectedKeys.length}
-              viewMode={viewMode}
-              onViewMode={changeViewMode}
-              onClear={() => setSelectedKeys([])}
-              onDelete={deleting ? () => undefined : deleteSelected}
-            />
+            {area !== "shared-links" && (
+              <WorkspaceToolbar
+                selectedItems={selectedItems}
+                area={area}
+                folderPermissions={folderPermissions}
+                viewMode={viewMode}
+                onViewMode={changeViewMode}
+                onClear={() => setSelectedKeys([])}
+                onCreate={() => setDialog({ type: "create-folder" })}
+                onUpload={() => setDialog({ type: "upload" })}
+                onRename={() => openSingleAction("rename")}
+                onMove={() => setDialog({ type: "move", mode: "move", items: selectedItems })}
+                onCopy={() => setDialog({ type: "move", mode: "copy", items: selectedItems })}
+                onMerge={() => setDialog({ type: "merge", items: selectedItems })}
+                onShare={() => openSingleAction("share")}
+                onFavorite={favoriteSelected}
+                onTrash={trashSelected}
+                onRestore={restoreSelected}
+                onDeleteForever={deleteForeverSelected}
+              />
+            )}
 
             <div className={`p-4 ${previewItem ? "lg:pr-[28rem]" : ""}`}>
               {loading ? (
@@ -657,38 +1279,63 @@ const MyLibraryPage: React.FC = () => {
                   <RefreshCw className="h-7 w-7 animate-spin text-primary" />
                   <p className="text-sm text-ink-secondary">Đang tải thư viện...</p>
                 </div>
+              ) : area === "shared-links" ? (
+                <SharedLinksView rows={shareLinks} />
               ) : visibleItems.length === 0 ? (
-                <EmptyState area={area} canCreate={canCreate} onCreate={() => setShowCreateFolder(true)} />
+                <EmptyState
+                  area={area}
+                  canCreate={canCreate}
+                  canUpload={canCreate}
+                  onCreate={() => setDialog({ type: "create-folder" })}
+                  onUpload={() => setDialog({ type: "upload" })}
+                />
               ) : viewMode === "grid" ? (
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 overflow-scroll max-h-screen">
                   {visibleItems.map((item) => (
-                    <LibraryItemCard
-                      key={item.key}
+                    <WorkspaceItemCard
+                      key={`${item.type}-${item.id}`}
                       item={item}
-                      selected={selectedKeys.includes(item.key)}
-                      onSelect={() => toggleSelection(item.key)}
+                      selected={selectedKeys.includes(`${item.type}-${item.id}`)}
+                      onSelect={() => toggleSelection(item)}
                       onPreview={() => setPreviewItem(item)}
+                      onMenu={() => {
+                        setSelectedKeys([`${item.type}-${item.id}`]);
+                        setDialog({ type: "share", item });
+                      }}
                     />
                   ))}
                 </div>
               ) : (
-                <LibraryItemList
+                <WorkspaceItemList
                   items={visibleItems}
-                  selectedKeys={selectedKeys}
+                  selectedIds={selectedKeys}
                   onToggle={toggleSelection}
                   onPreview={setPreviewItem}
+                  onMenu={(item) => {
+                    setSelectedKeys([`${item.type}-${item.id}`]);
+                    setDialog({ type: "share", item });
+                  }}
                 />
               )}
+              <PaginationComponent
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalCount={pagination.totalCount}
+                onPageChange={(nextPage) => setQuery({ pageNumber: String(nextPage) })}
+              />
             </div>
 
-            <PreviewDrawer item={previewItem} onClose={() => setPreviewItem(null)} />
+            <PreviewDrawer item={previewItem} onClose={() => setPreviewItem(null)} onShare={(item) => setDialog({ type: "share", item })} />
           </section>
         </div>
       </div>
 
-      {showCreateFolder && (
-        <FolderFormDialog title="Tạo thư mục" onClose={() => setShowCreateFolder(false)} onSubmit={createFolder} />
-      )}
+      {dialog?.type === "create-folder" && <CreateFolderDialog parentFolderId={null} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
+      {dialog?.type === "upload" && <UploadDialog parentFolderId={null} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
+      {dialog?.type === "rename" && <RenameDialog item={dialog.item} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
+      {dialog?.type === "move" && <MoveCopyDialog mode={dialog.mode} items={dialog.items} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
+      {dialog?.type === "merge" && <MergeDialog items={dialog.items} parentFolderId={null} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
+      {dialog?.type === "share" && <ShareDialog item={dialog.item} onClose={() => setDialog(null)} />}
     </>
   );
 };

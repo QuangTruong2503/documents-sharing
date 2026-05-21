@@ -23,9 +23,10 @@ interface DocumentData {
   document_id: number;
   user_id: string;
   title: string;
-  description: string;
+  description: string | null;
   file_url: string;
   file_type?: string;
+  file_size?: number;
   is_public: boolean;
   download_count: number;
   uploaded_at: string;
@@ -33,6 +34,10 @@ interface DocumentData {
   like_count: number;
   dislike_count: number;
   myReaction: number | null;
+  categories?: Array<string | { category_id?: string | number; name?: string; category_name?: string }>;
+  parent_folder_id?: number | null;
+  folder_visibility?: string | null;
+  access_source?: string | null;
 }
 
 interface Collection {
@@ -51,6 +56,29 @@ const isPdfDocument = (documentData: DocumentData) => {
   const fileUrl = documentData.file_url.toLowerCase().split("?")[0];
 
   return fileType.includes("pdf") || fileUrl.endsWith(".pdf");
+};
+
+const folderVisibilityLabel: Record<string, string> = {
+  private: "Thư mục riêng tư",
+  shared: "Thư mục chia sẻ",
+  public: "Thư mục công khai",
+};
+
+const accessSourceLabel: Record<string, string> = {
+  folder: "Truy cập qua thư mục",
+  public: "Tài liệu công khai",
+  owner: "Tài liệu của bạn",
+};
+
+const formatFileSize = (size?: number) => {
+  if (!size) return null;
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+  return `${(size / 1024 / 1024).toFixed(2)} MB`;
+};
+
+const getCategoryName = (category: NonNullable<DocumentData["categories"]>[number]) => {
+  if (typeof category === "string") return category;
+  return category.name || category.category_name || String(category.category_id || "");
 };
 
 const buildGoogleViewerUrl = (fileUrl: string, attempt: number) => {
@@ -348,6 +376,11 @@ const PdfViewer: React.FC = () => {
     return <div className="text-center p-4">Không có dữ liệu tài liệu</div>;
   }
 
+  const description = documentData.description || "Không có mô tả.";
+  const fileSize = formatFileSize(documentData.file_size);
+  const categories = (documentData.categories || []).map(getCategoryName).filter(Boolean);
+  const accessSource = documentData.access_source ? accessSourceLabel[documentData.access_source] || documentData.access_source : null;
+  const folderVisibility = documentData.folder_visibility ? folderVisibilityLabel[documentData.folder_visibility] || documentData.folder_visibility : null;
   const viewerUrl = isPdfDocument(documentData)
     ? documentData.file_url
     : buildGoogleViewerUrl(documentData.file_url, viewerAttempt);
@@ -357,7 +390,7 @@ const PdfViewer: React.FC = () => {
     <>
       <PageTitle
         title={documentData.title}
-        description={documentData.description}
+        description={documentData.description || documentData.title}
       />
       <div className="flex w-full flex-col gap-5 md:flex-row">
         {/* Left Sidebar */}
@@ -366,8 +399,23 @@ const PdfViewer: React.FC = () => {
             {documentData.title}
           </h1>
           <p className="mb-4 text-sm text-ink-secondary line-clamp-4">
-            {documentData.description}
+            {description}
           </p>
+          <div className="mb-4 flex flex-wrap gap-2 text-xs font-semibold">
+            <span className="rounded-full bg-primary-soft px-3 py-1 text-primary">
+              {documentData.is_public ? "Công khai" : "Riêng tư"}
+            </span>
+            {folderVisibility && (
+              <span className="rounded-full bg-canvas px-3 py-1 text-ink-secondary">
+                {folderVisibility}
+              </span>
+            )}
+            {accessSource && (
+              <span className="rounded-full bg-canvas px-3 py-1 text-ink-secondary">
+                {accessSource}
+              </span>
+            )}
+          </div>
           <p className="mb-4 text-sm text-neutral">
             Được tải bởi{" "}
             <NavLink
@@ -380,7 +428,25 @@ const PdfViewer: React.FC = () => {
           </p>
           <div className="mb-4 flex w-full items-center justify-between text-sm text-ink-secondary">
             <span>{documentData.download_count} lượt tải</span>
+            <span>{[documentData.file_type?.toUpperCase(), fileSize].filter(Boolean).join(" · ")}</span>
           </div>
+          {documentData.parent_folder_id && (
+            <NavLink
+              to={`/library/folders/${documentData.parent_folder_id}`}
+              className="mb-4 w-full rounded-md border border-line bg-canvas px-3 py-2 text-sm font-medium text-ink-secondary transition hover:text-primary"
+            >
+              Mở thư mục chứa tài liệu
+            </NavLink>
+          )}
+          {categories.length > 0 && (
+            <div className="mb-4 flex w-full flex-wrap gap-2">
+              {categories.map((category) => (
+                <span key={category} className="rounded-md border border-line bg-canvas px-2.5 py-1 text-xs font-medium text-ink-secondary">
+                  {category}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="grid w-full grid-cols-2 gap-2 lg:grid-cols-3">
             <button
               onClick={() => setShowAISummaryModal(true)}

@@ -3,7 +3,7 @@ import documentsApi from "api/documentsApi";
 
 interface DocumentInfor {
   title: string;
-  description: string;
+  description: string | null;
   file_size: number;
   file_type: string;
   uploaded_at: Date;
