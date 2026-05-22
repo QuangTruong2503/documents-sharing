@@ -94,11 +94,11 @@ const AccountButton = ({ onClose }) => {
               </span>
               Tải lên
             </Dropdown.Item>
-            <Dropdown.Item as={NavLink} to="/my-documents">
+            <Dropdown.Item as={NavLink} to="/library">
               <span className="me-2">
                 <FontAwesomeIcon icon={faFile} />
               </span>
-              Tài liệu của tôi
+              Thư viện của tôi
             </Dropdown.Item>
             <Dropdown.Item as={NavLink} to="/my-reports">
               <span className="me-2">
@@ -147,14 +147,14 @@ const AccountButton = ({ onClose }) => {
             Tải lên
           </NavLink>
           <NavLink
-            to="/my-documents"
+            to="/library"
             onClick={onClose}
             className="flex items-center rounded-md px-4 py-2 text-ink-secondary hover:bg-canvas hover:text-primary"
           >
             <span className="me-2">
               <FontAwesomeIcon icon={faFile} />
             </span>
-            Tài liệu của tôi
+            Thư viện của tôi
           </NavLink>
           <NavLink
             to="/account/profile"

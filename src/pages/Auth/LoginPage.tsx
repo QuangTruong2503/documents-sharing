@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import userApi from "api/usersApi";
-import Cookies from "js-cookie";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
@@ -10,8 +9,8 @@ import LoaderButton from "components/Loaders/LoaderButton.js";
 import PageTitle from "components/PageTitle.js";
 import GoogleLoginComponent from "./GoogleLoginComponent.tsx";
 import OtpModal from "components/Modal/OtpModal.tsx";
-import { UAParser } from "ua-parser-js";
 import { normalizeAuthResponse } from "utils/userMapper.js";
+import { getDeviceInfo as getCurrentDeviceInfo, saveAuthSession } from "utils/authSession.js";
 
 // Interfaces
 interface Login {
@@ -84,19 +83,7 @@ function LoginPage() {
 
   // Lấy thông tin thiết bị
   const getDeviceInfo = useCallback((): string => {
-    try {
-      const parser = new UAParser();
-      const result = parser.getResult();
-      const deviceName = result.device.model || "PC";
-      const osInfo = `${result.os.name || "Unknown"} ${result.os.version || ""}`.trim();
-      const deviceInfo = `${deviceName} - ${osInfo}`;
-      
-      console.log("Device Info:", deviceInfo);
-      return deviceInfo;
-    } catch (error) {
-      console.error("Error getting device info:", error);
-      return "Unknown Device";
-    }
+    return getCurrentDeviceInfo();
   }, []);
 
   // Validate email format
@@ -158,8 +145,7 @@ function LoginPage() {
       setIsTwoFARequired(true);
     } else if (data.success === true && data.isLogin === true) {
       toast.success(data.message || "Đăng nhập thành công");
-      Cookies.set("token", data.token, { expires: 3, secure: true, sameSite: "strict" });
-      Cookies.set("user", JSON.stringify(data.user), { expires: 3, secure: true, sameSite: "strict" });
+      saveAuthSession({ token: data.token, user: data.user });
       navigate("/");
     } else {
       toast.warning(data.message || "Đăng nhập không thành công");
@@ -197,8 +183,7 @@ function LoginPage() {
       const data: LoginResponse = normalizeAuthResponse(response.data);
 
       if (data.success) {
-        Cookies.set("token", data.token, { expires: 3, secure: true, sameSite: 'strict' });
-        Cookies.set("user", JSON.stringify(data.user), { expires: 3, secure: true, sameSite: 'strict' });
+        saveAuthSession({ token: data.token, user: data.user });
         setIsTwoFARequired(false);
         navigate("/");
       } else {
@@ -227,6 +212,11 @@ function LoginPage() {
       twoFactorMethod: "",
       maskedContact: "",
     });
+  };
+
+  const handleTwoFARequired = (data: TwoFARequiredResponse) => {
+    setTwofaRequired(data);
+    setIsTwoFARequired(true);
   };
 
   // Initialize on component mount
@@ -368,7 +358,7 @@ function LoginPage() {
 
             {/* Google Login */}
             <div className="grid grid-cols-1 gap-2 my-3">
-              <GoogleLoginComponent />
+              <GoogleLoginComponent onTwoFARequired={handleTwoFARequired} />
             </div>
           </div>
 

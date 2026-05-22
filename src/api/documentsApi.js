@@ -46,9 +46,13 @@ const documentsApi = {
     });
   },
   //upload document
-  postDocument: (file) => {
+  postDocument: (file, folderId) => {
     const authToken = Cookies.get("token");
-    return axiosInstance.post("Documents/upload-document", file, {
+    const endpoint = folderId
+      ? `folders/${folderId}/upload-document`
+      : "Documents/upload-document";
+
+    return axiosInstance.post(endpoint, file, {
       headers: {
         "Content-Type": "multipart/form-data",
         Authorization: `Bearer ${authToken}`,
@@ -75,16 +79,20 @@ const documentsApi = {
         },
         });
     },
-  deleteDocumentByID: (docID) => {
+  deleteDocuments: (documentIds) => {
     const authToken = Cookies.get("token");
-    return axiosInstance.delete(
-      `Documents/delete-document?documentID=${docID}`,
-      {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      }
-    );
+    return axiosInstance.delete("Documents/delete-document", {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
+      },
+      data: {
+        document_ids: documentIds.map(Number),
+      },
+    });
+  },
+  deleteDocumentByID: (docID) => {
+    return documentsApi.deleteDocuments([docID]);
   },
   //API tải xuống tài liệu
   downloadDocumentByID: (documentID) => {

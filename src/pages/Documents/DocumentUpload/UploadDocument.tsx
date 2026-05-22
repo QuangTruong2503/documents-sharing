@@ -12,16 +12,32 @@ import {
 import UploadSuccessComponent from "./UploadSuccessComponent.tsx";
 import documentsApi from "api/documentsApi.js";
 import PageTitle from "components/PageTitle.js";
+import { NavLink, useSearchParams } from "react-router-dom";
 
 interface DocumentResponse {
   message: string;
   success: boolean;
   document_id: number;
+  folder_id?: number;
+  added_to_folder?: boolean;
   title: string;
   thumbnail_url: string;
+  file_url?: string;
+  file_type?: string;
+  file_size?: number;
+  pages?: number;
+  uploaded_at?: string;
+  folder_document?: {
+    folder_id: number;
+    document_id: number;
+    added_by_user_id: string;
+    added_at: string;
+  };
 }
 
 function UploadDocument() {
+  const [searchParams] = useSearchParams();
+  const folderId = searchParams.get("folderId");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -88,7 +104,7 @@ function UploadDocument() {
     formData.append("file", selectedFile);
 
     try {
-      const response = await documentsApi.postDocument(formData);
+      const response = await documentsApi.postDocument(formData, folderId);
       const data: DocumentResponse = response.data;
       if (data.success) {
         setDocumentResponse(data);
@@ -120,12 +136,14 @@ function UploadDocument() {
       <PageTitle title="Tải tài liệu" description="Tải lên và chia sẻ tài liệu của bạn" />
 
       <section className="mb-8 border-b border-line pb-6">
-        <p className="mb-2 text-sm font-semibold text-primary">Đóng góp tài liệu</p>
+        <p className="mb-2 text-sm font-semibold text-primary">{folderId ? "Tải vào thư mục" : "Đóng góp tài liệu"}</p>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-ink">Tải lên tài liệu mới</h1>
+            <h1 className="text-3xl font-bold text-ink">{folderId ? "Tải tài liệu mới vào thư mục" : "Tải lên tài liệu mới"}</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-secondary">
-              Chọn tài liệu, kiểm tra lại thông tin, thêm danh mục và tag để người khác tìm thấy dễ hơn.
+              {folderId
+                ? "Chọn tài liệu và nhập thông tin cơ bản. Tài liệu trong thư mục không cần tag hoặc danh mục."
+                : "Chọn tài liệu, kiểm tra lại thông tin, thêm danh mục và tag để người khác tìm thấy dễ hơn."}
             </p>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold text-ink-secondary">
@@ -209,7 +227,9 @@ function UploadDocument() {
               <div className="mt-5 space-y-3 text-sm text-ink-secondary">
                 <p className="flex items-center gap-2">
                   <FontAwesomeIcon icon={faCheckCircle} className="text-success" />
-                  Sau khi upload, bạn sẽ bổ sung tiêu đề, mô tả, tag và danh mục.
+                  {folderId
+                    ? "Sau khi upload, bạn chỉ cần bổ sung tiêu đề và mô tả."
+                    : "Sau khi upload, bạn sẽ bổ sung tiêu đề, mô tả, tag và danh mục."}
                 </p>
                 <p className="flex items-center gap-2">
                   <FontAwesomeIcon icon={faShieldHalved} className="text-primary" />
@@ -236,7 +256,7 @@ function UploadDocument() {
             </aside>
           </div>
         ) : (
-          documentResponse && <UploadSuccessComponent document={documentResponse} />
+          documentResponse && <UploadSuccessComponent document={documentResponse} folderId={folderId ? Number(folderId) : undefined} />
         )}
 
         {error && (
@@ -246,13 +266,17 @@ function UploadDocument() {
         )}
 
         {uploadSuccess && (
-          <button
-            onClick={resetUpload}
-            className="btn-secondary mx-auto mt-8 flex items-center gap-2 px-6 py-3"
-          >
-            <FontAwesomeIcon icon={faArrowRotateRight} />
-            Tải lên tài liệu khác
-          </button>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <button onClick={resetUpload} className="btn-secondary flex items-center gap-2 px-6 py-3">
+              <FontAwesomeIcon icon={faArrowRotateRight} />
+              Tải lên tài liệu khác
+            </button>
+            {folderId && (
+              <NavLink to={`/library/folders/${folderId}`} className="btn-primary px-6 py-3">
+                Quay lại thư mục
+              </NavLink>
+            )}
+          </div>
         )}
       </div>
     </div>

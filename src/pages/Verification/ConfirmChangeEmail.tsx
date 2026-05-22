@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faCircleExclamation } from "@fortawesome/free-solid-svg-icons";
-import Loader from "components/Loaders/Loader";
+import { RefreshCw } from "lucide-react";
 import PageTitle from "components/PageTitle";
 import verificationsApi from "api/verificationsApi";
 
@@ -48,7 +48,7 @@ const ConfirmChangeEmail: React.FC = () => {
         <div className="surface-card w-full max-w-md p-8 text-center shadow-card">
           {loading ? (
             <div className="flex flex-col items-center gap-3">
-              <Loader />
+              <RefreshCw className="h-7 w-7 animate-spin text-primary" />
               <p className="text-sm text-ink-secondary">Đang xác nhận đổi email...</p>
             </div>
           ) : (

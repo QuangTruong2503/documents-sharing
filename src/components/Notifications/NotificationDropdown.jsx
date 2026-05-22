@@ -17,6 +17,7 @@ import {
   ThumbsDown,
   Trash2,
   UserPlus,
+  Users,
   X,
 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -39,6 +40,13 @@ const notificationTypeConfig = {
   DOCUMENT_DELETED_BY_ADMIN: { icon: Trash2, className: "bg-rose-50 text-rose-600" },
   ACCOUNT_UPDATED_BY_ADMIN: { icon: Shield, className: "bg-purple-50 text-purple-600" },
   EMAIL_CHANGED: { icon: MailCheck, className: "bg-green-50 text-green-600" },
+  folder_invite: { icon: MailCheck, className: "bg-indigo-50 text-indigo-600" },
+  folder_invite_accepted: { icon: FolderPlus, className: "bg-emerald-50 text-emerald-600" },
+  folder_invite_declined: { icon: X, className: "bg-rose-50 text-rose-600" },
+  folder_member_added: { icon: Users, className: "bg-blue-50 text-blue-600" },
+  folder_member_removed: { icon: Users, className: "bg-slate-100 text-slate-600" },
+  folder_role_changed: { icon: Shield, className: "bg-purple-50 text-purple-600" },
+  folder_document_added: { icon: FolderPlus, className: "bg-teal-50 text-teal-600" },
 };
 
 function formatNotificationTime(value) {
@@ -68,10 +76,34 @@ function normalizeTargetUrl(targetUrl) {
   return targetUrl
     .replace(/^\/documents\//, "/document/")
     .replace(/^\/collections\//, "/collection/")
+    .replace(/^\/api\/folders\//, "/library/folders/")
+    .replace(/^\/folders\//, "/library/folders/")
     .replace(/^\/users\//, "/public-profile/")
     .replace(/^\/reports\//, "/my-reports/")
     .replace(/^\/admin\/reports\/\d+/, "/admin")
     .replace(/^\/profile$/, "/account/profile");
+}
+
+function getFolderNotificationFallback(notification) {
+  const folderId = notification.related_folder_id ?? notification.relatedFolderId;
+  const inviteId = notification.related_invite_id ?? notification.relatedInviteId ?? notification.invite_id;
+
+  switch (notification.type) {
+    case "folder_invite":
+      return inviteId ? `/folder-invites/${inviteId}` : "/folder-invites";
+    case "folder_invite_declined":
+      return folderId ? `/library/folders/${folderId}/invites` : "/library?tab=folders";
+    case "folder_member_removed":
+      return "/library?tab=shared";
+    case "folder_document_added":
+      return folderId ? `/library/folders/${folderId}/documents` : "/library?tab=folders";
+    case "folder_invite_accepted":
+    case "folder_member_added":
+    case "folder_role_changed":
+      return folderId ? `/library/folders/${folderId}` : "/library?tab=folders";
+    default:
+      return null;
+  }
 }
 
 function getNotificationId(notification) {
@@ -224,7 +256,7 @@ const NotificationDropdown = ({ compact = false, onNavigate }) => {
       }
     }
 
-    const targetUrl = normalizeTargetUrl(notification.target_url);
+    const targetUrl = normalizeTargetUrl(notification.target_url) || getFolderNotificationFallback(notification);
     setIsOpen(false);
     if (targetUrl) {
       navigate(targetUrl);

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import documentsApi from "api/documentsApi.js";
 import { useSearchParams, NavLink } from "react-router-dom";
 import { toast } from "react-toastify";
-import Loader from "components/Loaders/Loader.js";
 import DeleteModal from "components/Modal/DeleteModal.js";
 import ModalInfor from "components/Modal/ModalDocumentInfor.tsx";
 import Pagination from "components/Pagination/Pagination.tsx";
@@ -11,6 +10,7 @@ import ActionButtons from "components/Documents/DocumentEdit/ActionButtons.tsx";
 import EditModal from "components/Modal/EditDocumentModal.tsx"; // Adjust path as needed
 import PageTitle from "components/PageTitle.js";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { RefreshCw } from "lucide-react";
 import {
   faArrowUpAZ,
   faCloudArrowUp,
@@ -137,7 +137,7 @@ const MyDocuments: React.FC = () => {
   if (loading)
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-        <Loader />
+        <RefreshCw className="h-7 w-7 animate-spin text-primary" />
         <p className="text-sm text-ink-secondary">Đang tải tài liệu của bạn...</p>
       </div>
     );

@@ -28,8 +28,21 @@ interface DocumentResponse {
   message: string;
   success: boolean;
   document_id: number;
+  folder_id?: number;
+  added_to_folder?: boolean;
   title: string;
   thumbnail_url: string;
+  file_url?: string;
+  file_type?: string;
+  file_size?: number;
+  pages?: number;
+  uploaded_at?: string;
+  folder_document?: {
+    folder_id: number;
+    document_id: number;
+    added_by_user_id: string;
+    added_at: string;
+  };
 }
 
 interface UpdateResponse {
@@ -53,8 +66,10 @@ const MAX_CATEGORIES = 3;
 
 const UploadSuccessComponent = ({
   document,
+  folderId,
 }: {
   document: DocumentResponse;
+  folderId?: number;
 }) => {
   const [documentForm, setDocumentForm] = useState<DocumentUpload>({
     document_id: document.document_id,
@@ -71,6 +86,7 @@ const UploadSuccessComponent = ({
   const [suggestedTags, setSuggestedTags] = useState<Tag[]>([]);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const isFolderUpload = Boolean(folderId);
 
   const debouncedTagSearch = useCallback(
     async (query: string) => {
@@ -220,8 +236,10 @@ const UploadSuccessComponent = ({
         console.error("Error fetching categories:", err);
       }
     };
-    fetchCategories();
-  }, []);
+    if (!isFolderUpload) {
+      fetchCategories();
+    }
+  }, [isFolderUpload]);
 
   const shareUrl = `${window.location.origin}/document/${updateResponse?.document_id || document.document_id}`;
 
@@ -232,7 +250,9 @@ const UploadSuccessComponent = ({
         <div>
           <h2 className="font-bold">Tải lên thành công</h2>
           <p className="mt-1 text-sm text-ink-secondary">
-            Hoàn tất thông tin bên dưới để tài liệu sẵn sàng hiển thị.
+            {isFolderUpload
+              ? "Hoàn tất thông tin cơ bản để đưa tài liệu vào thư mục."
+              : "Hoàn tất thông tin bên dưới để tài liệu sẵn sàng hiển thị."}
           </p>
         </div>
       </div>
@@ -291,99 +311,101 @@ const UploadSuccessComponent = ({
                 />
               </div>
 
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-ink">
-                  <FontAwesomeIcon icon={faTag} className="text-primary" />
-                  Tags
-                  <span className="text-xs font-medium text-ink-secondary">
-                    thêm tag để dễ tìm kiếm
-                  </span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={tagInput}
-                    onChange={handleTagInputChange}
-                    onKeyPress={handleTagKeyPress}
-                    placeholder="Nhập tag..."
-                    className="input-field mt-2"
-                  />
-                  {suggestedTags.length > 0 && (
-                    <ul className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-line bg-surface shadow-card">
-                      {suggestedTags.map((tag) => (
-                        <li
+              {!isFolderUpload && (
+                <>
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-ink">
+                      <FontAwesomeIcon icon={faTag} className="text-primary" />
+                      Tags
+                      <span className="text-xs font-medium text-ink-secondary">
+                        thêm tag để dễ tìm kiếm
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={tagInput}
+                        onChange={handleTagInputChange}
+                        onKeyPress={handleTagKeyPress}
+                        placeholder="Nhập tag..."
+                        className="input-field mt-2"
+                      />
+                      {suggestedTags.length > 0 && (
+                        <ul className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-line bg-surface shadow-card">
+                          {suggestedTags.map((tag) => (
+                            <li
+                              key={tag.name}
+                              onClick={() => addTag(tag.name)}
+                              className="cursor-pointer px-4 py-2 text-sm text-ink-secondary hover:bg-canvas hover:text-primary"
+                            >
+                              {tag.name}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {documentForm.tags.map((tag) => (
+                        <span
                           key={tag.name}
-                          onClick={() => addTag(tag.name)}
-                          className="cursor-pointer px-4 py-2 text-sm text-ink-secondary hover:bg-canvas hover:text-primary"
+                          className="inline-flex items-center rounded-md bg-primary-soft px-2 py-1 text-sm font-medium text-primary"
                         >
                           {tag.name}
-                        </li>
+                          <button
+                            type="button"
+                            onClick={() => removeTag(tag.name)}
+                            className="ml-2 text-primary hover:text-danger"
+                          >
+                            ×
+                          </button>
+                        </span>
                       ))}
-                    </ul>
-                  )}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {documentForm.tags.map((tag) => (
-                    <span
-                      key={tag.name}
-                      className="inline-flex items-center rounded-md bg-primary-soft px-2 py-1 text-sm font-medium text-primary"
-                    >
-                      {tag.name}
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag.name)}
-                        className="ml-2 text-primary hover:text-danger"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-              {/* Category Selector */}
-              <div className="rounded-lg border border-line bg-canvas p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-ink">
-                      Phân loại tài liệu
-                    </h3>
-                    <p className="text-xs text-ink-secondary">
-                      Chọn danh mục phù hợp để người khác dễ tìm
-                    </p>
+                    </div>
                   </div>
+                  <div className="rounded-lg border border-line bg-canvas p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-ink">
+                          Phân loại tài liệu
+                        </h3>
+                        <p className="text-xs text-ink-secondary">
+                          Chọn danh mục phù hợp để người khác dễ tìm
+                        </p>
+                      </div>
 
+                      {documentForm.categories.length > 0 && (
+                        <span className="text-xs font-medium text-primary">
+                          Đã chọn {documentForm.categories.length}
+                        </span>
+                      )}
+                    </div>
+
+                    <CategorySelector
+                      categories={categories}
+                      selected={documentForm.categories}
+                      onToggle={toggleCategory}
+                    />
+                  </div>
                   {documentForm.categories.length > 0 && (
-                    <span className="text-xs font-medium text-primary">
-                      Đã chọn {documentForm.categories.length}
-                    </span>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {documentForm.categories.map((id) => (
+                        <span
+                          key={id}
+                          className="flex items-center gap-1 rounded-md bg-primary-soft px-3 py-1 text-xs font-medium text-primary"
+                        >
+                          {getCategoryName(id)}
+                          <button
+                          type="button"
+                            onClick={() => toggleCategory(id)}
+                            className="hover:text-red-600"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
                   )}
-                </div>
-
-                <CategorySelector
-                  categories={categories}
-                  selected={documentForm.categories}
-                  onToggle={toggleCategory}
-                />
-              </div>
-              {/* Selected Categories */}
-              {documentForm.categories.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {documentForm.categories.map((id) => (
-                    <span
-                      key={id}
-                      className="flex items-center gap-1 rounded-md bg-primary-soft px-3 py-1 text-xs font-medium text-primary"
-                    >
-                      {getCategoryName(id)}
-                      <button
-                      type="button"
-                        onClick={() => toggleCategory(id)}
-                        className="hover:text-red-600"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
+                </>
               )}
 
               <label className="flex items-center rounded-lg border border-line bg-canvas p-4">
@@ -412,9 +434,9 @@ const UploadSuccessComponent = ({
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={documentForm.categories.length === 0}
+                  disabled={!isFolderUpload && documentForm.categories.length === 0}
                   className={`inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
-                    documentForm.categories.length === 0
+                    !isFolderUpload && documentForm.categories.length === 0
                       ? "cursor-not-allowed bg-line text-neutral"
                       : "bg-primary text-white hover:-translate-y-px hover:bg-primary-hover hover:shadow-glow"
                   }`}
@@ -438,11 +460,11 @@ const UploadSuccessComponent = ({
                   className="input-field mt-4 flex-1 bg-surface"
                 />
                 <NavLink
-                  to={`/document/${updateResponse.document_id}`}
+                  to={folderId ? `/library/folders/${folderId}` : `/document/${updateResponse.document_id}`}
                   className="btn-primary mt-4"
                 >
                   <FontAwesomeIcon icon={faEye} className="mr-2" />
-                  Xem
+                  {folderId ? "Về thư mục" : "Xem"}
                 </NavLink>
               </div>
             </div>
