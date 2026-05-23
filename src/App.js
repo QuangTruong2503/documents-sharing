@@ -25,12 +25,11 @@ import ConfirmChangeEmail from "pages/Verification/ConfirmChangeEmail.tsx";
 import ChangePassword from "pages/Auth/ChangePassword.js";
 import Search from "pages/Search/Search.tsx";
 import Categories from "pages/Categories.tsx";
-import ChatBoxAI from "components/Chat/ChatBoxAI.tsx";
-import { useState } from "react";
 import Admin from "pages/Admin/Admin.tsx";
 import MyReports from "pages/Reports/MyReports.tsx";
 import ReportDetail from "pages/Reports/ReportDetail.tsx";
 import PublicProfile from "pages/PublicProfile/PublicProfile.tsx";
+import PublicSharePage from "pages/Share/PublicSharePage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -54,7 +53,6 @@ const AuthLayout = ({ children }) => (
 );
 
 function App() {
-  const [chatOpen, setChatOpen] = useState(false);
   
   return (
     <QueryClientProvider client={queryClient}>
@@ -121,12 +119,13 @@ function App() {
                   <Route path="/my-documents" element={<Navigate to="/library?tab=documents" replace />} />
                   <Route path="/my-documents/page/:page" element={<Navigate to="/library?tab=documents" replace />} />
                   <Route path="/document/:documentID" element={<DocumentDetail />} />
+                  <Route path="/s/:token" element={<PublicSharePage />} />
                   <Route path="/public-profile/:userID" element={<PublicProfile />} />
                   <Route path="/my-reports" element={<MyReports />} />
                   <Route path="/my-reports/:reportId" element={<ReportDetail />} />
                   <Route path="/search/:search" element={<Search />}/>
                   <Route path="/category/:id" element={<Categories />}/>
-                  <Route path="/admin" element={<Admin />}/>
+                  <Route path="/admin/*" element={<Admin />}/>
                   {/* Collections */}
                   <Route path="/my-collections" element={<MyCollections />} />
                   <Route path="/collection/:collectionId" element={<CollectionDetail />} />
@@ -151,10 +150,10 @@ function App() {
                   <Route path="/folder-invites/:inviteId" element={<MyFolderInvitesPage />} />
                 </Routes>
                 {/* ChatBoxAI */}
-                <ChatBoxAI
+                {/* <ChatBoxAI
                   isOpenExternal={chatOpen}
                   onCloseExternal={() => setChatOpen(false)}
-                />
+                /> */}
               </MainLayout>
             }
           />

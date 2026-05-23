@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { NavLink, useSearchParams } from "react-router-dom";
-import { AlertTriangle, ChevronLeft, ChevronRight, FileText, RefreshCw } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, FileText, RefreshCw, XCircle } from "lucide-react";
 import { toast } from "react-toastify";
 import PageTitle from "components/PageTitle";
 import reportsApi from "api/reportsApi";
@@ -47,6 +47,7 @@ const MyReports: React.FC = () => {
   const [documentId, setDocumentId] = useState(searchParams.get("documentId") || "");
   const [page, setPage] = useState(Number(searchParams.get("page") || 1));
   const [loading, setLoading] = useState(false);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   useEffect(() => {
     reportsApi
@@ -88,6 +89,25 @@ const MyReports: React.FC = () => {
     loadReports();
   }, [documentId, loadReports, page, setSearchParams, status]);
 
+  const cancelReport = async (report: any) => {
+    if (report.status !== "Chờ giải quyết") return;
+    setCancellingId(report.report_id);
+    try {
+      const response = await reportsApi.cancelMyReport(report.report_id);
+      toast.success(response.data?.message || "Đã hủy báo cáo.");
+      loadReports();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không hủy được báo cáo.");
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  const visibleCounts = reports.reduce<Record<string, number>>((counts, report) => {
+    counts[report.status] = (counts[report.status] || 0) + 1;
+    return counts;
+  }, {});
+
   return (
     <>
       <PageTitle title="Báo cáo của tôi" description="Theo dõi các báo cáo tài liệu bạn đã gửi." />
@@ -99,6 +119,9 @@ const MyReports: React.FC = () => {
               Reports
             </div>
             <h1 className="text-3xl font-bold text-ink">Báo cáo của tôi</h1>
+            <p className="mt-2 text-sm text-ink-secondary">
+              Theo dõi trạng thái xử lý và hủy các báo cáo còn chờ giải quyết.
+            </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-[180px_160px]">
             <select
@@ -126,6 +149,29 @@ const MyReports: React.FC = () => {
           </div>
         </div>
 
+        {reports.length > 0 && (
+          <div className="grid gap-2 sm:grid-cols-4">
+            {["Chờ giải quyết", "Đang xử lý", "Đã xử lý", "Từ chối"].map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => {
+                  setStatus(status === item ? "" : item);
+                  setPage(1);
+                }}
+                className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm transition ${
+                  status === item
+                    ? "border-primary bg-primary-soft text-primary"
+                    : "border-line bg-surface text-ink-secondary hover:border-primary hover:text-primary"
+                }`}
+              >
+                <span>{item}</span>
+                <span className="font-semibold">{visibleCounts[item] || 0}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         <section className="surface-card overflow-hidden">
           {loading ? (
             <div className="flex min-h-64 items-center justify-center">
@@ -140,9 +186,8 @@ const MyReports: React.FC = () => {
           ) : (
             <div className="divide-y divide-line">
               {reports.map((report) => (
-                <NavLink
+                <div
                   key={report.report_id}
-                  to={`/my-reports/${report.report_id}`}
                   className="grid gap-3 p-4 transition hover:bg-gray-50 md:grid-cols-[64px_1fr_auto]"
                 >
                   <img
@@ -160,8 +205,24 @@ const MyReports: React.FC = () => {
                     <p className="mt-2 line-clamp-2 text-sm text-ink-secondary">{report.reason}</p>
                     <p className="mt-2 text-xs text-neutral">Gửi lúc {formatDate(report.created_at)}</p>
                   </div>
-                  <div className="text-sm font-medium text-primary md:self-center">Xem chi tiết</div>
-                </NavLink>
+                  <div className="flex flex-wrap items-center gap-2 md:flex-col md:items-end md:self-center">
+                    <NavLink to={`/my-reports/${report.report_id}`} className="btn-secondary px-3 py-2">
+                      Xem chi tiết
+                    </NavLink>
+                    {report.status === "Chờ giải quyết" && (
+                      <button
+                        type="button"
+                        className="btn-secondary px-3 py-2 text-danger hover:border-danger hover:text-danger"
+                        disabled={cancellingId === report.report_id}
+                        onClick={() => cancelReport(report)}
+                        title="Hủy báo cáo"
+                      >
+                        <XCircle className="mr-2 h-4 w-4" />
+                        {cancellingId === report.report_id ? "Đang hủy" : "Hủy"}
+                      </button>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
           )}

@@ -4,6 +4,7 @@ import ManageDashboard from "components/Dashboard/DashboardContent.tsx";
 import Profile from "./Profile.tsx";
 import PageTitle from "components/PageTitle.js";
 import Security from "./Security.tsx";
+import NotificationSettings from "./NotificationSettings.tsx";
 import Cookies from "js-cookie";
 import { normalizeUser } from "utils/userMapper.js";
 
@@ -38,6 +39,11 @@ function AccountPage() {
       url: "/account/security",
       icon: "fa-solid fa-shield-halved",
     },
+    {
+      name: "Thông báo",
+      url: "/account/notifications",
+      icon: "fa-regular fa-bell",
+    },
     ...(currentUserId
       ? [
           {
@@ -70,6 +76,7 @@ function AccountPage() {
               <Routes>
                 <Route path="profile" element={<Profile />} />
                 <Route path="security" element={<Security />} />
+                <Route path="notifications" element={<NotificationSettings />} />
               </Routes>
             </div>
           </main>

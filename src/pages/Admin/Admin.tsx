@@ -1,28 +1,39 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Cookies from "js-cookie";
-import { Navigate } from "react-router-dom";
+import { Navigate, NavLink, useParams } from "react-router-dom";
 import {
   BarChart3,
   Boxes,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
+  Eye,
+  ClipboardList,
   FileText,
   FolderTree,
   Globe2,
+  HardDrive,
+  ImageOff,
   LayoutDashboard,
   Library,
+  MoreVertical,
+  Pencil,
   RefreshCw,
+  ShieldCheck,
   Save,
   Search,
   ShieldAlert,
   Tags,
   Trash2,
+  X,
   UserCog,
+  UserX,
   Users,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import adminApi from "api/adminApi";
+import featureUpgradesApi from "api/featureUpgradesApi.ts";
 import PageTitle from "components/PageTitle";
 import { normalizeUser } from "utils/userMapper";
 
@@ -38,10 +49,18 @@ const tabs = [
   { id: "tags", label: "Thẻ", icon: Tags },
   { id: "collections", label: "Bộ sưu tập", icon: Library },
   { id: "analytics", label: "Thống kê", icon: BarChart3 },
+  { id: "engagement", label: "Tương tác", icon: BarChart3 },
+  { id: "audit", label: "Audit logs", icon: ClipboardList },
   { id: "seo", label: "SEO", icon: Globe2 },
 ];
 
 const reportStatuses = ["Chờ giải quyết", "Đang xử lý", "Đã xử lý", "Từ chối"];
+const reportStatusTones: Record<string, string> = {
+  "Chờ giải quyết": "warning",
+  "Đang xử lý": "info",
+  "Đã xử lý": "success",
+  "Từ chối": "danger",
+};
 
 const unwrap = (response: any) => response?.data?.data ?? response?.data ?? null;
 const unwrapList = (response: any) => {
@@ -70,6 +89,17 @@ const formatDate = (value?: string) => {
 
 const formatNumber = (value?: number) => (value ?? 0).toLocaleString("vi-VN");
 const ownerName = (owner: any) => owner?.full_name || owner?.username || owner?.email || "-";
+const storageUnits = {
+  MB: 1024 * 1024,
+  GB: 1024 * 1024 * 1024,
+};
+const formatStorageLimit = (bytes?: number | null) => {
+  if (!bytes) return "Chưa thiết lập";
+  if (bytes >= storageUnits.GB) {
+    return `${(bytes / storageUnits.GB).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} GB`;
+  }
+  return `${(bytes / storageUnits.MB).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} MB`;
+};
 
 const canAccessAdmin = () => {
   const token = Cookies.get("token");
@@ -251,6 +281,10 @@ function UsersView() {
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [page, setPage] = useState(1);
+  const [quotaModal, setQuotaModal] = useState<{ user: any; value: string; unit: "MB" | "GB" } | null>(null);
+  const [renameModal, setRenameModal] = useState<{ user: any; fullName: string } | null>(null);
+  const [actionMenu, setActionMenu] = useState<{ userId: string; top: number; left: number } | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -268,82 +302,326 @@ function UsersView() {
   useEffect(load, [load]);
 
   const updateUser = async (user: any, patch: any) => {
-    await adminApi.updateUser(user.user_id, patch);
-    toast.success("Đã cập nhật người dùng");
-    load();
+    try {
+      await adminApi.updateUser(user.user_id, patch);
+      toast.success("Đã cập nhật người dùng");
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không cập nhật được người dùng");
+    }
   };
 
   const deleteUser = async (user: any) => {
     if (!window.confirm(`Xóa người dùng ${user.username}?`)) return;
-    await adminApi.deleteUser(user.user_id);
-    toast.success("Đã xóa người dùng");
-    load();
+    try {
+      await adminApi.deleteUser(user.user_id);
+      toast.success("Đã xóa người dùng");
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không xóa được người dùng");
+    }
+  };
+
+  const openQuotaModal = (user: any) => {
+    const currentBytes = user.storage_limit_bytes ?? user.storageLimitBytes ?? storageUnits.GB;
+    const unit = currentBytes >= storageUnits.GB ? "GB" : "MB";
+    const value = currentBytes / storageUnits[unit];
+    setQuotaModal({
+      user,
+      unit,
+      value: Number.isInteger(value) ? String(value) : value.toFixed(2),
+    });
+  };
+
+  const submitQuota = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!quotaModal) return;
+
+    const amount = Number(quotaModal.value);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("Dung lượng phải là số hợp lệ lớn hơn 0.");
+      return;
+    }
+
+    setActionBusy(true);
+    try {
+      await featureUpgradesApi.updateUserStorage(quotaModal.user.user_id, Math.round(amount * storageUnits[quotaModal.unit]));
+      toast.success("Đã cập nhật dung lượng người dùng");
+      setQuotaModal(null);
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không cập nhật được dung lượng");
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const submitRename = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!renameModal) return;
+
+    const fullName = renameModal.fullName.trim();
+    if (fullName.length < 2) {
+      toast.error("Tên hiển thị cần ít nhất 2 ký tự.");
+      return;
+    }
+
+    setActionBusy(true);
+    try {
+      await adminApi.updateUser(renameModal.user.user_id, { full_name: fullName, fullName });
+      toast.success("Đã đổi tên người dùng");
+      setRenameModal(null);
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không đổi được tên người dùng");
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const removeAvatar = async (user: any) => {
+    if (!window.confirm(`Xóa avatar của ${user.full_name || user.username || user.email}?`)) return;
+    setActionBusy(true);
+    try {
+      await adminApi.updateUser(user.user_id, { avatar_url: null, avatarUrl: null, avatar: null });
+      toast.success("Đã xóa avatar người dùng");
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không xóa được avatar");
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleUserAction = (user: any, action: string) => {
+    setActionMenu(null);
+    if (action === "quota") openQuotaModal(user);
+    if (action === "rename") setRenameModal({ user, fullName: user.full_name || user.fullName || "" });
+    if (action === "remove-avatar") removeAvatar(user);
+    if (action === "toggle-role") updateUser(user, { role: user.role === "admin" ? "user" : "admin" });
+    if (action === "delete") deleteUser(user);
   };
 
   return (
-    <section className="surface-card overflow-hidden">
-      <div className="flex flex-col gap-3 border-b border-line p-4 md:flex-row md:items-center md:justify-between">
-        <SearchInput value={search} onChange={(value) => { setSearch(value); setPage(1); }} placeholder="Tìm email, username, họ tên" />
-        <select value={role} onChange={(event) => { setRole(event.target.value); setPage(1); }} className="input-field w-full md:w-44">
-          <option value="">Tất cả vai trò</option>
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-        </select>
-      </div>
-      {loading ? <LoadingState /> : (
-        <AdminTable>
-          <table className="min-w-full divide-y divide-line text-sm">
-            <thead className="bg-gray-50 text-left text-xs uppercase text-ink-secondary">
-              <tr>
-                <th className="px-4 py-3">Người dùng</th>
-                <th className="px-4 py-3">Vai trò</th>
-                <th className="px-4 py-3">Xác minh</th>
-                <th className="px-4 py-3">Tài liệu</th>
-                <th className="px-4 py-3">Ngày tạo</th>
-                <th className="px-4 py-3 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {rows.map((user) => (
-                <tr key={user.user_id}>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <img src={user.avatar_url || "/logo.ico"} alt="" className="h-9 w-9 rounded-full object-cover" />
-                      <div>
-                        <p className="font-medium">{user.full_name || user.username}</p>
-                        <p className="text-xs text-ink-secondary">{user.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={user.role}
-                      onChange={(event) => updateUser(user, { role: event.target.value })}
-                      className="rounded-md border border-line bg-white px-2 py-1"
-                    >
-                      <option value="user">user</option>
-                      <option value="admin">admin</option>
-                    </select>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge tone={user.is_verified ? "success" : "warning"}>{user.is_verified ? "Đã xác minh" : "Chưa xác minh"}</Badge>
-                  </td>
-                  <td className="px-4 py-3">{formatNumber(user.document_count)}</td>
-                  <td className="px-4 py-3">{formatDate(user.created_at)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="btn-secondary px-3 py-2 text-danger" onClick={() => deleteUser(user)} title="Xóa">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {rows.length === 0 && <EmptyState message="Không tìm thấy người dùng." />}
-        </AdminTable>
+    <>
+      {actionMenu && (
+        <button
+          type="button"
+          aria-label="Đóng menu thao tác"
+          className="fixed inset-0 z-30 cursor-default bg-transparent"
+          onClick={() => setActionMenu(null)}
+        />
       )}
-      <PaginationBar pagination={pagination} onPageChange={setPage} />
-    </section>
+      <section className="surface-card">
+        <div className="flex flex-col gap-3 border-b border-line p-4 md:flex-row md:items-center md:justify-between">
+          <SearchInput value={search} onChange={(value) => { setSearch(value); setPage(1); }} placeholder="Tìm email, username, họ tên" />
+          <select value={role} onChange={(event) => { setRole(event.target.value); setPage(1); }} className="input-field w-full md:w-44">
+            <option value="">Tất cả vai trò</option>
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        {loading ? <LoadingState /> : (
+          <AdminTable>
+            <table className="min-w-[900px] divide-y divide-line text-sm lg:min-w-full">
+              <thead className="bg-gray-50 text-left text-xs uppercase text-ink-secondary">
+                <tr>
+                  <th className="px-4 py-3">Người dùng</th>
+                  <th className="px-4 py-3">Vai trò</th>
+                  <th className="px-4 py-3">Xác minh</th>
+                  <th className="px-4 py-3">Tài liệu</th>
+                  <th className="px-4 py-3">Ngày tạo</th>
+                  <th className="px-4 py-3 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {rows.map((user) => (
+                  <tr key={user.user_id}>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <img src={user.avatar_url || user.avatarUrl || "/logo.ico"} alt="" className="h-9 w-9 rounded-full object-cover" />
+                        <div>
+                          <p className="font-medium">{user.full_name || user.fullName || user.username}</p>
+                          <p className="text-xs text-ink-secondary">{user.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge tone={user.role === "admin" ? "info" : "neutral"}>{user.role || "user"}</Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge tone={user.is_verified ? "success" : "warning"}>{user.is_verified ? "Đã xác minh" : "Chưa xác minh"}</Badge>
+                    </td>
+                    <td className="px-4 py-3">{formatNumber(user.document_count)}</td>
+                    <td className="px-4 py-3">{formatDate(user.created_at)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="relative inline-flex justify-end">
+                        <button
+                          type="button"
+                          disabled={actionBusy}
+                          onClick={(event) => {
+                            const rect = event.currentTarget.getBoundingClientRect();
+                            setActionMenu((current) =>
+                              current?.userId === user.user_id
+                                ? null
+                                : {
+                                    userId: user.user_id,
+                                    top: rect.bottom + 8,
+                                    left: Math.max(12, rect.right - 224),
+                                  }
+                            );
+                          }}
+                          className="btn-secondary px-3 py-2"
+                          title="Mở menu thao tác"
+                          aria-haspopup="menu"
+                          aria-expanded={actionMenu?.userId === user.user_id}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                        {actionMenu?.userId === user.user_id && (
+                          <div
+                            className="fixed z-[70] w-56 overflow-hidden rounded-md border border-line bg-surface text-left shadow-card"
+                            style={{ top: actionMenu.top, left: actionMenu.left }}
+                          >
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-ink hover:bg-gray-50"
+                              onClick={() => handleUserAction(user, "quota")}
+                            >
+                              <HardDrive className="h-4 w-4 text-primary" />
+                              Set dung lượng
+                            </button>
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-ink hover:bg-gray-50"
+                              onClick={() => handleUserAction(user, "rename")}
+                            >
+                              <Pencil className="h-4 w-4 text-primary" />
+                              Đổi tên
+                            </button>
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-ink hover:bg-gray-50"
+                              onClick={() => handleUserAction(user, "remove-avatar")}
+                            >
+                              <ImageOff className="h-4 w-4 text-primary" />
+                              Xóa avatar
+                            </button>
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-ink hover:bg-gray-50"
+                              onClick={() => handleUserAction(user, "toggle-role")}
+                            >
+                              <ShieldCheck className="h-4 w-4 text-primary" />
+                              {user.role === "admin" ? "Đặt làm user" : "Đặt làm admin"}
+                            </button>
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-3 border-t border-line px-3 py-2.5 text-sm text-danger hover:bg-red-50"
+                              onClick={() => handleUserAction(user, "delete")}
+                            >
+                              <UserX className="h-4 w-4" />
+                              Xóa người dùng
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {rows.length === 0 && <EmptyState message="Không tìm thấy người dùng." />}
+          </AdminTable>
+        )}
+        <PaginationBar pagination={pagination} onPageChange={setPage} />
+      </section>
+
+      {quotaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
+          <form onSubmit={submitQuota} className="surface-card w-full max-w-md bg-surface p-5 shadow-card">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-ink">Set dung lượng người dùng</h3>
+                <p className="mt-1 text-sm text-ink-secondary">{quotaModal.user.email}</p>
+              </div>
+              <button type="button" onClick={() => setQuotaModal(null)} className="btn-secondary px-3 py-2" title="Đóng">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-5 rounded-md border border-line bg-canvas p-3 text-sm">
+              <span className="text-ink-secondary">Dung lượng hiện tại</span>
+              <p className="mt-1 font-semibold text-ink">
+                {formatStorageLimit(quotaModal.user.storage_limit_bytes ?? quotaModal.user.storageLimitBytes)}
+              </p>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_120px]">
+              <label>
+                <span className="mb-1 block text-sm font-medium text-ink-secondary">Dung lượng</span>
+                <input
+                  value={quotaModal.value}
+                  onChange={(event) => setQuotaModal({ ...quotaModal, value: event.target.value })}
+                  className="input-field"
+                  inputMode="decimal"
+                  placeholder="Ví dụ: 500"
+                  required
+                />
+              </label>
+              <label>
+                <span className="mb-1 block text-sm font-medium text-ink-secondary">Đơn vị</span>
+                <select
+                  value={quotaModal.unit}
+                  onChange={(event) => setQuotaModal({ ...quotaModal, unit: event.target.value as "MB" | "GB" })}
+                  className="input-field"
+                >
+                  <option value="MB">MB</option>
+                  <option value="GB">GB</option>
+                </select>
+              </label>
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" className="btn-secondary" onClick={() => setQuotaModal(null)}>Hủy</button>
+              <button type="submit" className="btn-primary" disabled={actionBusy}>
+                {actionBusy ? "Đang lưu..." : "Lưu dung lượng"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {renameModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
+          <form onSubmit={submitRename} className="surface-card w-full max-w-md bg-surface p-5 shadow-card">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-ink">Đổi tên người dùng</h3>
+                <p className="mt-1 text-sm text-ink-secondary">{renameModal.user.email}</p>
+              </div>
+              <button type="button" onClick={() => setRenameModal(null)} className="btn-secondary px-3 py-2" title="Đóng">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <label className="mt-5 block">
+              <span className="mb-1 block text-sm font-medium text-ink-secondary">Tên hiển thị</span>
+              <input
+                value={renameModal.fullName}
+                onChange={(event) => setRenameModal({ ...renameModal, fullName: event.target.value })}
+                className="input-field"
+                placeholder="Nhập tên mới"
+                maxLength={120}
+                required
+              />
+            </label>
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" className="btn-secondary" onClick={() => setRenameModal(null)}>Hủy</button>
+              <button type="submit" className="btn-primary" disabled={actionBusy}>
+                {actionBusy ? "Đang lưu..." : "Lưu tên"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -456,12 +734,17 @@ function ReportsView() {
   const [pagination, setPagination] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
+  const [documentId, setDocumentId] = useState("");
+  const [userId, setUserId] = useState("");
   const [page, setPage] = useState(1);
+  const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
     adminApi
-      .getReports({ PageNumber: page, PageSize: PAGE_SIZE, status })
+      .getReports({ PageNumber: page, PageSize: PAGE_SIZE, status, documentId, userId })
       .then((response) => {
         const result = unwrapList(response);
         setRows(result.data);
@@ -469,74 +752,235 @@ function ReportsView() {
       })
       .catch(() => toast.error("Không tải được danh sách báo cáo"))
       .finally(() => setLoading(false));
-  }, [page, status]);
+  }, [documentId, page, status, userId]);
 
   useEffect(load, [load]);
 
   const updateStatus = async (report: any, nextStatus: string) => {
-    await adminApi.updateReport(report.report_id, { status: nextStatus });
-    toast.success("Đã cập nhật báo cáo");
-    load();
+    setUpdatingId(report.report_id);
+    try {
+      const response = await adminApi.updateReport(report.report_id, { status: nextStatus });
+      toast.success("Đã cập nhật báo cáo");
+      const updatedReport = unwrap(response);
+      if (selectedReport?.report_id === report.report_id) {
+        setSelectedReport(updatedReport ?? { ...selectedReport, status: nextStatus });
+      }
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không cập nhật được báo cáo");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const openReport = async (report: any) => {
+    setSelectedReport(report);
+    setDetailLoading(true);
+    try {
+      const response = await adminApi.getReport(report.report_id);
+      setSelectedReport(unwrap(response) ?? report);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không tải được chi tiết báo cáo");
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const deleteReport = async (report: any) => {
     if (!window.confirm(`Xóa báo cáo #${report.report_id}?`)) return;
-    await adminApi.deleteReport(report.report_id);
-    toast.success("Đã xóa báo cáo");
-    load();
+    try {
+      await adminApi.deleteReport(report.report_id);
+      toast.success("Đã xóa báo cáo");
+      if (selectedReport?.report_id === report.report_id) setSelectedReport(null);
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không xóa được báo cáo");
+    }
   };
 
   return (
-    <section className="surface-card overflow-hidden">
-      <div className="flex justify-end border-b border-line p-4">
-        <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className="input-field w-full md:w-56">
-          <option value="">Tất cả trạng thái</option>
-          {reportStatuses.map((item) => <option key={item} value={item}>{item}</option>)}
-        </select>
-      </div>
-      {loading ? <LoadingState /> : (
-        <AdminTable>
-          <table className="min-w-full divide-y divide-line text-sm">
-            <thead className="bg-gray-50 text-left text-xs uppercase text-ink-secondary">
-              <tr>
-                <th className="px-4 py-3">Tài liệu</th>
-                <th className="px-4 py-3">Người báo cáo</th>
-                <th className="px-4 py-3">Lý do</th>
-                <th className="px-4 py-3">Trạng thái</th>
-                <th className="px-4 py-3">Ngày tạo</th>
-                <th className="px-4 py-3 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {rows.map((report) => (
-                <tr key={report.report_id}>
-                  <td className="px-4 py-3 font-medium">{report.document?.title || `#${report.document_id}`}</td>
-                  <td className="px-4 py-3">{ownerName(report.reporter)}</td>
-                  <td className="max-w-sm px-4 py-3 text-ink-secondary">{report.reason}</td>
-                  <td className="px-4 py-3">
+    <div className="space-y-5">
+      <section className="surface-card overflow-hidden">
+        <div className="grid gap-3 border-b border-line p-4 sm:grid-cols-2 xl:grid-cols-[220px_minmax(180px,1fr)_minmax(180px,1fr)_auto]">
+          <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className="input-field">
+            <option value="">Tất cả trạng thái</option>
+            {reportStatuses.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <input
+            value={documentId}
+            onChange={(event) => { setDocumentId(event.target.value.replace(/\D/g, "")); setPage(1); }}
+            className="input-field"
+            placeholder="Lọc theo document ID"
+          />
+          <input
+            value={userId}
+            onChange={(event) => { setUserId(event.target.value.trim()); setPage(1); }}
+            className="input-field"
+            placeholder="Lọc theo user ID"
+          />
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              setStatus("");
+              setDocumentId("");
+              setUserId("");
+              setPage(1);
+            }}
+          >
+            Xóa lọc
+          </button>
+        </div>
+        {loading ? <LoadingState /> : (
+          <AdminTable>
+            <table className="min-w-[980px] divide-y divide-line text-sm lg:min-w-full">
+              <thead className="bg-gray-50 text-left text-xs uppercase text-ink-secondary">
+                <tr>
+                  <th className="px-4 py-3">Tài liệu</th>
+                  <th className="hidden px-4 py-3 lg:table-cell">Người báo cáo</th>
+                  <th className="px-4 py-3">Lý do</th>
+                  <th className="px-4 py-3">Trạng thái</th>
+                  <th className="hidden px-4 py-3 xl:table-cell">Ngày tạo</th>
+                  <th className="px-4 py-3 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {rows.map((report) => (
+                  <tr key={report.report_id} className={selectedReport?.report_id === report.report_id ? "bg-primary-soft/40" : undefined}>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-ink">{report.document?.title || `#${report.document_id}`}</p>
+                      <p className="mt-1 text-xs text-neutral">Document #{report.document_id}</p>
+                      <p className="mt-1 text-xs text-ink-secondary lg:hidden">{ownerName(report.reporter)}</p>
+                    </td>
+                    <td className="hidden px-4 py-3 lg:table-cell">{ownerName(report.reporter)}</td>
+                    <td className="max-w-sm px-4 py-3 text-ink-secondary">
+                      <p className="line-clamp-2">{report.reason}</p>
+                      <p className="mt-1 text-xs text-neutral xl:hidden">{formatDate(report.created_at)}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="space-y-2">
+                        <Badge tone={reportStatusTones[report.status] ?? "neutral"}>{report.status}</Badge>
+                        <select
+                          value={report.status}
+                          disabled={updatingId === report.report_id}
+                          onChange={(event) => updateStatus(report, event.target.value)}
+                          className="block w-full rounded-md border border-line bg-white px-2 py-1 text-xs"
+                        >
+                          {reportStatuses.map((item) => <option key={item} value={item}>{item}</option>)}
+                        </select>
+                      </div>
+                    </td>
+                    <td className="hidden px-4 py-3 xl:table-cell">{formatDate(report.created_at)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <button className="btn-secondary px-3 py-2" onClick={() => openReport(report)} title="Xem chi tiết">
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button className="btn-secondary px-3 py-2 text-danger hover:border-danger hover:text-danger" onClick={() => deleteReport(report)} title="Xóa">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {rows.length === 0 && <EmptyState message="Không có báo cáo phù hợp." />}
+          </AdminTable>
+        )}
+        <PaginationBar pagination={pagination} onPageChange={setPage} />
+      </section>
+
+      {selectedReport && (
+        <div className="fixed inset-0 z-50 p-3 sm:flex sm:justify-end sm:p-5">
+          <aside className="surface-card ml-auto flex h-full w-full max-w-xl flex-col overflow-hidden bg-surface shadow-card">
+            <div className="flex items-start justify-between gap-3 border-b border-line p-4">
+              <div>
+                <h3 className="text-lg font-semibold text-ink">Chi tiết moderation</h3>
+                <p className="mt-1 text-sm text-ink-secondary">Xem tài liệu, reporter và thao tác xử lý report.</p>
+              </div>
+              <button type="button" onClick={() => setSelectedReport(null)} className="btn-secondary px-3 py-2" title="Đóng">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {detailLoading ? (
+                <LoadingState />
+              ) : (
+                <div className="space-y-4 text-sm">
+                  <div className="overflow-hidden rounded-md border border-line">
+                    <img
+                      src={selectedReport.document?.thumbnail_url || "/logo.ico"}
+                      alt=""
+                      className="h-44 w-full object-cover"
+                    />
+                    <div className="p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-semibold text-ink">{selectedReport.document?.title || `Tài liệu #${selectedReport.document_id}`}</p>
+                        <Badge tone={reportStatusTones[selectedReport.status] ?? "neutral"}>{selectedReport.status}</Badge>
+                      </div>
+                      <p className="mt-2 line-clamp-3 text-ink-secondary">
+                        {selectedReport.document?.description || "Không có mô tả tài liệu."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border border-line bg-canvas p-3">
+                    <p className="text-xs font-semibold uppercase text-neutral">Lý do báo cáo</p>
+                    <p className="mt-2 whitespace-pre-wrap text-ink-secondary">{selectedReport.reason}</p>
+                  </div>
+
+                  <dl className="grid gap-3 rounded-md border border-line p-3 sm:grid-cols-2">
+                    <div>
+                      <dt className="text-neutral">Reporter</dt>
+                      <dd className="font-medium text-ink">{ownerName(selectedReport.reporter)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-neutral">Ngày tạo</dt>
+                      <dd className="font-medium text-ink">{formatDate(selectedReport.created_at)}</dd>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <dt className="text-neutral">Email</dt>
+                      <dd className="break-all font-medium text-ink">{selectedReport.reporter?.email || "-"}</dd>
+                    </div>
+                  </dl>
+
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-medium text-ink-secondary">Cập nhật trạng thái</span>
                     <select
-                      value={report.status}
-                      onChange={(event) => updateStatus(report, event.target.value)}
-                      className="rounded-md border border-line bg-white px-2 py-1"
+                      value={selectedReport.status}
+                      disabled={updatingId === selectedReport.report_id}
+                      onChange={(event) => updateStatus(selectedReport, event.target.value)}
+                      className="input-field"
                     >
                       {reportStatuses.map((item) => <option key={item} value={item}>{item}</option>)}
                     </select>
-                  </td>
-                  <td className="px-4 py-3">{formatDate(report.created_at)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="btn-secondary px-3 py-2 text-danger" onClick={() => deleteReport(report)} title="Xóa">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {rows.length === 0 && <EmptyState message="Không có báo cáo phù hợp." />}
-        </AdminTable>
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {!detailLoading && (
+              <div className="flex flex-wrap justify-end gap-2 border-t border-line p-4">
+                <NavLink to={`/document/${selectedReport.document_id}`} target="_blank" className="btn-primary">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Mở tài liệu
+                </NavLink>
+                <button
+                  type="button"
+                  className="btn-secondary text-danger hover:border-danger hover:text-danger"
+                  onClick={() => deleteReport(selectedReport)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Xóa report
+                </button>
+              </div>
+            )}
+          </aside>
+        </div>
       )}
-      <PaginationBar pagination={pagination} onPageChange={setPage} />
-    </section>
+    </div>
   );
 }
 
@@ -826,6 +1270,142 @@ function AnalyticsView() {
   );
 }
 
+function EngagementView() {
+  const [data, setData] = useState<any>(null);
+  const [days, setDays] = useState(30);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    featureUpgradesApi
+      .getEngagementAnalytics({ days })
+      .then((response) => setData(response.data ?? response))
+      .catch(() => toast.error("Không tải được engagement analytics"))
+      .finally(() => setLoading(false));
+  }, [days]);
+
+  const dailyViews = data?.dailyViews ?? [];
+  const dailyDownloads = data?.dailyDownloads ?? [];
+  const maxValue = Math.max(1, ...dailyViews.map((item: any) => item.count ?? item.views ?? 0), ...dailyDownloads.map((item: any) => item.count ?? item.downloads ?? 0));
+
+  return (
+    <div className="space-y-5">
+      <div className="flex justify-end">
+        <select value={days} onChange={(event) => setDays(Number(event.target.value))} className="input-field w-40">
+          <option value={7}>7 ngày</option>
+          <option value={30}>30 ngày</option>
+          <option value={90}>90 ngày</option>
+        </select>
+      </div>
+      {loading ? <LoadingState /> : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="surface-card p-4">
+              <p className="text-sm font-medium text-ink-secondary">Tổng lượt xem</p>
+              <p className="mt-3 text-3xl font-bold text-ink">{formatNumber(data?.totalViews)}</p>
+            </div>
+            <div className="surface-card p-4">
+              <p className="text-sm font-medium text-ink-secondary">Tổng lượt tải</p>
+              <p className="mt-3 text-3xl font-bold text-ink">{formatNumber(data?.totalDownloads)}</p>
+            </div>
+          </div>
+          <section className="surface-card p-4">
+            <h2 className="mb-4 text-lg font-semibold">Views và downloads theo ngày</h2>
+            <div className="flex h-64 items-end gap-3 overflow-x-auto border-b border-line pb-2">
+              {dailyViews.map((viewItem: any, index: number) => {
+                const downloadItem = dailyDownloads[index] ?? {};
+                const date = viewItem.date ?? downloadItem.date ?? "";
+                const views = viewItem.count ?? viewItem.views ?? 0;
+                const downloads = downloadItem.count ?? downloadItem.downloads ?? 0;
+                return (
+                  <div key={`${date}-${index}`} className="flex min-w-10 flex-col items-center gap-2">
+                    <div className="flex h-52 items-end gap-1">
+                      <div className="w-4 rounded-t bg-primary" style={{ height: `${(views / maxValue) * 200}px` }} title={`${date}: ${views} views`} />
+                      <div className="w-4 rounded-t bg-secondary" style={{ height: `${(downloads / maxValue) * 200}px` }} title={`${date}: ${downloads} downloads`} />
+                    </div>
+                    <span className="text-[10px] text-neutral">{String(date).slice(5)}</span>
+                  </div>
+                );
+              })}
+              {dailyViews.length === 0 && <EmptyState message="Chưa có dữ liệu tương tác." />}
+            </div>
+            <div className="mt-3 flex gap-4 text-xs text-ink-secondary">
+              <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-primary" />Views</span>
+              <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-secondary" />Downloads</span>
+            </div>
+          </section>
+        </>
+      )}
+    </div>
+  );
+}
+
+function AuditLogsView() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [pagination, setPagination] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState({ entityType: "", action: "", actorUserId: "" });
+
+  const load = useCallback(() => {
+    setLoading(true);
+    featureUpgradesApi
+      .getAuditLogs({ PageNumber: page, PageSize: 50, ...filters })
+      .then((response) => {
+        const body = response.data ?? response;
+        setRows(body.auditLogs || body.logs || body.data || []);
+        setPagination(body.pagination ?? { currentPage: page, totalPages: 1, totalCount: 0 });
+      })
+      .catch(() => toast.error("Không tải được audit logs"))
+      .finally(() => setLoading(false));
+  }, [filters, page]);
+
+  useEffect(load, [load]);
+
+  const updateFilter = (key: keyof typeof filters, value: string) => {
+    setFilters((current) => ({ ...current, [key]: value }));
+    setPage(1);
+  };
+
+  return (
+    <section className="surface-card overflow-hidden">
+      <div className="grid gap-3 border-b border-line p-4 md:grid-cols-3">
+        <input value={filters.action} onChange={(event) => updateFilter("action", event.target.value)} className="input-field" placeholder="Action: comment.created" />
+        <input value={filters.entityType} onChange={(event) => updateFilter("entityType", event.target.value)} className="input-field" placeholder="Entity type: document" />
+        <input value={filters.actorUserId} onChange={(event) => updateFilter("actorUserId", event.target.value)} className="input-field" placeholder="Actor user id" />
+      </div>
+      {loading ? <LoadingState /> : (
+        <AdminTable>
+          <table className="min-w-full divide-y divide-line text-sm">
+            <thead className="bg-gray-50 text-left text-xs uppercase text-ink-secondary">
+              <tr>
+                <th className="px-4 py-3">Thời gian</th>
+                <th className="px-4 py-3">Action</th>
+                <th className="px-4 py-3">Entity</th>
+                <th className="px-4 py-3">Actor</th>
+                <th className="px-4 py-3">Chi tiết</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {rows.map((row, index) => (
+                <tr key={row.id || row.auditLogId || index}>
+                  <td className="px-4 py-3 text-ink-secondary">{formatDate(row.createdAt || row.created_at)}</td>
+                  <td className="px-4 py-3 font-medium">{row.action}</td>
+                  <td className="px-4 py-3">{row.entityType || row.entity_type} #{row.entityId || row.entity_id || "-"}</td>
+                  <td className="px-4 py-3 text-ink-secondary">{row.actorUserId || row.actor_user_id || row.actor?.email || "-"}</td>
+                  <td className="max-w-sm truncate px-4 py-3 text-ink-secondary">{row.description || row.message || JSON.stringify(row.metadata || row.details || {})}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {rows.length === 0 && <EmptyState message="Không có audit log phù hợp." />}
+        </AdminTable>
+      )}
+      <PaginationBar pagination={pagination} onPageChange={setPage} />
+    </section>
+  );
+}
+
 const defaultSeoForm = {
   siteName: "DocShare",
   siteUrl: "https://docshare.id.vn",
@@ -1010,8 +1590,18 @@ function SeoView() {
 }
 
 function AdminContent() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const { "*": sectionPath } = useParams();
+  const section = sectionPath?.split("/")[0] || "";
+  const activeTab = section || "dashboard";
   const currentTab = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+
+  if (!section) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  if (!tabs.some((tab) => tab.id === activeTab)) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
 
   const content = {
     dashboard: <DashboardView />,
@@ -1022,6 +1612,8 @@ function AdminContent() {
     tags: <TaxonomyView type="tags" />,
     collections: <CollectionsView />,
     analytics: <AnalyticsView />,
+    engagement: <EngagementView />,
+    audit: <AuditLogsView />,
     seo: <SeoView />,
   }[activeTab];
 
@@ -1051,16 +1643,16 @@ function AdminContent() {
                 const Icon = tab.icon;
                 const isActive = tab.id === activeTab;
                 return (
-                  <button
+                  <NavLink
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    to={`/admin/${tab.id}`}
                     className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm font-medium transition ${
                       isActive ? "bg-primary text-white shadow-glow" : "text-ink-secondary hover:bg-gray-50 hover:text-ink"
                     }`}
                   >
                     <Icon className="h-4 w-4" />
                     {tab.label}
-                  </button>
+                  </NavLink>
                 );
               })}
             </nav>
