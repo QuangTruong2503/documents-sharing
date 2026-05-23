@@ -11,8 +11,10 @@ const tabs: Array<{ id: FeedKey; label: string; icon: React.ElementType; auth?: 
   { id: "following", label: "Đang theo dõi", icon: Users, auth: true },
 ];
 
-const normalizeDocuments = (response: any) =>
-  response?.documents || response?.items || response?.data || response?.history || [];
+const normalizeDocuments = (response: any) => {
+  const rows = response?.documents || response?.items || response?.data || response?.history || [];
+  return Array.isArray(rows) ? rows.map((row) => row?.document || row) : [];
+};
 
 export default function DocumentFeedTabs() {
   const isSignedIn = Boolean(Cookies.get("token"));

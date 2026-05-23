@@ -644,13 +644,27 @@ const CreateFolderDialog = ({ parentFolderId, onClose, onDone }: { parentFolderI
 const UploadDialog = ({ parentFolderId, onClose, onDone }: { parentFolderId: number; onClose: () => void; onDone: () => void }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const maxUploadFileBytes = 10 * 1024 * 1024;
+
+  const handleFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(event.target.files || []);
+    const validFiles = selectedFiles.filter((file) => file.size <= maxUploadFileBytes);
+    const oversizedCount = selectedFiles.length - validFiles.length;
+    if (oversizedCount > 0) {
+      toast.warning(`${oversizedCount} file vượt quá 10MB đã bị bỏ qua.`);
+    }
+    setFiles(validFiles);
+  };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (files.length === 0) return;
     setUploading(true);
+    setUploadProgress(0);
     try {
-      const response = await workspaceLibraryApi.uploadDocuments(files, parentFolderId);
+      const response = await workspaceLibraryApi.uploadDocuments(files, parentFolderId, setUploadProgress);
+      setUploadProgress(100);
       if (response.failed?.length) toast.warning(`${response.documents?.length || 0} file tải lên thành công, ${response.failed.length} file lỗi.`);
       else toast.success("Đã tải file vào thư mục.");
       onDone();
@@ -668,9 +682,20 @@ const UploadDialog = ({ parentFolderId, onClose, onDone }: { parentFolderId: num
         <label className="mt-5 block rounded-lg border border-dashed border-line bg-canvas p-6 text-center">
           <Upload className="mx-auto h-8 w-8 text-primary" />
           <span className="mt-2 block text-sm font-semibold text-ink">Chọn một hoặc nhiều file</span>
-          <input type="file" multiple className="mt-4 block w-full text-sm text-ink-secondary" onChange={(event) => setFiles(Array.from(event.target.files || []))} />
+          <input type="file" multiple className="mt-4 block w-full text-sm text-ink-secondary" onChange={handleFilesChange} />
         </label>
         {files.length > 0 && <p className="mt-3 text-sm text-ink-secondary">{files.length} file đã chọn</p>}
+        {uploading && (
+          <div className="mt-4 rounded-lg border border-line bg-canvas p-3">
+            <div className="mb-2 flex items-center justify-between text-xs font-semibold text-ink-secondary">
+              <span>Đang tải lên</span>
+              <span>{uploadProgress}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-line">
+              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
+            </div>
+          </div>
+        )}
         <div className="mt-6 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="btn-secondary">Hủy</button>
           <button type="submit" disabled={uploading || files.length === 0} className="btn-primary">

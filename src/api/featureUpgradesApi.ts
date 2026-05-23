@@ -53,12 +53,18 @@ const featureUpgradesApi = {
   getVersions: (documentId: number | string) =>
     axiosInstance.get(`documents/${documentId}/versions`).then((response) => response.data),
 
-  uploadVersion: (documentId: number | string, file: File, changeNote: string) => {
+  uploadVersion: (documentId: number | string, file: File, changeNote: string, onUploadProgress?: (progress: number) => void) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("changeNote", changeNote);
     return axiosInstance
-      .post(`documents/${documentId}/versions`, formData, { headers: { "Content-Type": "multipart/form-data" } })
+      .post(`documents/${documentId}/versions`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (event) => {
+          if (!event.total) return;
+          onUploadProgress?.(Math.min(99, Math.round((event.loaded * 100) / event.total)));
+        },
+      })
       .then((response) => response.data);
   },
 

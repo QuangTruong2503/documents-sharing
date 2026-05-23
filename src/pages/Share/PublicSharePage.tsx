@@ -56,6 +56,8 @@ export default function PublicSharePage() {
   const title = itemTitle(item);
   const fileUrl = itemFileUrl(item);
   const downloadUrl = itemDownloadUrl(item);
+  const isFolderShare = item?.type === "folder";
+  const folderItems = Array.isArray(item?.items) ? item.items : [];
   const requiresPassword = payload?.requiresPassword && !item;
   const canDownload = payload?.allowDownload !== false;
   const viewerUrl = useMemo(() => {
@@ -126,7 +128,51 @@ export default function PublicSharePage() {
               </div>
             </aside>
             <section className="surface-card overflow-hidden p-4">
-              {viewerUrl ? (
+              {isFolderShare ? (
+                <div className="min-h-[560px]">
+                  {folderItems.length === 0 ? (
+                    <div className="flex min-h-[360px] flex-col items-center justify-center rounded-lg border border-dashed border-line bg-canvas p-6 text-center">
+                      <FileText className="h-12 w-12 text-primary" />
+                      <p className="mt-3 font-semibold text-ink">Thư mục này chưa có nội dung có thể xem.</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {folderItems.map((child: any) => {
+                        const childTitle = itemTitle(child);
+                        const childFileUrl = itemFileUrl(child);
+                        const childDownloadUrl = itemDownloadUrl(child);
+                        return (
+                          <article key={`${child.type}-${child.id}`} className="rounded-lg border border-line bg-canvas p-4">
+                            <div className="flex items-start gap-3">
+                              <FileText className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                              <div className="min-w-0 flex-1">
+                                <h2 className="line-clamp-2 font-semibold text-ink">{childTitle}</h2>
+                                <p className="mt-1 text-xs text-ink-secondary">{child.type === "folder" ? "Thư mục" : "Tài liệu"}</p>
+                              </div>
+                            </div>
+                            {child.type === "document" && (
+                              <div className="mt-4 flex flex-wrap gap-2">
+                                {childFileUrl && (
+                                  <a href={childFileUrl} target="_blank" rel="noreferrer" className="btn-secondary px-3 py-2 text-sm">
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    Mở
+                                  </a>
+                                )}
+                                {canDownload && childDownloadUrl && (
+                                  <a href={childDownloadUrl} className="btn-primary px-3 py-2 text-sm">
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Tải
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </article>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : viewerUrl ? (
                 <iframe src={viewerUrl} title={title} className="h-[75vh] min-h-[560px] w-full rounded-lg border border-line" />
               ) : (
                 <div className="flex min-h-[560px] flex-col items-center justify-center rounded-lg border border-dashed border-line bg-canvas p-6 text-center">

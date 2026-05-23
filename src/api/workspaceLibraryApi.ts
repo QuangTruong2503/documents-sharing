@@ -73,14 +73,20 @@ const workspaceLibraryApi = {
   createFolder: (payload: { name: string; parentFolderId?: number | null; description?: string; color?: string | null }) =>
     axiosInstance.post("folders", payload).then((response) => response.data?.folder ?? response.data),
 
-  uploadDocuments: (files: File[], parentFolderId?: number | null) => {
+  uploadDocuments: (files: File[], parentFolderId?: number | null, onUploadProgress?: (progress: number) => void) => {
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));
     if (parentFolderId !== null && parentFolderId !== undefined) {
       formData.append("parentFolderId", String(parentFolderId));
     }
     return axiosInstance
-      .post("documents/upload", formData, { headers: { "Content-Type": "multipart/form-data" } })
+      .post("documents/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (event) => {
+          if (!event.total) return;
+          onUploadProgress?.(Math.min(99, Math.round((event.loaded * 100) / event.total)));
+        },
+      })
       .then((response) => response.data);
   },
 

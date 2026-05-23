@@ -59,8 +59,26 @@ export default function SecuritySettings({ isTwoFactorEnabled }: SecuritySetting
   };
   // Disable 2FA
   const handleDisable2FA = async () => {
-    toast.info("Tính năng tắt 2FA đang được phát triển.");
-    // Bạn có thể implement API tắt 2FA tương tự như bật 2FA ở đây
+    if (!window.confirm("Bạn có chắc chắn muốn tắt xác thực hai yếu tố?")) return;
+
+    try {
+      setLoading(true);
+      const response = await userApi.requestDisable2FA({});
+      const { success, message } = response.data;
+      if (success) {
+        toast.success(message || "Đã tắt bảo mật 2FA");
+        window.location.reload();
+      } else {
+        toast.warning(message || "Không thể tắt xác thực 2FA");
+      }
+    } catch (error: any) {
+      const errMsg =
+        error.response?.data?.message ||
+        "Không thể tắt xác thực 2FA";
+      toast.error(errMsg);
+    } finally {
+      setLoading(false);
+    }
   };
   // Verify OTP
   const handleVerifyOtp = async (otp: string) => {
