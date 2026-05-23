@@ -80,6 +80,9 @@ const featureUpgradesApi = {
   getEngagementAnalytics: (params = {}) =>
     axiosInstance.get("admin/analytics/engagement", { params: cleanParams(params) }).then((response) => response.data),
 
+  getDocumentInsights: (documentId: number | string, params = {}) =>
+    axiosInstance.get(`documents/${documentId}/insights`, { params: cleanParams(params) }).then((response) => response.data),
+
   updateUserStorage: (userId: string, storageLimitBytes: number) =>
     axiosInstance.patch(`admin/users/${userId}/storage`, { storageLimitBytes }).then((response) => response.data),
 };

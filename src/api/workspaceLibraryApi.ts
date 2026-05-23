@@ -152,6 +152,9 @@ const workspaceLibraryApi = {
 
   getTeam: (params = {}) =>
     axiosInstance.get("library/team", { params: cleanParams(params) }).then((response) => response.data),
+
+  getActivity: (params = {}) =>
+    axiosInstance.get("workspace/activity", { params: cleanParams(params) }).then((response) => response.data),
 };
 
 export default workspaceLibraryApi;

@@ -4,6 +4,7 @@ import {
   Check,
   Clock3,
   Copy,
+  ClipboardList,
   Download,
   Eye,
   File,
@@ -41,6 +42,7 @@ import featureUpgradesApi from "api/featureUpgradesApi.ts";
 import PaginationComponent from "components/Pagination/Pagination.tsx";
 import WorkspaceCreateDropdown from "components/Workspace/WorkspaceCreateDropdown.tsx";
 import WorkspaceConfirmDialog from "components/Workspace/WorkspaceConfirmDialog.tsx";
+import WorkspaceActivityView from "components/Workspace/WorkspaceActivityView.tsx";
 import WorkspaceLoadingSkeleton from "components/Workspace/WorkspaceLoadingSkeleton.tsx";
 import { formatDateToVN } from "utils/formatDateToVN";
 import {
@@ -57,7 +59,7 @@ import { copyTextToClipboard, copyWorkspaceItemLink } from "utils/workspaceItemL
 import { apiMessage } from "pages/Folders/FolderListPage.tsx";
 
 type ViewMode = "grid" | "list";
-type LibraryArea = "my" | "shared" | "team" | "recent" | "favorites" | "shared-links" | "trash";
+type LibraryArea = "my" | "shared" | "team" | "recent" | "favorites" | "shared-links" | "trash" | "activity";
 type ConfirmActionState =
   | {
       title: string;
@@ -99,6 +101,13 @@ interface ShareLinkRow {
   createdAt?: string;
 }
 
+interface WorkspaceActivityResponse {
+  summary?: Record<string, number>;
+  sections?: Record<string, any[]>;
+  timeline?: any[];
+  counts?: Record<string, number>;
+}
+
 const navItems = [
   { key: "my", label: "Tài liệu của tôi", icon: FolderOpen, href: "/library" },
   { key: "shared", label: "Được chia sẻ với tôi", icon: Users, href: "/library?area=shared" },
@@ -106,6 +115,7 @@ const navItems = [
   { key: "recent", label: "Gần đây", icon: Clock3, href: "/library?area=recent" },
   { key: "favorites", label: "Yêu thích", icon: Star, href: "/library?area=favorites" },
   { key: "shared-links", label: "Liên kết đã chia sẻ", icon: Link2, href: "/library?area=shared-links" },
+  { key: "activity", label: "Hoạt động mở rộng", icon: ClipboardList, href: "/library?area=activity" },
   { key: "trash", label: "Thùng rác", icon: Trash2, href: "/library?area=trash" },
 ];
 
@@ -1216,6 +1226,7 @@ const MyLibraryPage: React.FC = () => {
   const [folder, setFolder] = useState<WorkspaceFolder | null>(null);
   const [items, setItems] = useState<WorkspaceItem[]>([]);
   const [shareLinks, setShareLinks] = useState<ShareLinkRow[]>([]);
+  const [activity, setActivity] = useState<WorkspaceActivityResponse | null>(null);
   const [pagination, setPagination] = useState<WorkspacePagination>(defaultWorkspacePagination);
   const [workspaceCounts, setWorkspaceCounts] = useState<Record<string, number>>({});
   const [storage, setStorage] = useState<{ usedBytes?: number; limitBytes?: number }>({});
@@ -1244,10 +1255,23 @@ const MyLibraryPage: React.FC = () => {
       if (area === "shared-links") {
         const response = await workspaceLibraryApi.getMyShareLinks(params);
         setShareLinks(response.shareLinks || []);
+        setActivity(null);
         setPagination(normalizeWorkspacePagination(response.pagination));
         setItems([]);
         setFolder(null);
         setWorkspaceCounts({});
+        setStorage({});
+        return;
+      }
+
+      if (area === "activity") {
+        const response = await workspaceLibraryApi.getActivity({ limit: 20 });
+        setActivity(response);
+        setShareLinks([]);
+        setItems([]);
+        setFolder(null);
+        setPagination(defaultWorkspacePagination);
+        setWorkspaceCounts(response.counts || {});
         setStorage({});
         return;
       }
@@ -1268,6 +1292,7 @@ const MyLibraryPage: React.FC = () => {
       setFolder(response.folder || null);
       setItems(response.items || []);
       setShareLinks([]);
+      setActivity(null);
       setPagination(normalizeWorkspacePagination(response.pagination));
       setWorkspaceCounts(response.counts || {});
       setStorage(response.storage || {});
@@ -1305,9 +1330,11 @@ const MyLibraryPage: React.FC = () => {
   const counts = {
     my: (workspaceCounts.folders || 0) + (workspaceCounts.documents || 0),
     shared: workspaceCounts.shared || 0,
+    team: workspaceCounts.team || 0,
     recent: area === "recent" ? visibleItems.length : 0,
     favorites: workspaceCounts.favorites || 0,
     "shared-links": shareLinks.length,
+    activity: workspaceCounts.activity || 0,
     trash: workspaceCounts.trash || 0,
   };
 
@@ -1497,7 +1524,9 @@ const MyLibraryPage: React.FC = () => {
                   </div>
                   <h1 className="text-3xl font-bold text-ink">{activeLabel}</h1>
                   <p className="mt-2 text-sm text-ink-secondary">
-                    {area === "shared-links"
+                    {area === "activity"
+                      ? "Workspace/library, sharing, versioning, report/moderation, notification và audit trong một nơi."
+                      : area === "shared-links"
                       ? `${shareLinks.length} liên kết`
                       : `${visibleItems.length} mục · ${visibleItems.filter((item) => item.type === "folder").length} thư mục · ${visibleItems.filter((item) => item.type === "document").length} tài liệu`}
                   </p>
@@ -1511,7 +1540,7 @@ const MyLibraryPage: React.FC = () => {
                   />
                 )}
               </div>
-              <form onSubmit={submitSearch} className="mt-4 flex max-w-3xl flex-col gap-2 sm:flex-row">
+              {area !== "activity" && <form onSubmit={submitSearch} className="mt-4 flex max-w-3xl flex-col gap-2 sm:flex-row">
                 <label className="relative min-w-0 flex-1">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral" />
                   <input
@@ -1554,10 +1583,10 @@ const MyLibraryPage: React.FC = () => {
                   </select>
                 )}
                 <button type="submit" className="btn-secondary px-3">Tìm</button>
-              </form>
+              </form>}
             </div>
 
-            {area !== "shared-links" && (
+            {area !== "shared-links" && area !== "activity" && (
               <WorkspaceToolbar
                 selectedItems={selectedItems}
                 area={area}
@@ -1583,6 +1612,8 @@ const MyLibraryPage: React.FC = () => {
             <div className="p-4">
               {loading ? (
                 <WorkspaceLoadingSkeleton />
+              ) : area === "activity" ? (
+                <WorkspaceActivityView data={activity} />
               ) : area === "shared-links" ? (
                 <SharedLinksView rows={shareLinks} />
               ) : visibleItems.length === 0 ? (
@@ -1629,12 +1660,14 @@ const MyLibraryPage: React.FC = () => {
                   onFavorite={toggleFavoriteItem}
                 />
               )}
-              <PaginationComponent
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                totalCount={pagination.totalCount}
-                onPageChange={(nextPage) => setQuery({ pageNumber: String(nextPage) })}
-              />
+              {area !== "activity" && (
+                <PaginationComponent
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  totalCount={pagination.totalCount}
+                  onPageChange={(nextPage) => setQuery({ pageNumber: String(nextPage) })}
+                />
+              )}
             </div>
 
             <PreviewDrawer item={previewItem} onClose={() => setPreviewItem(null)} onShare={(item) => setDialog({ type: "share", item })} />
