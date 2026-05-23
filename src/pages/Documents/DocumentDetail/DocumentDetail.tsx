@@ -4,6 +4,8 @@ import documentsApi from "api/documentsApi";
 import collectionsApi from "api/collectionsApi";
 import reportsApi from "api/reportsApi";
 import DocumentSummaryByAI from "components/Chat/DocumentSummaryByAI.tsx";
+import DocumentCommentsPanel from "components/Documents/DocumentCommentsPanel.tsx";
+import DocumentVersionsPanel from "components/Documents/DocumentVersionsPanel.tsx";
 import { checkNotSigned } from "utils/CheckSigned";
 import { formatDateToVN } from "utils/formatDateToVN";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -18,6 +20,8 @@ import {
 import PageTitle from "components/PageTitle";
 import Cookies from "js-cookie";
 import { toast } from "react-toastify";
+import workspaceLibraryApi from "api/workspaceLibraryApi.ts";
+import featureUpgradesApi from "api/featureUpgradesApi.ts";
 
 interface DocumentData {
   document_id: number;
@@ -46,6 +50,26 @@ interface Collection {
   description: string;
   is_public: boolean;
   documentCount: number;
+}
+
+interface ReportStatusData {
+  canReport: boolean;
+  blockedReason: "OWN_DOCUMENT" | "HAS_ACTIVE_REPORT" | null;
+  hasActiveReport: boolean;
+  activeReport?: {
+    report_id: number;
+    document_id: number;
+    reason: string;
+    status: string;
+    created_at: string;
+  } | null;
+  latestReport?: {
+    report_id: number;
+    document_id: number;
+    reason: string;
+    status: string;
+    created_at: string;
+  } | null;
 }
 
 const VIEWER_RETRY_DELAY = 8000;
@@ -81,6 +105,11 @@ const getCategoryName = (category: NonNullable<DocumentData["categories"]>[numbe
   return category.name || category.category_name || String(category.category_id || "");
 };
 
+const reportBlockedMessages: Record<string, string> = {
+  OWN_DOCUMENT: "Bạn không thể báo cáo tài liệu của chính mình.",
+  HAS_ACTIVE_REPORT: "Bạn đã có báo cáo đang được xử lý cho tài liệu này.",
+};
+
 const buildGoogleViewerUrl = (fileUrl: string, attempt: number) => {
   const params = new URLSearchParams({
     url: fileUrl,
@@ -104,6 +133,19 @@ const PdfViewer: React.FC = () => {
   const [collectionsLoading, setCollectionsLoading] = useState(false);
   const [savingToCollection, setSavingToCollection] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareSettings, setShareSettings] = useState<any>(null);
+  const [shareSaving, setShareSaving] = useState(false);
+  const [shareDisabling, setShareDisabling] = useState(false);
+  const [shareForm, setShareForm] = useState({
+    access: "anyone_with_link",
+    permission: "viewer",
+    allowDownload: true,
+    password: "",
+    expiresAt: "",
+    maxViews: "",
+    maxDownloads: "",
+  });
   const [reportOptions, setReportOptions] = useState({
     suggestedReasons: [
       "Nội dung vi phạm bản quyền",
@@ -121,6 +163,8 @@ const PdfViewer: React.FC = () => {
   const [selectedReason, setSelectedReason] = useState("");
   const [reportReason, setReportReason] = useState("");
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [reportStatus, setReportStatus] = useState<ReportStatusData | null>(null);
+  const [reportStatusLoading, setReportStatusLoading] = useState(false);
   const [viewerAttempt, setViewerAttempt] = useState(0);
   const [viewerLoaded, setViewerLoaded] = useState(false);
 
@@ -187,6 +231,36 @@ const PdfViewer: React.FC = () => {
     setViewerAttempt(0);
     setViewerLoaded(false);
   }, [documentData?.file_url]);
+
+  useEffect(() => {
+    if (!documentID || !documentData || !Cookies.get("token")) {
+      setReportStatus(null);
+      return;
+    }
+
+    let isMounted = true;
+    setReportStatusLoading(true);
+    reportsApi
+      .getDocumentReportStatus(documentID)
+      .then((response) => {
+        if (isMounted) setReportStatus(response.data?.data ?? null);
+      })
+      .catch(() => {
+        if (isMounted) setReportStatus(null);
+      })
+      .finally(() => {
+        if (isMounted) setReportStatusLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [documentID, documentData]);
+
+  useEffect(() => {
+    if (!documentID || !documentData) return;
+    featureUpgradesApi.recordView(documentID, "document_detail").catch(() => undefined);
+  }, [documentID, documentData]);
 
   useEffect(() => {
     if (!documentData || viewerLoaded || viewerAttempt >= MAX_VIEWER_RETRIES) {
@@ -289,10 +363,96 @@ const PdfViewer: React.FC = () => {
   const handleDislike = () => {
     alert("Chức năng Dislike chưa được triển khai!");
   };
-  const handleShare = () => alert("Chức năng Share chưa được triển khai!");
+  const toDateTimeLocalValue = (value?: string | null) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+    return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+  };
+
+  const handleShare = async () => {
+    if (!Cookies.get("token")) {
+      checkNotSigned();
+      return;
+    }
+    setShowShareModal(true);
+    try {
+      const response = await workspaceLibraryApi.getShareLinkSettings({ itemId: Number(documentID), itemType: "document" });
+      const shareLink = response.shareLink;
+      if (shareLink) {
+        setShareSettings(shareLink);
+        setShareForm({
+          access: shareLink.access || "anyone_with_link",
+          permission: shareLink.permission || "viewer",
+          allowDownload: shareLink.allowDownload !== false,
+          password: "",
+          expiresAt: toDateTimeLocalValue(shareLink.expiresAt),
+          maxViews: shareLink.maxViews ? String(shareLink.maxViews) : "",
+          maxDownloads: shareLink.maxDownloads ? String(shareLink.maxDownloads) : "",
+        });
+      }
+    } catch {
+      setShareSettings(null);
+    }
+  };
+
+  const saveShareLink = async () => {
+    setShareSaving(true);
+    try {
+      const response = await workspaceLibraryApi.createShareLink({
+        itemId: Number(documentID),
+        itemType: "document",
+        access: shareForm.access,
+        permission: shareForm.permission,
+        allowDownload: shareForm.allowDownload,
+        password: shareForm.password || null,
+        expiresAt: shareForm.expiresAt || null,
+        maxViews: shareForm.maxViews ? Number(shareForm.maxViews) : null,
+        maxDownloads: shareForm.maxDownloads ? Number(shareForm.maxDownloads) : null,
+      });
+      setShareSettings(response.shareLink);
+      toast.success("Đã lưu liên kết chia sẻ.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không tạo được liên kết chia sẻ.");
+    } finally {
+      setShareSaving(false);
+    }
+  };
+
+  const copyShareLink = async () => {
+    if (!shareSettings?.shareUrl) {
+      await saveShareLink();
+      return;
+    }
+    await navigator.clipboard.writeText(shareSettings.shareUrl);
+    toast.success("Đã sao chép liên kết.");
+  };
+
+  const disableShareLink = async () => {
+    if (!shareSettings?.id) return;
+    setShareDisabling(true);
+    try {
+      await workspaceLibraryApi.disableShareLink(shareSettings.id);
+      setShareSettings(null);
+      toast.success("Đã tắt liên kết chia sẻ.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không tắt được liên kết.");
+    } finally {
+      setShareDisabling(false);
+    }
+  };
   const handleReport = async () => {
     if (!Cookies.get("token")) {
       checkNotSigned();
+      return;
+    }
+
+    if (reportStatus?.canReport === false) {
+      const blockedMessage = reportStatus.blockedReason
+        ? reportBlockedMessages[reportStatus.blockedReason]
+        : "Hiện chưa thể báo cáo tài liệu này.";
+      toast.info(blockedMessage);
       return;
     }
 
@@ -349,11 +509,29 @@ const PdfViewer: React.FC = () => {
         reason,
       });
       toast.success(response.data?.message || "Đã gửi báo cáo tài liệu.");
+      const createdReport = response.data?.data;
+      if (createdReport) {
+        setReportStatus({
+          canReport: false,
+          blockedReason: "HAS_ACTIVE_REPORT",
+          hasActiveReport: true,
+          activeReport: createdReport,
+          latestReport: createdReport,
+        });
+      }
       setShowReportModal(false);
     } catch (err: any) {
       const status = err?.response?.status;
       const data = err?.response?.data;
       if (status === 409 && data?.data) {
+        setReportStatus((current) => ({
+          ...(current ?? {}),
+          canReport: false,
+          blockedReason: "HAS_ACTIVE_REPORT",
+          hasActiveReport: true,
+          activeReport: data.data,
+          latestReport: data.data,
+        }));
         toast.info(data.message || "Bạn đã có báo cáo đang xử lý cho tài liệu này.");
       } else {
         toast.error(data?.message || "Gửi báo cáo thất bại.");
@@ -385,6 +563,16 @@ const PdfViewer: React.FC = () => {
     ? documentData.file_url
     : buildGoogleViewerUrl(documentData.file_url, viewerAttempt);
   const viewerFallbackUrl = documentData.file_url;
+  const activeReport = reportStatus?.activeReport;
+  const latestReport = reportStatus?.latestReport;
+  const reportButtonDisabled = reportStatusLoading || reportStatus?.canReport === false;
+  const reportButtonLabel = reportStatusLoading
+    ? "Đang kiểm tra"
+    : activeReport
+      ? "Đã báo cáo"
+      : reportStatus?.blockedReason === "OWN_DOCUMENT"
+        ? "Tài liệu của bạn"
+        : "Report";
 
   return (
     <>
@@ -548,7 +736,7 @@ const PdfViewer: React.FC = () => {
                 icon={faBookmark}
                 className="mb-1"
               />
-              <span className="text-sm">Save</span>
+              <span className="text-sm">Lưu</span>
             </button>
             <button
               onClick={handleShare}
@@ -558,16 +746,53 @@ const PdfViewer: React.FC = () => {
                 icon={faShareAlt}
                 className="mb-1"
               />
-              <span className="text-sm">Share</span>
+              <span className="text-sm">Chia sẻ</span>
             </button>
             <button
               onClick={handleReport}
-              className="flex flex-col items-center rounded-md border border-line bg-canvas p-2 text-ink-secondary transition hover:-translate-y-px hover:text-danger"
+              disabled={reportButtonDisabled}
+              className={`flex flex-col items-center rounded-md border border-line p-2 transition ${
+                activeReport
+                  ? "bg-amber-50 text-amber-700"
+                  : reportStatus?.blockedReason === "OWN_DOCUMENT"
+                    ? "bg-gray-50 text-neutral"
+                    : "bg-canvas text-ink-secondary hover:-translate-y-px hover:text-danger"
+              } disabled:cursor-not-allowed disabled:opacity-80`}
             >
               <FontAwesomeIcon icon={faFlag} className="mb-1" />
-              <span className="text-sm">Report</span>
+              <span className="text-sm">{reportButtonLabel}</span>
             </button>
           </div>
+          {(activeReport || latestReport || reportStatus?.blockedReason === "OWN_DOCUMENT") && (
+            <div className="mt-4 w-full rounded-md border border-line bg-canvas p-3 text-sm">
+              {activeReport ? (
+                <>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-medium text-ink">Báo cáo đang hoạt động</span>
+                    <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-100">
+                      {activeReport.status}
+                    </span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-ink-secondary">{activeReport.reason}</p>
+                  <NavLink to={`/my-reports/${activeReport.report_id}`} className="mt-3 inline-flex font-medium text-primary hover:text-primary-hover">
+                    Xem báo cáo
+                  </NavLink>
+                </>
+              ) : reportStatus?.blockedReason === "OWN_DOCUMENT" ? (
+                <p className="text-ink-secondary">{reportBlockedMessages.OWN_DOCUMENT}</p>
+              ) : latestReport ? (
+                <>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-medium text-ink">Báo cáo gần nhất</span>
+                    <span className="rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-100">
+                      {latestReport.status}
+                    </span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-ink-secondary">{latestReport.reason}</p>
+                </>
+              ) : null}
+            </div>
+          )}
         </div>
 
         {/* Main Content */}
@@ -618,11 +843,87 @@ const PdfViewer: React.FC = () => {
           </div>
         </div>
       </div>
+      <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <DocumentCommentsPanel documentId={documentData.document_id} />
+        <DocumentVersionsPanel
+          documentId={documentData.document_id}
+          currentFileUrl={documentData.file_url}
+          currentFileType={documentData.file_type}
+          currentFileSize={documentData.file_size}
+        />
+      </div>
       {showAISummaryModal && documentData?.document_id && (
         <DocumentSummaryByAI
           documentId={documentData.document_id}
           onClose={() => setShowAISummaryModal(false)}
         />
+      )}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
+          <div className="surface-card w-full max-w-xl bg-surface p-6 shadow-card">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-bold text-ink">Chia sẻ tài liệu</h2>
+                <p className="mt-2 line-clamp-2 text-sm text-ink-secondary">{documentData.title}</p>
+              </div>
+              <button type="button" onClick={() => setShowShareModal(false)} className="rounded-md p-2 text-ink-secondary hover:bg-canvas">
+                Đóng
+              </button>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <label>
+                <span className="mb-1 block text-sm font-semibold text-ink">Quyền truy cập</span>
+                <select value={shareForm.access} onChange={(event) => setShareForm({ ...shareForm, access: event.target.value })} className="input-field">
+                  <option value="restricted">Restricted</option>
+                  <option value="anyone_with_link">Anyone with link</option>
+                </select>
+              </label>
+              <label>
+                <span className="mb-1 block text-sm font-semibold text-ink">Permission</span>
+                <select value={shareForm.permission} onChange={(event) => setShareForm({ ...shareForm, permission: event.target.value })} className="input-field">
+                  <option value="viewer">Viewer</option>
+                  <option value="editor">Editor</option>
+                </select>
+              </label>
+            </div>
+            <label className="mt-4 flex items-center gap-3 rounded-md border border-line p-3 text-sm text-ink-secondary">
+              <input type="checkbox" checked={shareForm.allowDownload} onChange={(event) => setShareForm({ ...shareForm, allowDownload: event.target.checked })} />
+              <span>Cho phép tải xuống</span>
+            </label>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label>
+                <span className="mb-1 block text-sm font-semibold text-ink">Mật khẩu</span>
+                <input value={shareForm.password} onChange={(event) => setShareForm({ ...shareForm, password: event.target.value })} className="input-field" placeholder="Không bắt buộc" />
+              </label>
+              <label>
+                <span className="mb-1 block text-sm font-semibold text-ink">Ngày hết hạn</span>
+                <input type="datetime-local" value={shareForm.expiresAt} onChange={(event) => setShareForm({ ...shareForm, expiresAt: event.target.value })} className="input-field" />
+              </label>
+              <label>
+                <span className="mb-1 block text-sm font-semibold text-ink">Giới hạn lượt xem</span>
+                <input type="number" min="1" value={shareForm.maxViews} onChange={(event) => setShareForm({ ...shareForm, maxViews: event.target.value })} className="input-field" placeholder="Không giới hạn" />
+              </label>
+              <label>
+                <span className="mb-1 block text-sm font-semibold text-ink">Giới hạn lượt tải</span>
+                <input type="number" min="1" value={shareForm.maxDownloads} onChange={(event) => setShareForm({ ...shareForm, maxDownloads: event.target.value })} className="input-field" placeholder="Không giới hạn" />
+              </label>
+            </div>
+            <div className="mt-5 rounded-md border border-line bg-canvas p-3 text-sm text-ink-secondary">
+              {shareSettings?.shareUrl || "Chưa có link. Bấm tạo/cập nhật để lấy liên kết."}
+            </div>
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              {shareSettings?.id && (
+                <button type="button" onClick={disableShareLink} disabled={shareDisabling} className="btn-secondary border-danger text-danger hover:border-danger hover:text-danger">
+                  {shareDisabling ? "Đang tắt..." : "Tắt link"}
+                </button>
+              )}
+              <button type="button" onClick={saveShareLink} disabled={shareSaving} className="btn-secondary">
+                {shareSaving ? "Đang lưu..." : "Tạo/Cập nhật link"}
+              </button>
+              <button type="button" onClick={copyShareLink} className="btn-primary">Sao chép liên kết</button>
+            </div>
+          </div>
+        </div>
       )}
       {showSaveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">

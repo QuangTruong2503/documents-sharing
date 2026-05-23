@@ -37,6 +37,7 @@ import workspaceLibraryApi, {
   WorkspaceItemType,
   WorkspacePermissions,
 } from "api/workspaceLibraryApi.ts";
+import featureUpgradesApi from "api/featureUpgradesApi.ts";
 import PaginationComponent from "components/Pagination/Pagination.tsx";
 import WorkspaceCreateDropdown from "components/Workspace/WorkspaceCreateDropdown.tsx";
 import WorkspaceConfirmDialog from "components/Workspace/WorkspaceConfirmDialog.tsx";
@@ -279,6 +280,7 @@ const WorkspaceToolbar = ({
   onTrash: () => void;
   onRestore: () => void;
   onDeleteForever: () => void;
+  onFavorite: () => void;
 }) => {
   const selectedCount = selectedItems.length;
   const single = selectedCount === 1;
@@ -561,7 +563,20 @@ const WorkspaceItemCard = ({
               {getItemName(item)}
             </button>
           )}
-          {item.isFavorite && <Star className="h-4 w-4 shrink-0 fill-warning text-warning" />}
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onFavorite();
+            }}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${
+              item.isFavorite ? "text-warning" : "text-ink-secondary hover:bg-canvas hover:text-warning"
+            }`}
+            title={item.isFavorite ? "Bỏ yêu thích" : "Thêm yêu thích"}
+            aria-label={item.isFavorite ? "Bỏ yêu thích" : "Thêm yêu thích"}
+          >
+            <Star className={`h-4 w-4 ${item.isFavorite ? "fill-warning" : ""}`} />
+          </button>
         </div>
         <p className="mt-1 line-clamp-2 min-h-10 text-sm leading-5 text-ink-secondary">
           {isFolder ? item.description || `${item.childrenCount ?? 0} mục` : item.description || "Không có mô tả."}
@@ -587,6 +602,7 @@ const WorkspaceItemList = ({
   onTrash,
   onRestore,
   onDeleteForever,
+  onFavorite,
 }: {
   items: WorkspaceItem[];
   area: LibraryArea;
@@ -599,6 +615,7 @@ const WorkspaceItemList = ({
   onTrash: (item: WorkspaceItem) => void;
   onRestore: (item: WorkspaceItem) => void;
   onDeleteForever: (item: WorkspaceItem) => void;
+  onFavorite: (item: WorkspaceItem) => void;
 }) => (
   <div className="overflow-x-auto rounded-lg border border-line bg-surface">
     <div className="grid min-w-[800px] grid-cols-[44px_1fr_120px_120px_150px_88px] gap-3 border-b border-line px-4 py-3 text-xs font-semibold uppercase text-ink-secondary">
@@ -639,6 +656,16 @@ const WorkspaceItemList = ({
                 {getItemName(item)}
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => onFavorite(item)}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${
+                item.isFavorite ? "text-warning" : "text-ink-secondary hover:bg-surface hover:text-warning"
+              }`}
+              title={item.isFavorite ? "Bỏ yêu thích" : "Thêm yêu thích"}
+            >
+              <Star className={`h-4 w-4 ${item.isFavorite ? "fill-warning" : ""}`} />
+            </button>
           </div>
           <span className="self-center text-sm text-ink-secondary">{item.type === "folder" ? "Folder" : getExtension(item).toUpperCase()}</span>
           <span className="self-center text-sm text-ink-secondary">{item.type === "folder" ? formatSize(item.totalSize) : formatSize(item.size)}</span>
@@ -987,6 +1014,8 @@ const ShareDialog = ({ item, onClose }: { item: WorkspaceItem; onClose: () => vo
     allowDownload: true,
     password: "",
     expiresAt: "",
+    maxViews: "",
+    maxDownloads: "",
   });
 
   useEffect(() => {
@@ -1001,6 +1030,8 @@ const ShareDialog = ({ item, onClose }: { item: WorkspaceItem; onClose: () => vo
             allowDownload: response.shareLink.allowDownload !== false,
             password: "",
             expiresAt: toDateTimeLocalValue(response.shareLink.expiresAt),
+            maxViews: response.shareLink.maxViews ? String(response.shareLink.maxViews) : "",
+            maxDownloads: response.shareLink.maxDownloads ? String(response.shareLink.maxDownloads) : "",
           });
         }
       })
@@ -1018,8 +1049,8 @@ const ShareDialog = ({ item, onClose }: { item: WorkspaceItem; onClose: () => vo
         allowDownload: form.allowDownload,
         password: form.password || null,
         expiresAt: form.expiresAt || null,
-        maxViews: null,
-        maxDownloads: null,
+        maxViews: form.maxViews ? Number(form.maxViews) : null,
+        maxDownloads: form.maxDownloads ? Number(form.maxDownloads) : null,
       });
       setSettings(response.shareLink);
       toast.success("Đã tạo liên kết chia sẻ.");
@@ -1093,6 +1124,14 @@ const ShareDialog = ({ item, onClose }: { item: WorkspaceItem; onClose: () => vo
           <label>
             <span className="mb-1 block text-sm font-semibold text-ink">Expiration date</span>
             <input type="datetime-local" value={form.expiresAt} onChange={(event) => setForm({ ...form, expiresAt: event.target.value })} className="input-field" />
+          </label>
+          <label>
+            <span className="mb-1 block text-sm font-semibold text-ink">Max views</span>
+            <input type="number" min="1" value={form.maxViews} onChange={(event) => setForm({ ...form, maxViews: event.target.value })} className="input-field" placeholder="Không giới hạn" />
+          </label>
+          <label>
+            <span className="mb-1 block text-sm font-semibold text-ink">Max downloads</span>
+            <input type="number" min="1" value={form.maxDownloads} onChange={(event) => setForm({ ...form, maxDownloads: event.target.value })} className="input-field" placeholder="Không giới hạn" />
           </label>
         </div>
         <div className="mt-5 rounded-md border border-line bg-canvas p-3 text-sm text-ink-secondary">
@@ -1219,6 +1258,16 @@ const MyLibraryPage: React.FC = () => {
     loadLibrary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [area, querySearch, queryFileType, pageNumber, sort]);
+
+  useEffect(() => {
+    featureUpgradesApi
+      .getStorage()
+      .then((response) => {
+        const nextStorage = response.storage || response.data?.storage;
+        if (nextStorage) setStorage(nextStorage);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const visibleItems = useMemo(() => items, [items]);
   const selectedItems = useMemo(
@@ -1390,13 +1439,18 @@ const MyLibraryPage: React.FC = () => {
 
   const favoriteSelected = async () => {
     if (selectedItems.length !== 1) return;
-    const item = selectedItems[0];
+    await toggleFavoriteItem(selectedItems[0]);
+  };
+
+  const toggleFavoriteItem = async (item: WorkspaceItem) => {
+    const nextFavorite = !item.isFavorite;
+    setItems((current) => current.map((row) => row.id === item.id && row.type === item.type ? { ...row, isFavorite: nextFavorite } : row));
     try {
-      const response = await workspaceLibraryApi.setFavorite(item.id, { type: item.type, favorite: !item.isFavorite });
+      const response = await workspaceLibraryApi.setFavorite(item.id, { type: item.type, favorite: nextFavorite });
       if (response.message) toast.info(response.message);
       else toast.success(item.isFavorite ? "Đã bỏ yêu thích." : "Đã thêm vào yêu thích.");
-      loadLibrary();
     } catch (error: any) {
+      setItems((current) => current.map((row) => row.id === item.id && row.type === item.type ? { ...row, isFavorite: item.isFavorite } : row));
       toast.error(apiMessage(error, "Không thể cập nhật yêu thích."));
     }
   };
@@ -1530,6 +1584,7 @@ const MyLibraryPage: React.FC = () => {
                       onTrash={() => trashItems([item])}
                       onRestore={() => restoreItems([item])}
                       onDeleteForever={() => deleteForeverItems([item])}
+                      onFavorite={() => toggleFavoriteItem(item)}
                     />
                   ))}
                 </div>
@@ -1546,6 +1601,7 @@ const MyLibraryPage: React.FC = () => {
                   onTrash={(item) => trashItems([item])}
                   onRestore={(item) => restoreItems([item])}
                   onDeleteForever={(item) => deleteForeverItems([item])}
+                  onFavorite={toggleFavoriteItem}
                 />
               )}
               <PaginationComponent

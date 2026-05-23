@@ -2,6 +2,7 @@ import React from "react";
 import PageTitle from "components/PageTitle";
 import DocumentCarousel from "components/Carousel/DocumentCarousel.tsx";
 import DocumentHistory from "components/Documents/DocumentsHistory.tsx";
+import DocumentFeedTabs from "components/Documents/DocumentFeedTabs.tsx";
 function Home() {
 
   return (
@@ -22,6 +23,7 @@ function Home() {
           </p>
         </div>
       </section>
+      <DocumentFeedTabs />
       <DocumentCarousel categoryID={"van-hoc"} title="Tài Liệu Văn Học"/>
       <DocumentCarousel categoryID={"lap-trinh"} title="Tài Liệu Lập Trình"/>
       {/* Tài liệu đã xem */}

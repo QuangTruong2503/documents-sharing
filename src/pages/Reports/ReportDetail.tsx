@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { NavLink, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, Download, RefreshCw } from "lucide-react";
+import { NavLink, useNavigate, useParams } from "react-router-dom";
+import { AlertTriangle, ArrowLeft, Download, RefreshCw, XCircle } from "lucide-react";
 import { toast } from "react-toastify";
 import PageTitle from "components/PageTitle";
 import reportsApi from "api/reportsApi";
@@ -18,8 +18,10 @@ const formatDate = (value?: string) => {
 
 const ReportDetail: React.FC = () => {
   const { reportId } = useParams<{ reportId: string }>();
+  const navigate = useNavigate();
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (!reportId) return;
@@ -45,6 +47,20 @@ const ReportDetail: React.FC = () => {
 
   const document = report.document ?? {};
   const owner = document.owner ?? {};
+
+  const cancelReport = async () => {
+    if (!reportId || report.status !== "Chờ giải quyết") return;
+    setCancelling(true);
+    try {
+      const response = await reportsApi.cancelMyReport(reportId);
+      toast.success(response.data?.message || "Đã hủy báo cáo.");
+      navigate("/my-reports");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không hủy được báo cáo.");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   return (
     <>
@@ -106,6 +122,17 @@ const ReportDetail: React.FC = () => {
                 <NavLink to={`/document/${report.document_id}`} className="btn-primary">
                   Xem tài liệu
                 </NavLink>
+                {report.status === "Chờ giải quyết" && (
+                  <button
+                    type="button"
+                    onClick={cancelReport}
+                    disabled={cancelling}
+                    className="btn-secondary text-danger hover:border-danger hover:text-danger"
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    {cancelling ? "Đang hủy..." : "Hủy báo cáo"}
+                  </button>
+                )}
                 {document.file_url && (
                   <a href={document.file_url} target="_blank" rel="noreferrer" className="btn-secondary">
                     <Download className="mr-2 h-4 w-4" />
