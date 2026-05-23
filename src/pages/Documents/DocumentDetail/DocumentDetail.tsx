@@ -5,6 +5,7 @@ import collectionsApi from "api/collectionsApi";
 import reportsApi from "api/reportsApi";
 import DocumentSummaryByAI from "components/Chat/DocumentSummaryByAI.tsx";
 import DocumentCommentsPanel from "components/Documents/DocumentCommentsPanel.tsx";
+import DocumentInsightsPanel from "components/Documents/DocumentInsightsPanel.tsx";
 import DocumentVersionsPanel from "components/Documents/DocumentVersionsPanel.tsx";
 import { checkNotSigned } from "utils/CheckSigned";
 import { formatDateToVN } from "utils/formatDateToVN";
@@ -851,6 +852,9 @@ const PdfViewer: React.FC = () => {
           currentFileType={documentData.file_type}
           currentFileSize={documentData.file_size}
         />
+      </div>
+      <div className="mt-5">
+        <DocumentInsightsPanel documentId={documentData.document_id} />
       </div>
       {showAISummaryModal && documentData?.document_id && (
         <DocumentSummaryByAI

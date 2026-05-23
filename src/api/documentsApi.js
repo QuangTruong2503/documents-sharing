@@ -46,7 +46,7 @@ const documentsApi = {
     });
   },
   //upload document
-  postDocument: (file, folderId) => {
+  postDocument: (file, folderId, onUploadProgress) => {
     const authToken = Cookies.get("token");
     const endpoint = folderId
       ? `folders/${folderId}/upload-document`
@@ -56,6 +56,10 @@ const documentsApi = {
       headers: {
         "Content-Type": "multipart/form-data",
         Authorization: `Bearer ${authToken}`,
+      },
+      onUploadProgress: (event) => {
+        if (!event.total) return;
+        onUploadProgress?.(Math.min(99, Math.round((event.loaded * 100) / event.total)));
       },
     });
   },

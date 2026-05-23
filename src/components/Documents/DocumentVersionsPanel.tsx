@@ -37,7 +37,6 @@ interface DocumentVersionsPanelProps {
   currentFileSize?: number;
 }
 
-const MAX_VERSION_FILE_BYTES = 100 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = [
   "pdf",
   "doc",
@@ -53,6 +52,7 @@ const ALLOWED_EXTENSIONS = [
   "jpg",
   "jpeg",
 ];
+const MAX_VERSION_FILE_BYTES = 10 * 1024 * 1024;
 
 const versionIdOf = (version: DocumentVersion) => version.id ?? version.versionId;
 
@@ -128,6 +128,7 @@ export default function DocumentVersionsPanel({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [restoringId, setRestoringId] = useState<string | number | null>(null);
   const [pendingRestore, setPendingRestore] = useState<DocumentVersion | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -147,7 +148,7 @@ export default function DocumentVersionsPanel({
   const validateFile = (nextFile: File | null) => {
     if (!nextFile) return "";
     if (nextFile.size <= 0) return "File không hợp lệ hoặc rỗng.";
-    if (nextFile.size > MAX_VERSION_FILE_BYTES) return "File phiên bản không được vượt quá 100 MB.";
+    if (nextFile.size > MAX_VERSION_FILE_BYTES) return "File phiên bản không được vượt quá 10MB.";
     const extension = fileExtension(nextFile.name);
     if (!extension || !ALLOWED_EXTENSIONS.includes(extension)) {
       return `Định dạng .${extension || "unknown"} chưa được hỗ trợ.`;
@@ -212,8 +213,10 @@ export default function DocumentVersionsPanel({
     }
 
     setUploading(true);
+    setUploadProgress(0);
     try {
-      await featureUpgradesApi.uploadVersion(documentId, file, note || "Cập nhật phiên bản tài liệu");
+      await featureUpgradesApi.uploadVersion(documentId, file, note || "Cập nhật phiên bản tài liệu", setUploadProgress);
+      setUploadProgress(100);
       toast.success("Đã tải phiên bản mới.");
       resetUploadForm();
       await loadVersions();
@@ -327,6 +330,17 @@ export default function DocumentVersionsPanel({
             </label>
             {validationMessage && (
               <div className="rounded-md border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{validationMessage}</div>
+            )}
+            {uploading && (
+              <div className="rounded-md border border-line bg-surface p-3">
+                <div className="mb-2 flex items-center justify-between text-xs font-semibold text-ink-secondary">
+                  <span>Đang tải phiên bản</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-line">
+                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
+                </div>
+              </div>
             )}
             <div className="flex flex-wrap justify-end gap-2">
               {(file || changeNote) && (

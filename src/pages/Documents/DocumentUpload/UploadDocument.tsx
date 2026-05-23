@@ -35,6 +35,8 @@ interface DocumentResponse {
   };
 }
 
+const MAX_UPLOAD_FILE_BYTES = 10 * 1024 * 1024;
+
 function UploadDocument() {
   const [searchParams] = useSearchParams();
   const folderId = searchParams.get("folderId");
@@ -42,16 +44,19 @@ function UploadDocument() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [documentResponse, setDocumentResponse] = useState<DocumentResponse | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && isValidFileType(file)) {
+    const validation = validateFile(file);
+    if (file && !validation) {
       setSelectedFile(file);
       setError(null);
     } else {
-      setError("Chỉ hỗ trợ các định dạng: PDF, DOCX, TXT");
+      setSelectedFile(null);
+      setError(validation);
     }
   };
 
@@ -74,21 +79,25 @@ function UploadDocument() {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file && isValidFileType(file)) {
+    const validation = validateFile(file);
+    if (file && !validation) {
       setSelectedFile(file);
       setError(null);
     } else {
-      setError("Chỉ hỗ trợ các định dạng: PDF, DOCX, TXT");
+      setSelectedFile(null);
+      setError(validation);
     }
   };
 
-  const isValidFileType = (file: File) => {
+  const validateFile = (file?: File) => {
+    if (!file) return "Vui lòng chọn tài liệu.";
+    if (file.size > MAX_UPLOAD_FILE_BYTES) return "Mỗi tài liệu không được vượt quá 10MB.";
     const validTypes = [
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "text/plain",
     ];
-    return validTypes.includes(file.type);
+    return validTypes.includes(file.type) ? null : "Chỉ hỗ trợ các định dạng: PDF, DOCX, TXT";
   };
 
   const handleUpload = async () => {
@@ -98,15 +107,17 @@ function UploadDocument() {
     }
 
     setLoading(true);
+    setUploadProgress(0);
     setError(null);
 
     const formData = new FormData();
     formData.append("file", selectedFile);
 
     try {
-      const response = await documentsApi.postDocument(formData, folderId);
+      const response = await documentsApi.postDocument(formData, folderId, setUploadProgress);
       const data: DocumentResponse = response.data;
       if (data.success) {
+        setUploadProgress(100);
         setDocumentResponse(data);
         setUploadSuccess(true);
       } else {
@@ -238,6 +249,18 @@ function UploadDocument() {
               </div>
 
               {selectedFile && (
+                <>
+                {loading && (
+                  <div className="mt-5 rounded-lg border border-line bg-canvas p-3">
+                    <div className="mb-2 flex items-center justify-between text-xs font-semibold text-ink-secondary">
+                      <span>Đang tải lên</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-line">
+                      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
+                    </div>
+                  </div>
+                )}
                 <button
                   onClick={handleUpload}
                   disabled={loading}
@@ -252,6 +275,7 @@ function UploadDocument() {
                     </>
                   )}
                 </button>
+                </>
               )}
             </aside>
           </div>
