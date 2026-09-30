@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 
 interface EditModalProps {
   documentID: number | null;
+  initialDocument?: Partial<Document> | null;
   onClose: () => void;
   onUpdate: (updatedDoc: Document) => void; // Callback to update document in parent
 }
@@ -22,6 +23,7 @@ interface Document {
 
 const EditModal: React.FC<EditModalProps> = ({
   documentID,
+  initialDocument,
   onClose,
   onUpdate,
 }) => {
@@ -33,10 +35,31 @@ const EditModal: React.FC<EditModalProps> = ({
   useEffect(() => {
     const fetchDocument = async () => {
       if (!documentID) return;
+      if (initialDocument) {
+        setDocumentData({
+          document_id: initialDocument.document_id ?? documentID,
+          title: initialDocument.title || "",
+          description: initialDocument.description ?? null,
+          thumbnail_url: initialDocument.thumbnail_url || "",
+          like_count: initialDocument.like_count || 0,
+          uploaded_at: initialDocument.uploaded_at || "",
+          is_public: initialDocument.is_public ?? false,
+        });
+        return;
+      }
       try {
         setLoading(true);
         const response = await documentsApi.getDocumentByID(documentID);
-        setDocumentData(response.data);
+        const raw = response.data?.document ?? response.data?.data ?? response.data;
+        setDocumentData({
+          document_id: raw.document_id ?? raw.id ?? documentID,
+          title: raw.title ?? raw.Title ?? raw.name ?? "",
+          description: raw.description ?? raw.Description ?? null,
+          thumbnail_url: raw.thumbnail_url ?? raw.thumbnailUrl ?? "",
+          like_count: raw.like_count ?? raw.likeCount ?? 0,
+          uploaded_at: raw.uploaded_at ?? raw.uploadedAt ?? raw.createdAt ?? "",
+          is_public: raw.is_public ?? raw.isPublic ?? raw.isShared ?? false,
+        });
       } catch (err) {
         setError(err.response?.message || "Failed to load document details");
       } finally {
@@ -44,7 +67,7 @@ const EditModal: React.FC<EditModalProps> = ({
       }
     };
     fetchDocument();
-  }, [documentID]);
+  }, [documentID, initialDocument]);
 
   // Handle input changes
   const handleChange = (

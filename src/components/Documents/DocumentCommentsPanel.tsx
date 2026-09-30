@@ -14,6 +14,7 @@ interface CommentAuthor {
 
 interface DocumentComment {
   id: number;
+  parentCommentId?: number | null;
   content: string;
   author?: CommentAuthor;
   canEdit?: boolean;
@@ -23,6 +24,7 @@ interface DocumentComment {
 }
 
 const authorName = (author?: CommentAuthor) => author?.fullName || author?.username || "Người dùng DocShare";
+const mentionLabel = (author?: CommentAuthor) => author?.username || author?.fullName?.replace(/\s+/g, "");
 
 const normalizeAuthor = (raw: any): CommentAuthor => ({
   userId: raw?.userId ?? raw?.user_id ?? raw?.id,
@@ -33,6 +35,7 @@ const normalizeAuthor = (raw: any): CommentAuthor => ({
 
 const normalizeComment = (raw: any): DocumentComment => ({
   id: raw?.id ?? raw?.commentId ?? raw?.comment_id,
+  parentCommentId: raw?.parentCommentId ?? raw?.parent_comment_id ?? null,
   content: raw?.content ?? raw?.body ?? raw?.message ?? "",
   author: normalizeAuthor(raw?.author ?? raw?.user ?? raw),
   canEdit: Boolean(raw?.canEdit ?? raw?.can_edit ?? raw?.permissions?.canEdit),
@@ -46,20 +49,69 @@ const normalizeCommentsResponse = (response: any): DocumentComment[] => {
   return Array.isArray(list) ? list.map(normalizeComment).filter((comment) => comment.id) : [];
 };
 
+const collectMentionableUsers = (comments: DocumentComment[]): CommentAuthor[] => {
+  const users = new Map<string, CommentAuthor>();
+
+  const visit = (comment: DocumentComment) => {
+    const username = mentionLabel(comment.author);
+    const userKey = comment.author?.userId || username;
+    if (username && userKey && !users.has(userKey)) {
+      users.set(userKey, comment.author || {});
+    }
+    (comment.replies || []).forEach(visit);
+  };
+
+  comments.forEach(visit);
+  return Array.from(users.values());
+};
+
+function renderCommentContent(content: string) {
+  const parts = content.split(/(@[A-Za-z0-9_.-]{2,50})/g);
+  return parts.map((part, index) =>
+    /^@[A-Za-z0-9_.-]{2,50}$/.test(part) ? (
+      <span key={`${part}-${index}`} className="font-semibold text-primary">
+        {part}
+      </span>
+    ) : (
+      <React.Fragment key={`${part}-${index}`}>{part}</React.Fragment>
+    )
+  );
+}
+
 function CommentComposer({
   placeholder,
   buttonLabel,
   loading,
+  mentionableUsers = [],
+  initialContent = "",
   onSubmit,
   onCancel,
 }: {
   placeholder: string;
   buttonLabel: string;
   loading: boolean;
+  mentionableUsers?: CommentAuthor[];
+  initialContent?: string;
   onSubmit: (content: string) => Promise<boolean>;
   onCancel?: () => void;
 }) {
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState(initialContent);
+
+  useEffect(() => {
+    setContent(initialContent);
+  }, [initialContent]);
+
+  const mentionMatch = content.match(/(?:^|\s)@([A-Za-z0-9_.-]{0,50})$/);
+  const mentionQuery = mentionMatch?.[1]?.toLowerCase();
+  const mentionSuggestions =
+    mentionMatch && mentionableUsers.length > 0
+      ? mentionableUsers
+          .filter((user) => {
+            const username = mentionLabel(user);
+            return username && username.toLowerCase().includes(mentionQuery || "");
+          })
+          .slice(0, 5)
+      : [];
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -69,14 +121,43 @@ function CommentComposer({
     if (submitted) setContent("");
   };
 
+  const insertMention = (user: CommentAuthor) => {
+    const username = mentionLabel(user);
+    if (!username) return;
+    setContent((current) => current.replace(/(^|\s)@([A-Za-z0-9_.-]{0,50})$/, `$1@${username} `));
+  };
+
   return (
     <form onSubmit={submit} className="rounded-lg border border-line bg-canvas p-3">
-      <textarea
-        value={content}
-        onChange={(event) => setContent(event.target.value)}
-        className="input-field min-h-24 resize-none bg-surface"
-        placeholder={placeholder}
-      />
+      <div className="relative">
+        <textarea
+          value={content}
+          onChange={(event) => setContent(event.target.value)}
+          className="input-field min-h-24 resize-none bg-surface"
+          placeholder={placeholder}
+        />
+        {mentionSuggestions.length > 0 && (
+          <div className="absolute bottom-2 left-2 z-10 w-64 overflow-hidden rounded-lg border border-line bg-surface shadow-lg">
+            {mentionSuggestions.map((user) => {
+              const username = mentionLabel(user);
+              return (
+                <button
+                  key={user.userId || username}
+                  type="button"
+                  onClick={() => insertMention(user)}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-primary-soft"
+                >
+                  <img src={user.avatarUrl || "/logo.ico"} alt="" className="h-7 w-7 rounded-full object-cover" />
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-ink">{authorName(user)}</span>
+                    <span className="block truncate text-xs text-ink-secondary">@{username}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
       <div className="mt-3 flex justify-end gap-2">
         {onCancel && (
           <button type="button" onClick={onCancel} className="btn-secondary px-3 py-2">
@@ -96,6 +177,7 @@ function CommentComposer({
 function CommentItem({
   comment,
   depth = 0,
+  mentionableUsers,
   posting,
   onReply,
   onEdit,
@@ -103,6 +185,7 @@ function CommentItem({
 }: {
   comment: DocumentComment;
   depth?: number;
+  mentionableUsers: CommentAuthor[];
   posting: boolean;
   onReply: (parentId: number, content: string) => Promise<boolean>;
   onEdit: (commentId: number, content: string) => Promise<boolean>;
@@ -118,6 +201,8 @@ function CommentItem({
     const saved = await onEdit(comment.id, nextContent);
     if (saved) setEditing(false);
   };
+
+  const replyInitialContent = depth > 0 && mentionLabel(comment.author) ? `@${mentionLabel(comment.author)} ` : "";
 
   return (
     <div className={`${depth > 0 ? "ml-8 border-l border-line pl-4" : ""}`}>
@@ -138,7 +223,7 @@ function CommentItem({
                 </div>
               </div>
             ) : (
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink-secondary">{comment.content}</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink-secondary">{renderCommentContent(comment.content)}</p>
             )}
             {!editing && (
               <div className="mt-3 flex flex-wrap gap-2">
@@ -169,6 +254,8 @@ function CommentItem({
             placeholder="Viết phản hồi..."
             buttonLabel="Gửi trả lời"
             loading={posting}
+            mentionableUsers={mentionableUsers}
+            initialContent={replyInitialContent}
             onSubmit={async (content) => {
               const submitted = await onReply(comment.id, content);
               if (submitted) setReplying(false);
@@ -185,6 +272,7 @@ function CommentItem({
               key={reply.id}
               comment={reply}
               depth={depth + 1}
+              mentionableUsers={mentionableUsers}
               posting={posting}
               onReply={onReply}
               onEdit={onEdit}
@@ -202,6 +290,7 @@ export default function DocumentCommentsPanel({ documentId }: { documentId: numb
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const isSignedIn = Boolean(Cookies.get("token"));
+  const mentionableUsers = collectMentionableUsers(comments);
 
   const loadComments = async () => {
     setLoading(true);
@@ -288,6 +377,7 @@ export default function DocumentCommentsPanel({ documentId }: { documentId: numb
           placeholder="Chia sẻ nhận xét của bạn..."
           buttonLabel="Gửi bình luận"
           loading={posting}
+          mentionableUsers={mentionableUsers}
           onSubmit={(content) => submitComment(content)}
         />
       ) : (
@@ -308,6 +398,7 @@ export default function DocumentCommentsPanel({ documentId }: { documentId: numb
             <CommentItem
               key={comment.id}
               comment={comment}
+              mentionableUsers={mentionableUsers}
               posting={posting}
               onReply={(parentId, content) => submitComment(content, parentId)}
               onEdit={editComment}

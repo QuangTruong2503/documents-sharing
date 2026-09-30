@@ -33,6 +33,8 @@ export interface WorkspaceItem {
   extension?: string;
   size?: number;
   thumbnailUrl?: string;
+  fileUrl?: string;
+  publicId?: string;
   previewUrl?: string;
   downloadUrl?: string;
   status?: string;
@@ -99,8 +101,14 @@ const workspaceLibraryApi = {
   downloadDocument: (documentId: number) =>
     axiosInstance.get(`documents/${documentId}/download`, { responseType: "blob" }),
 
+  downloadItems: (payload: { publicIds?: string[]; items?: Array<{ id: number; type: WorkspaceItemType }> }) =>
+    axiosInstance.post("library-items/download", payload).then((response) => response.data),
+
   renameItem: (itemId: number, payload: { type: WorkspaceItemType; name: string }) =>
     axiosInstance.patch(`library-items/${itemId}/rename`, payload).then((response) => response.data),
+
+  updateDocumentMetadata: (payload: { document_id: number; title: string; description?: string | null; is_public: boolean }) =>
+    axiosInstance.put("Documents/update-document", payload).then((response) => response.data),
 
   moveItems: (payload: { items: Array<{ id: number; type: WorkspaceItemType }>; targetFolderId: number | null; conflictStrategy?: "error" | "auto_rename" }) =>
     axiosInstance.patch("library-items/move", { conflictStrategy: "error", ...payload }).then((response) => response.data),

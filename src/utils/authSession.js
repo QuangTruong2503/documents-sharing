@@ -15,9 +15,10 @@ export const getDeviceInfo = () => {
   }
 };
 
-export const saveAuthSession = ({ token, user, expires = 3 }) => {
+export const saveAuthSession = ({ token, user, expires, expiresIn }) => {
+  const cookieExpires = expires ?? (expiresIn ? expiresIn / 86400 : 3);
   const cookieOptions = {
-    expires,
+    expires: cookieExpires,
     sameSite: "strict",
     secure: window.location.protocol === "https:",
   };

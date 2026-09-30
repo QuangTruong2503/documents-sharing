@@ -23,6 +23,7 @@ import Cookies from "js-cookie";
 import { toast } from "react-toastify";
 import workspaceLibraryApi from "api/workspaceLibraryApi.ts";
 import featureUpgradesApi from "api/featureUpgradesApi.ts";
+import { buildCloudinaryAttachmentUrl } from "utils/workspaceLibraryHelpers.ts";
 
 interface DocumentData {
   document_id: number;
@@ -284,23 +285,14 @@ const PdfViewer: React.FC = () => {
     setIsDownloading(true);
     try {
       checkNotSigned();
-      const response = await documentsApi.downloadDocumentByID(documentID);
+      const fileName = documentData?.title || "document";
+      const downloadUrl = buildCloudinaryAttachmentUrl(documentData?.file_url, fileName);
+      if (!downloadUrl) {
+        toast.error("Không tìm thấy Cloudinary URL của tài liệu.");
+        return;
+      }
 
-      const blob = new Blob([response.data], {
-        type: response.headers["content-type"],
-      });
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-
-      const fileName = documentData?.title || "document.pdf"; // Tên file mặc định
-
-      link.setAttribute("download", fileName);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-      // Cập nhật số lượt tải tài liệu sau khi tải thành công
+      window.location.href = downloadUrl;
       setDocumentData((prev) => {
         if (prev) {
           return { ...prev, download_count: prev.download_count + 1 };
@@ -309,6 +301,7 @@ const PdfViewer: React.FC = () => {
       });
     } catch (error: any) {
       console.error("Error downloading document:", error);
+      toast.error(error?.response?.data?.message || "Không thể tải tài liệu.");
     } finally {
       setIsDownloading(false);
     }
