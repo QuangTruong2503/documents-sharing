@@ -1,3 +1,4 @@
+import { checkPasswordStrength } from "utils/passwordPolicy";
 import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import userApi from "api/usersApi";
@@ -38,27 +39,13 @@ function RegisterPage() {
   // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setRegisterData((prev) => ({ ...prev, [name]: value.trim() }));
+    setRegisterData((prev) => ({ ...prev, [name]: name === "email" ? value.trim() : value }));
   };
 
   // Toggle password visibility
   const toggleShowPassword = () => setShowPassword((prev) => !prev);
 
   // Password strength checker
-  const checkPasswordStrength = (password: string) => {
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasNumber = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    const isLongEnough = password.length >= 8;
-
-    return {
-      hasUpperCase,
-      hasNumber,
-      hasSpecialChar,
-      isLongEnough,
-      isValid: hasUpperCase && hasNumber && hasSpecialChar && isLongEnough,
-    };
-  };
 
   // Form validation
   const validateForm = () => {

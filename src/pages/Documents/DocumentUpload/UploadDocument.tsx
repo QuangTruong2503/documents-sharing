@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRotateRight,
@@ -40,6 +40,7 @@ const MAX_UPLOAD_FILE_BYTES = 10 * 1024 * 1024;
 function UploadDocument() {
   const [searchParams] = useSearchParams();
   const folderId = searchParams.get("folderId");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -61,6 +62,7 @@ function UploadDocument() {
   };
 
   const clearSelectedFile = () => {
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setSelectedFile(null);
     setError(null);
   };
@@ -97,7 +99,7 @@ function UploadDocument() {
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "text/plain",
     ];
-    return validTypes.includes(file.type) ? null : "Chỉ hỗ trợ các định dạng: PDF, DOCX, TXT";
+    return (validTypes.includes(file.type) || (!file.type && /\.(pdf|docx|txt)$/i.test(file.name))) ? null : "Chỉ hỗ trợ các định dạng: PDF, DOCX, TXT";
   };
 
   const handleUpload = async () => {
@@ -131,6 +133,7 @@ function UploadDocument() {
   };
 
   const resetUpload = () => {
+    clearSelectedFile();
     setSelectedFile(null);
     setUploadSuccess(false);
     setDocumentResponse(null);
@@ -193,6 +196,7 @@ function UploadDocument() {
               <input
                 id="file-upload"
                 type="file"
+                ref={fileInputRef}
                 className="hidden"
                 accept=".pdf,.docx,.txt"
                 onChange={handleFileChange}

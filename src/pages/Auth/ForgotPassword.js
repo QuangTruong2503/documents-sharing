@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import  verificationsApi from "api/verificationsApi.js"// Đường dẫn tới file API của bạn
 import PageTitle from "components/PageTitle.js";
 import { useSearchParams } from "react-router-dom";
@@ -11,6 +11,12 @@ function ForgotPassword() {
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
+
+  useEffect(() => {
+    if (!countdown) return;
+    const timer = setTimeout(() => setCountdown((prev) => Math.max(0, prev - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
   // Hàm xử lý gửi yêu cầu reset password
   const handleResetPassword = async (e) => {
@@ -33,16 +39,7 @@ function ForgotPassword() {
       setSuccess(true);
       setCountdown(60);
       
-      // Tạo interval để giảm countdown mỗi giây
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+
 
     } catch (err) {
       setError("Có lỗi xảy ra: " + (err.response?.data?.message || err.message));

@@ -1,3 +1,4 @@
+import RequireAuth from "components/RequireAuth";
 import "styles/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -104,10 +105,10 @@ function App() {
                   <Route path="/verify-email/:token" element={<VerifyEmail />} />
                   <Route path="/confirm-change-email" element={<ConfirmChangeEmail />} />
                   {/* Account */}
-                  <Route path="/account/*" element={<AccountPage />} />
+                  <Route path="/account/*" element={<RequireAuth><AccountPage /></RequireAuth>} />
                   {/* Document */}
-                  <Route path="/upload-document" element={<UploadDocument />} />
-                  <Route path="/library" element={<MyLibraryPage />} />
+                  <Route path="/upload-document" element={<RequireAuth><UploadDocument /></RequireAuth>} />
+                  <Route path="/library" element={<RequireAuth><MyLibraryPage /></RequireAuth>} />
                   <Route path="/documents" element={<Navigate to="/library" replace />} />
                   <Route path="/documents/my" element={<Navigate to="/library" replace />} />
                   <Route path="/documents/shared-with-me" element={<Navigate to="/library?area=shared" replace />} />
@@ -121,33 +122,33 @@ function App() {
                   <Route path="/document/:documentID" element={<DocumentDetail />} />
                   <Route path="/s/:token" element={<PublicSharePage />} />
                   <Route path="/public-profile/:userID" element={<PublicProfile />} />
-                  <Route path="/my-reports" element={<MyReports />} />
-                  <Route path="/my-reports/:reportId" element={<ReportDetail />} />
+                  <Route path="/my-reports" element={<RequireAuth><MyReports /></RequireAuth>} />
+                  <Route path="/my-reports/:reportId" element={<RequireAuth><ReportDetail /></RequireAuth>} />
                   <Route path="/search/:search" element={<Search />}/>
                   <Route path="/category/:id" element={<Categories />}/>
-                  <Route path="/admin/*" element={<Admin />}/>
+                  <Route path="/admin/*" element={<RequireAuth admin><Admin /></RequireAuth>}/>
                   {/* Collections */}
-                  <Route path="/my-collections" element={<MyCollections />} />
+                  <Route path="/my-collections" element={<RequireAuth><MyCollections /></RequireAuth>} />
                   <Route path="/collection/:collectionId" element={<CollectionDetail />} />
                   {/* Folders */}
                   <Route path="/folders" element={<Navigate to="/library?tab=folders" replace />} />
                   <Route path="/folders/my" element={<Navigate to="/library?tab=folders" replace />} />
                   <Route path="/folders/shared-with-me" element={<Navigate to="/library?tab=shared" replace />} />
-                  <Route path="/folders/:folderId" element={<FolderDetailPage />} />
-                  <Route path="/folders/:folderId/documents" element={<FolderDetailPage />} />
-                  <Route path="/folders/:folderId/members" element={<FolderDetailPage />} />
-                  <Route path="/folders/:folderId/invites" element={<FolderDetailPage />} />
-                  <Route path="/documents/folders/:folderId" element={<FolderDetailPage />} />
-                  <Route path="/documents/folders/:folderId/documents" element={<FolderDetailPage />} />
-                  <Route path="/documents/folders/:folderId/members" element={<FolderDetailPage />} />
-                  <Route path="/documents/folders/:folderId/invites" element={<FolderDetailPage />} />
+                  <Route path="/folders/:folderId" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
+                  <Route path="/folders/:folderId/documents" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
+                  <Route path="/folders/:folderId/members" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
+                  <Route path="/folders/:folderId/invites" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
+                  <Route path="/documents/folders/:folderId" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
+                  <Route path="/documents/folders/:folderId/documents" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
+                  <Route path="/documents/folders/:folderId/members" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
+                  <Route path="/documents/folders/:folderId/invites" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
                   <Route path="/documents/files/:documentID" element={<DocumentDetail />} />
-                  <Route path="/library/folders/:folderId" element={<FolderDetailPage />} />
-                  <Route path="/library/folders/:folderId/documents" element={<FolderDetailPage />} />
-                  <Route path="/library/folders/:folderId/members" element={<FolderDetailPage />} />
-                  <Route path="/library/folders/:folderId/invites" element={<FolderDetailPage />} />
-                  <Route path="/folder-invites" element={<MyFolderInvitesPage />} />
-                  <Route path="/folder-invites/:inviteId" element={<MyFolderInvitesPage />} />
+                  <Route path="/library/folders/:folderId" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
+                  <Route path="/library/folders/:folderId/documents" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
+                  <Route path="/library/folders/:folderId/members" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
+                  <Route path="/library/folders/:folderId/invites" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
+                  <Route path="/folder-invites" element={<RequireAuth><MyFolderInvitesPage /></RequireAuth>} />
+                  <Route path="/folder-invites/:inviteId" element={<RequireAuth><MyFolderInvitesPage /></RequireAuth>} />
                 </Routes>
                 {/* ChatBoxAI */}
                 {/* <ChatBoxAI

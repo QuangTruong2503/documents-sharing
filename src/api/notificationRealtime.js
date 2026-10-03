@@ -46,6 +46,7 @@ export function startNotificationRealtime() {
 
   activeToken = token;
   connection = createConnection(token);
+  const localConnection = connection;
 
   // connection.on("ReceiveNotification", (notification) => {
   //   notifySubscribers("onNotification", notification);
@@ -63,17 +64,23 @@ export function startNotificationRealtime() {
   });
 
   connection.onclose(() => {
-    startPromise = null;
+    if (connection === localConnection) {
+      connection = null;
+      activeToken = null;
+      startPromise = null;
+    }
   });
 
   startPromise = connection
     .start()
-    .then(() => connection)
+    .then(() => localConnection)
     .catch((error) => {
       console.error("Cannot start notification realtime connection:", error);
-      connection = null;
-      activeToken = null;
-      startPromise = null;
+      if (connection === localConnection) {
+        connection = null;
+        activeToken = null;
+        startPromise = null;
+      }
       return null;
     });
 

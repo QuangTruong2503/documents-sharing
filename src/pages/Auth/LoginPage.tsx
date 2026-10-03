@@ -24,6 +24,7 @@ interface LoginResponse {
   success: boolean;
   twofaRequired: boolean;
   token: string;
+  expiresIn?: number;
   user: User;
 }
 
@@ -145,7 +146,7 @@ function LoginPage() {
       setIsTwoFARequired(true);
     } else if (data.success === true && data.isLogin === true) {
       toast.success(data.message || "Đăng nhập thành công");
-      saveAuthSession({ token: data.token, user: data.user });
+      saveAuthSession({ token: data.token, user: data.user, expiresIn: data.expiresIn });
       navigate("/");
     } else {
       toast.warning(data.message || "Đăng nhập không thành công");
@@ -183,7 +184,7 @@ function LoginPage() {
       const data: LoginResponse = normalizeAuthResponse(response.data);
 
       if (data.success) {
-        saveAuthSession({ token: data.token, user: data.user });
+        saveAuthSession({ token: data.token, user: data.user, expiresIn: data.expiresIn });
         setIsTwoFARequired(false);
         navigate("/");
       } else {
@@ -231,7 +232,6 @@ function LoginPage() {
     }));
   }, [getDeviceInfo]);
   useEffect(() => {
-    console.log(isTwoFARequired)
   }, [isTwoFARequired]);
   return (
     <div className="flex min-h-screen items-center justify-center bg-canvas px-4 py-12 sm:px-6 lg:px-8">

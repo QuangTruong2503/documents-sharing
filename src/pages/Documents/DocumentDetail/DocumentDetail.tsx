@@ -1,3 +1,4 @@
+import { readDocumentHistory } from "utils/documentHistory";
 import React, { useEffect, useState } from "react";
 import { NavLink, useParams } from "react-router-dom";
 import documentsApi from "api/documentsApi";
@@ -23,6 +24,7 @@ import Cookies from "js-cookie";
 import { toast } from "react-toastify";
 import workspaceLibraryApi from "api/workspaceLibraryApi.ts";
 import featureUpgradesApi from "api/featureUpgradesApi.ts";
+import { buildCloudinaryAttachmentUrl } from "utils/workspaceLibraryHelpers.ts";
 
 interface DocumentData {
   document_id: number;
@@ -171,9 +173,7 @@ const PdfViewer: React.FC = () => {
 
   // Hàm lưu lịch sử truy cập vào Cookies
   const saveHistoryToCookies = (docID: string) => {
-    const history = Cookies.get("documentHistory")
-      ? JSON.parse(Cookies.get("documentHistory")!)
-      : [];
+    const history = readDocumentHistory();
 
     // Loại bỏ documentID trùng lặp nếu đã tồn tại
     const updatedHistory = history.filter((id: string) => id !== docID);
@@ -190,12 +190,14 @@ const PdfViewer: React.FC = () => {
     Cookies.set("documentHistory", JSON.stringify(updatedHistory), {
       expires: 7,
     });
-    console.log("Document history saved to cookies:", updatedHistory);
   };
 
   // Fetch document data và lưu lịch sử
   useEffect(() => {
     window.scroll({ top: 0, behavior: "smooth" });
+    let ignore = false;
+    setDocumentData(null);
+    setError(null);
 
     const fetchDocumentData = async () => {
       if (!documentID) {
@@ -207,6 +209,7 @@ const PdfViewer: React.FC = () => {
       try {
         setLoading(true);
         const response = await documentsApi.getDocumentByID(documentID);
+        if (ignore) return;
         if (response.data) {
           setDocumentData(response.data);
           // Lưu documentID vào Cookies sau khi tải dữ liệu thành công
@@ -215,17 +218,19 @@ const PdfViewer: React.FC = () => {
           setError("No document data returned");
         }
       } catch (err) {
+        if (ignore) return;
         const errorMessage =
           err instanceof Error && "response" in err
             ? (err as any).response?.data?.message
             : "Đây là tài liệu riêng tư hoặc đã bị xóa.";
         setError(errorMessage || "Đây là tài liệu riêng tư hoặc đã bị xóa.");
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
 
     fetchDocumentData();
+    return () => { ignore = true; };
   }, [documentID]);
 
   useEffect(() => {
@@ -234,7 +239,7 @@ const PdfViewer: React.FC = () => {
   }, [documentData?.file_url]);
 
   useEffect(() => {
-    if (!documentID || !documentData || !Cookies.get("token")) {
+    if (!documentID || String(documentData?.document_id) !== documentID || !Cookies.get("token")) {
       setReportStatus(null);
       return;
     }
@@ -256,12 +261,12 @@ const PdfViewer: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [documentID, documentData]);
+  }, [documentID, documentData?.document_id]);
 
   useEffect(() => {
-    if (!documentID || !documentData) return;
+    if (!documentID || String(documentData?.document_id) !== documentID) return;
     featureUpgradesApi.recordView(documentID, "document_detail").catch(() => undefined);
-  }, [documentID, documentData]);
+  }, [documentID, documentData?.document_id]);
 
   useEffect(() => {
     if (!documentData || viewerLoaded || viewerAttempt >= MAX_VIEWER_RETRIES) {
@@ -283,24 +288,15 @@ const PdfViewer: React.FC = () => {
   const handleDownloadDocument = async () => {
     setIsDownloading(true);
     try {
-      checkNotSigned();
-      const response = await documentsApi.downloadDocumentByID(documentID);
+      if (checkNotSigned()) return;
+      const fileName = documentData?.title || "document";
+      const downloadUrl = buildCloudinaryAttachmentUrl(documentData?.file_url, fileName);
+      if (!downloadUrl) {
+        toast.error("Không tìm thấy Cloudinary URL của tài liệu.");
+        return;
+      }
 
-      const blob = new Blob([response.data], {
-        type: response.headers["content-type"],
-      });
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-
-      const fileName = documentData?.title || "document.pdf"; // Tên file mặc định
-
-      link.setAttribute("download", fileName);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-      // Cập nhật số lượt tải tài liệu sau khi tải thành công
+      window.location.href = downloadUrl;
       setDocumentData((prev) => {
         if (prev) {
           return { ...prev, download_count: prev.download_count + 1 };
@@ -309,6 +305,7 @@ const PdfViewer: React.FC = () => {
       });
     } catch (error: any) {
       console.error("Error downloading document:", error);
+      toast.error(error?.response?.data?.message || "Không thể tải tài liệu.");
     } finally {
       setIsDownloading(false);
     }
@@ -316,7 +313,7 @@ const PdfViewer: React.FC = () => {
 
   const handleSave = async () => {
     if (!Cookies.get("token")) {
-      checkNotSigned();
+      if (checkNotSigned()) return;
       return;
     }
 
@@ -352,14 +349,18 @@ const PdfViewer: React.FC = () => {
   };
 
   const handleLike = async () => {
-    checkNotSigned();
-    const response = await documentsApi.updateDocumentLikeStatus(documentID, 1);
-    setDocumentData((prev) => ({
-      ...prev!,
-      myReaction: response.data.reaction,
-      like_count: response.data.likeCount,
-      dislike_count: response.data.dislikeCount,
-    }));
+    if (checkNotSigned()) return;
+    try {
+      const response = await documentsApi.updateDocumentLikeStatus(documentID, 1);
+      setDocumentData((prev) => ({
+        ...prev!,
+        myReaction: response.data.reaction,
+        like_count: response.data.likeCount,
+        dislike_count: response.data.dislikeCount,
+      }));
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không thể cập nhật lượt thích.");
+    }
   }
   const handleDislike = () => {
     alert("Chức năng Dislike chưa được triển khai!");
@@ -374,7 +375,7 @@ const PdfViewer: React.FC = () => {
 
   const handleShare = async () => {
     if (!Cookies.get("token")) {
-      checkNotSigned();
+      if (checkNotSigned()) return;
       return;
     }
     setShowShareModal(true);
@@ -414,6 +415,7 @@ const PdfViewer: React.FC = () => {
       });
       setShareSettings(response.shareLink);
       toast.success("Đã lưu liên kết chia sẻ.");
+      return response.shareLink;
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Không tạo được liên kết chia sẻ.");
     } finally {
@@ -422,11 +424,14 @@ const PdfViewer: React.FC = () => {
   };
 
   const copyShareLink = async () => {
-    if (!shareSettings?.shareUrl) {
-      await saveShareLink();
+    const link = shareSettings?.shareUrl ? shareSettings : await saveShareLink();
+    if (!link?.shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(link.shareUrl);
+    } catch {
+      toast.error("Không thể sao chép liên kết.");
       return;
     }
-    await navigator.clipboard.writeText(shareSettings.shareUrl);
     toast.success("Đã sao chép liên kết.");
   };
 
@@ -445,7 +450,7 @@ const PdfViewer: React.FC = () => {
   };
   const handleReport = async () => {
     if (!Cookies.get("token")) {
-      checkNotSigned();
+      if (checkNotSigned()) return;
       return;
     }
 

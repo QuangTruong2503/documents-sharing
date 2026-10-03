@@ -62,26 +62,6 @@ const mimeExtensionMap: Record<string, string> = {
   "text/plain": "txt",
 };
 
-const getHeaderValue = (headers: any, key: string) => {
-  if (!headers) return "";
-  if (typeof headers.get === "function") return headers.get(key) || headers.get(key.toLowerCase()) || "";
-  return headers[key] || headers[key.toLowerCase()] || "";
-};
-
-const getFilenameFromContentDisposition = (contentDisposition: string) => {
-  const encodedMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
-  if (encodedMatch?.[1]) {
-    try {
-      return decodeURIComponent(encodedMatch[1].trim().replace(/^"|"$/g, ""));
-    } catch {
-      return encodedMatch[1].trim().replace(/^"|"$/g, "");
-    }
-  }
-
-  const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
-  return filenameMatch?.[1]?.trim() || "";
-};
-
 const hasFileExtension = (fileName: string) => /\.[^./\\]+$/.test(fileName);
 
 const getExtensionFromDocument = (document: WorkspaceItem, contentType: string) => {
@@ -92,27 +72,56 @@ const getExtensionFromDocument = (document: WorkspaceItem, contentType: string) 
   return mimeExtensionMap[mimeType] || "";
 };
 
-const getWorkspaceDownloadFileName = (document: WorkspaceItem, response: any, contentType: string) => {
-  const headerFileName = getFilenameFromContentDisposition(getHeaderValue(response.headers, "content-disposition"));
-  const baseFileName = headerFileName || document.name || document.title || `document-${document.id}`;
+export const getWorkspaceDownloadFileName = (document: WorkspaceItem) => {
+  const baseFileName = document.name || document.title || `document-${document.id}`;
 
   if (hasFileExtension(baseFileName)) return baseFileName;
 
-  const extension = getExtensionFromDocument(document, contentType);
+  const extension = getExtensionFromDocument(document, document.mimeType || "");
   return extension ? `${baseFileName}.${extension}` : baseFileName;
 };
 
+const sanitizeCloudinaryAttachmentName = (fileName: string) =>
+  fileName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 120) || "document";
+
+export const buildCloudinaryAttachmentUrl = (secureUrl?: string | null, fileName?: string | null) => {
+  if (!secureUrl) return "";
+  const uploadMarker = "/upload/";
+  const uploadIndex = secureUrl.indexOf(uploadMarker);
+  if (uploadIndex < 0) return secureUrl;
+
+  const safeFileName = sanitizeCloudinaryAttachmentName(fileName || "document");
+  const beforeUpload = secureUrl.slice(0, uploadIndex + uploadMarker.length);
+  const afterUpload = secureUrl.slice(uploadIndex + uploadMarker.length);
+  return `${beforeUpload}fl_attachment:${safeFileName}/${afterUpload}`;
+};
+
 export const downloadWorkspaceDocument = async (document: WorkspaceItem) => {
-  const response = await workspaceLibraryApi.downloadDocument(document.id);
-  const responseContentType = getHeaderValue(response.headers, "content-type");
-  const blobType = responseContentType || document.mimeType || response.data?.type || "";
-  const blob = new Blob([response.data], blobType ? { type: blobType } : undefined);
-  const url = window.URL.createObjectURL(blob);
-  const link = window.document.createElement("a");
-  link.href = url;
-  link.download = getWorkspaceDownloadFileName(document, response, blobType);
-  window.document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.URL.revokeObjectURL(url);
+  const sourceUrl = document.fileUrl || document.downloadUrl || document.previewUrl;
+  const downloadUrl = buildCloudinaryAttachmentUrl(sourceUrl, getWorkspaceDownloadFileName(document));
+  if (!downloadUrl) throw new Error("Không tìm thấy Cloudinary URL của tài liệu.");
+  window.location.href = downloadUrl;
+};
+
+export const downloadWorkspaceDocuments = async (documents: WorkspaceItem[]) => {
+  const selectedDocuments = documents.filter((item) => item.type === "document");
+  if (selectedDocuments.length === 0) return;
+
+  if (selectedDocuments.length === 1) {
+    await downloadWorkspaceDocument(selectedDocuments[0]);
+    return;
+  }
+
+  const publicIds = selectedDocuments.map((item) => item.publicId).filter(Boolean) as string[];
+  const response = await workspaceLibraryApi.downloadItems({
+    publicIds,
+    items: publicIds.length === selectedDocuments.length ? undefined : selectedDocuments.map((item) => ({ id: item.id, type: item.type })),
+  });
+  if (!response?.downloadUrl) throw new Error("Backend chưa trả về URL tải ZIP.");
+  window.location.href = response.downloadUrl;
 };

@@ -33,6 +33,7 @@ import PageTitle from "components/PageTitle.js";
 import WorkspaceCreateDropdown from "components/Workspace/WorkspaceCreateDropdown.tsx";
 import WorkspaceConfirmDialog from "components/Workspace/WorkspaceConfirmDialog.tsx";
 import WorkspaceLoadingSkeleton from "components/Workspace/WorkspaceLoadingSkeleton.tsx";
+import EditDocumentModal from "components/Modal/EditDocumentModal.tsx";
 import workspaceLibraryApi, {
   WorkspaceFolder,
   WorkspaceItem,
@@ -45,6 +46,7 @@ import {
   canEvery,
   defaultWorkspacePagination,
   downloadWorkspaceDocument,
+  downloadWorkspaceDocuments,
   normalizeWorkspacePagination,
   toDateTimeLocalValue,
   WorkspacePagination,
@@ -68,6 +70,7 @@ type DialogState =
   | { type: "create-folder" }
   | { type: "upload" }
   | { type: "rename"; item: WorkspaceItem }
+  | { type: "edit-document"; item: WorkspaceItem }
   | { type: "move"; mode: "move" | "copy"; items: WorkspaceItem[] }
   | { type: "merge"; items: WorkspaceItem[] }
   | { type: "share"; item: WorkspaceItem }
@@ -186,7 +189,7 @@ const FolderWorkspaceSidebar = ({
               key={item.key}
               type="button"
               onClick={() => onTab(item.key)}
-              disabled={item.disabled}
+              disabled={"disabled" in item && item.disabled}
               className={`flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-medium transition ${
                 active ? "bg-primary-soft text-primary" : "text-ink-secondary hover:bg-canvas hover:text-ink"
               } disabled:pointer-events-none disabled:opacity-40`}
@@ -217,8 +220,10 @@ const DocumentsToolbar = ({
   onCreate,
   onUpload,
   onRename,
+  onEditDocument,
   onMove,
   onCopy,
+  onDownload,
   onCopyLink,
   onMerge,
   onShare,
@@ -232,8 +237,10 @@ const DocumentsToolbar = ({
   onCreate: () => void;
   onUpload: () => void;
   onRename: () => void;
+  onEditDocument: () => void;
   onMove: () => void;
   onCopy: () => void;
+  onDownload: () => void;
   onCopyLink: () => void;
   onMerge: () => void;
   onShare: () => void;
@@ -242,8 +249,10 @@ const DocumentsToolbar = ({
   const selectedCount = selectedItems.length;
   const allDocuments = selectedItems.length > 1 && selectedItems.every((item) => item.type === "document");
   const canRename = selectedCount === 1 && selectedItems[0].permissions?.canRename !== false;
+  const canEditDocument = canRename && selectedItems[0].type === "document";
   const canMove = canEvery(selectedItems, "canMove");
   const canCopy = canEvery(selectedItems, "canCopy");
+  const canDownload = selectedItems.length > 0 && selectedItems.every((item) => item.type === "document" && item.permissions?.canDownload !== false);
   const canShare = selectedCount === 1 && selectedItems[0].permissions?.canShare !== false;
   const canDelete = canEvery(selectedItems, "canDelete");
 
@@ -258,6 +267,12 @@ const DocumentsToolbar = ({
               Đổi tên
             </button>
           )}
+          {selectedCount === 1 && selectedItems[0].type === "document" && (
+            <button type="button" onClick={onEditDocument} disabled={!canEditDocument} className="btn-secondary px-3 py-2">
+              <FileText className="mr-2 h-4 w-4" />
+              Chỉnh sửa
+            </button>
+          )}
           <button type="button" onClick={onMove} disabled={!canMove} className="btn-secondary px-3 py-2">
             <MoveRight className="mr-2 h-4 w-4" />
             Di chuyển
@@ -265,6 +280,10 @@ const DocumentsToolbar = ({
           <button type="button" onClick={onCopy} disabled={!canCopy} className="btn-secondary px-3 py-2">
             <Copy className="mr-2 h-4 w-4" />
             Sao chép
+          </button>
+          <button type="button" onClick={onDownload} disabled={!canDownload} className="btn-secondary px-3 py-2">
+            <Download className="mr-2 h-4 w-4" />
+            Tải xuống
           </button>
           {selectedCount === 1 && (
             <button type="button" onClick={onCopyLink} className="btn-secondary px-3 py-2">
@@ -326,13 +345,17 @@ const DocumentsToolbar = ({
 const ItemActionDropdown = ({
   item,
   onCopyLink,
+  onDownload,
   onRename,
+  onEditDocument,
   onMove,
   onTrash,
 }: {
   item: WorkspaceItem;
   onCopyLink: () => void;
+  onDownload: () => void;
   onRename: () => void;
+  onEditDocument: () => void;
   onMove: () => void;
   onTrash: () => void;
 }) => {
@@ -378,10 +401,22 @@ const ItemActionDropdown = ({
           <Link2 className="h-4 w-4" />
           Copy link
         </button>
+        {item.type === "document" && (
+          <button type="button" onClick={() => runAction(onDownload)} disabled={permissions.canDownload === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40" role="menuitem">
+            <Download className="h-4 w-4" />
+            Tải xuống
+          </button>
+        )}
         <button type="button" onClick={() => runAction(onRename)} disabled={permissions.canRename === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40" role="menuitem">
           <Pencil className="h-4 w-4" />
           Đổi tên
         </button>
+        {item.type === "document" && (
+          <button type="button" onClick={() => runAction(onEditDocument)} disabled={permissions.canRename === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40" role="menuitem">
+            <FileText className="h-4 w-4" />
+            Chỉnh sửa
+          </button>
+        )}
         <button type="button" onClick={() => runAction(onMove)} disabled={permissions.canMove === false} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-secondary hover:bg-canvas hover:text-primary disabled:pointer-events-none disabled:opacity-40" role="menuitem">
           <MoveRight className="h-4 w-4" />
           Di chuyển
@@ -401,7 +436,9 @@ const WorkspaceItemCard = ({
   onSelect,
   onPreview,
   onCopyLink,
+  onDownload,
   onRename,
+  onEditDocument,
   onMove,
   onTrash,
 }: {
@@ -410,7 +447,9 @@ const WorkspaceItemCard = ({
   onSelect: () => void;
   onPreview: () => void;
   onCopyLink: () => void;
+  onDownload: () => void;
   onRename: () => void;
+  onEditDocument: () => void;
   onMove: () => void;
   onTrash: () => void;
 }) => {
@@ -425,7 +464,7 @@ const WorkspaceItemCard = ({
           {selected ? <Check className="h-4 w-4" /> : <span className="h-3.5 w-3.5 rounded-sm border border-current" />}
         </button>
         <div className="absolute right-3 top-3 z-20 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-          <ItemActionDropdown item={item} onCopyLink={onCopyLink} onRename={onRename} onMove={onMove} onTrash={onTrash} />
+          <ItemActionDropdown item={item} onCopyLink={onCopyLink} onDownload={onDownload} onRename={onRename} onEditDocument={onEditDocument} onMove={onMove} onTrash={onTrash} />
         </div>
         {isFolder ? (
           <NavLink to={`/library/folders/${item.id}`} className="flex h-36 items-center justify-center bg-primary-soft">
@@ -471,7 +510,9 @@ const WorkspaceItemList = ({
   onToggle,
   onPreview,
   onCopyLink,
+  onDownload,
   onRename,
+  onEditDocument,
   onMove,
   onTrash,
 }: {
@@ -480,7 +521,9 @@ const WorkspaceItemList = ({
   onToggle: (item: WorkspaceItem) => void;
   onPreview: (item: WorkspaceItem) => void;
   onCopyLink: (item: WorkspaceItem) => void;
+  onDownload: (item: WorkspaceItem) => void;
   onRename: (item: WorkspaceItem) => void;
+  onEditDocument: (item: WorkspaceItem) => void;
   onMove: (item: WorkspaceItem) => void;
   onTrash: (item: WorkspaceItem) => void;
 }) => (
@@ -515,7 +558,7 @@ const WorkspaceItemList = ({
           <span className="self-center text-sm text-ink-secondary">{item.type === "folder" ? formatSize(item.totalSize) : formatSize(item.size)}</span>
           <span className="self-center text-sm text-ink-secondary">{item.updatedAt ? formatDateToVN(item.updatedAt) : "--"}</span>
           <div className="flex items-center justify-end opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-            <ItemActionDropdown item={item} onCopyLink={() => onCopyLink(item)} onRename={() => onRename(item)} onMove={() => onMove(item)} onTrash={() => onTrash(item)} />
+            <ItemActionDropdown item={item} onCopyLink={() => onCopyLink(item)} onDownload={() => onDownload(item)} onRename={() => onRename(item)} onEditDocument={() => onEditDocument(item)} onMove={() => onMove(item)} onTrash={() => onTrash(item)} />
           </div>
         </div>
       );
@@ -1302,7 +1345,9 @@ const FolderDetailPage: React.FC = () => {
   const visibleItems = useMemo(() => items, [items]);
   const selectedItems = useMemo(() => visibleItems.filter((item) => selectedKeys.includes(`${item.type}-${item.id}`)), [selectedKeys, visibleItems]);
 
+  const requestId = useRef(0);
   const loadFolder = async () => {
+    const currentRequest = ++requestId.current;
     if (!numericFolderId) {
       setError("Không tìm thấy thư mục.");
       setLoading(false);
@@ -1317,24 +1362,30 @@ const FolderDetailPage: React.FC = () => {
         pageNumber,
         pageSize: 50,
       });
+      if (currentRequest !== requestId.current) return;
       setFolder(response.folder);
       setItems(response.items || []);
       setPagination(normalizeWorkspacePagination(response.pagination));
       setError("");
     } catch (error: any) {
+      if (currentRequest !== requestId.current) return;
       setError(apiMessage(error, "Không thể mở thư mục."));
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadFolder();
+    const invalidateRequests = () => { requestId.current++; };
+    return () => { invalidateRequests(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numericFolderId, querySearch, queryFileType, pageNumber, sort]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable]:not([contenteditable=\"false\"])") && event.key !== "Escape") return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a" && activeTab === "documents") {
         event.preventDefault();
         setSelectedKeys(visibleItems.map((item) => `${item.type}-${item.id}`));
@@ -1345,10 +1396,10 @@ const FolderDetailPage: React.FC = () => {
         setDialog(null);
         setConfirmAction(null);
       }
-      if (event.key === "Delete" && selectedItems.length > 0) {
+      if (event.key === "Delete" && canEvery(selectedItems, "canDelete") && selectedItems.length > 0) {
         trashSelected();
       }
-      if (event.key === "F2" && selectedItems.length === 1) {
+      if (event.key === "F2" && selectedItems.length === 1 && selectedItems[0].permissions?.canRename !== false) {
         setDialog({ type: "rename", item: selectedItems[0] });
       }
     };
@@ -1382,6 +1433,17 @@ const FolderDetailPage: React.FC = () => {
       toast.success(`Đã sao chép link ${item.type === "folder" ? "thư mục" : "tài liệu"}.`);
     } catch {
       toast.error("Không thể sao chép link.");
+    }
+  };
+
+  const downloadItems = async (itemsToDownload: WorkspaceItem[]) => {
+    const documents = itemsToDownload.filter((item) => item.type === "document");
+    if (documents.length === 0) return;
+    try {
+      await downloadWorkspaceDocuments(documents);
+      toast.success(documents.length > 1 ? "Đã tải file ZIP." : "Đã tải tài liệu.");
+    } catch (error: any) {
+      toast.error(apiMessage(error, "Không thể tải tài liệu đã chọn."));
     }
   };
 
@@ -1550,8 +1612,10 @@ const FolderDetailPage: React.FC = () => {
                   onCreate={() => setDialog({ type: "create-folder" })}
                   onUpload={() => setDialog({ type: "upload" })}
                   onRename={() => selectedItems.length === 1 && setDialog({ type: "rename", item: selectedItems[0] })}
+                  onEditDocument={() => selectedItems.length === 1 && setDialog({ type: "edit-document", item: selectedItems[0] })}
                   onMove={() => setDialog({ type: "move", mode: "move", items: selectedItems })}
                   onCopy={() => setDialog({ type: "move", mode: "copy", items: selectedItems })}
+                  onDownload={() => downloadItems(selectedItems)}
                   onCopyLink={() => selectedItems.length === 1 && copyItemLink(selectedItems[0])}
                   onMerge={() => setDialog({ type: "merge", items: selectedItems })}
                   onShare={() => selectedItems.length === 1 && setDialog({ type: "share", item: selectedItems[0] })}
@@ -1584,7 +1648,9 @@ const FolderDetailPage: React.FC = () => {
                           onSelect={() => toggleSelection(item)}
                           onPreview={() => setPreviewItem(item)}
                           onCopyLink={() => copyItemLink(item)}
+                          onDownload={() => downloadItems([item])}
                           onRename={() => setDialog({ type: "rename", item })}
+                          onEditDocument={() => setDialog({ type: "edit-document", item })}
                           onMove={() => moveSingleItem(item)}
                           onTrash={() => trashItems([item])}
                         />
@@ -1597,7 +1663,9 @@ const FolderDetailPage: React.FC = () => {
                       onToggle={toggleSelection}
                       onPreview={setPreviewItem}
                       onCopyLink={copyItemLink}
+                      onDownload={(item) => downloadItems([item])}
                       onRename={(item) => setDialog({ type: "rename", item })}
+                      onEditDocument={(item) => setDialog({ type: "edit-document", item })}
                       onMove={moveSingleItem}
                       onTrash={(item) => trashItems([item])}
                     />
@@ -1632,6 +1700,21 @@ const FolderDetailPage: React.FC = () => {
       {dialog?.type === "create-folder" && <CreateFolderDialog parentFolderId={numericFolderId} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
       {dialog?.type === "upload" && <UploadDialog parentFolderId={numericFolderId} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
       {dialog?.type === "rename" && <RenameDialog item={dialog.item} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
+      {dialog?.type === "edit-document" && (
+        <EditDocumentModal
+          documentID={dialog.item.id}
+          initialDocument={{
+            document_id: dialog.item.id,
+            title: getItemName(dialog.item),
+            description: dialog.item.description ?? null,
+            thumbnail_url: dialog.item.thumbnailUrl || "",
+            uploaded_at: dialog.item.createdAt || dialog.item.updatedAt || "",
+            is_public: dialog.item.isShared === true,
+          }}
+          onClose={() => setDialog(null)}
+          onUpdate={() => closeDialogAndReload()}
+        />
+      )}
       {dialog?.type === "move" && <MoveCopyDialog mode={dialog.mode} items={dialog.items} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
       {dialog?.type === "merge" && <MergeDialog items={dialog.items} parentFolderId={numericFolderId} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
       {dialog?.type === "share" && <ShareDialog item={dialog.item} onClose={() => setDialog(null)} />}

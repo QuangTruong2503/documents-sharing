@@ -58,13 +58,12 @@ const MyCollections: React.FC = () => {
     try {
       const response = await collectionsApi.postCreateCollection(newCollection);
       toast.success(response.data?.message || 'Tạo bộ sưu tập mới thành công.');
+      setIsModalOpen(false);
+      setNewCollection({ name: '', description: '', is_public: true });
+      setReload((current) => !current);
     } catch (err) {
       console.error(err.message);
       toast.error('Tạo bộ sưu tập thất bại.');
-    } finally {
-      setIsModalOpen(false);
-      setNewCollection({ name: '', description: '', is_public: true });
-      setReload(!reload);
     }
   };
 

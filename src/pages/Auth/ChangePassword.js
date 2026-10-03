@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { checkPasswordStrength } from "utils/passwordPolicy";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import verificationsApi from "api/verificationsApi"; // Đường dẫn tới file API của bạn
 import PageTitle from "components/PageTitle";
@@ -14,6 +15,8 @@ function ResetPassword() {
 
   const { token } = useParams(); // Lấy token từ URL params
   const navigate = useNavigate();
+  const redirectTimer = useRef(null);
+  useEffect(() => () => clearTimeout(redirectTimer.current), []);
 
   // Kiểm tra token khi component mount
   useEffect(() => {
@@ -53,8 +56,7 @@ function ResetPassword() {
     }
 
     // Kiểm tra mật khẩu có ít nhất 1 chữ hoa, 1 ký tự đặc biệt và 1 số
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(newPassword)) {
+    if (!checkPasswordStrength(newPassword).isValid) {
       setError("Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 ký tự đặc biệt và 1 số");
       return;
     }
@@ -71,7 +73,7 @@ function ResetPassword() {
 
       setSuccess(true);
       // Chuyển hướng về trang login sau 2 giây
-      setTimeout(() => {
+      redirectTimer.current = setTimeout(() => {
         navigate("/login");
       }, 2000);
     } catch (err) {

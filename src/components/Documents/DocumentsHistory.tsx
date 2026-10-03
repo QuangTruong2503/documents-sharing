@@ -1,5 +1,5 @@
+import { readDocumentHistory } from "utils/documentHistory";
 import React, { useEffect, useState } from "react";
-import Cookies from "js-cookie";
 import DocumentListWithStyles from "./DocumentList.tsx"; // Đường dẫn tới DocumentListWithStyles
 import documentsApi from "api/documentsApi.js";
 
@@ -61,9 +61,7 @@ const HistoryViewedDocuments: React.FC = () => {
 
   // Lấy documentIDs từ Cookies và gọi API khi component mount
   useEffect(() => {
-    const history = Cookies.get("documentHistory")
-      ? JSON.parse(Cookies.get("documentHistory")!)
-      : [];
+    const history = readDocumentHistory();
 
     if (history.length > 0) {
       fetchHistoryDocuments(history);

@@ -53,7 +53,7 @@ function LoginButton({ onTwoFARequired }: LoginButtonProps) {
         toast.info(data.message || "Vui lòng xác thực 2FA");
       } else if (data.success && data.token && data.user) {
         toast.success(data.message || "Đăng nhập Google thành công");
-        saveAuthSession({ token: data.token, user: data.user });
+        saveAuthSession({ token: data.token, user: data.user, expiresIn: data.expiresIn });
         navigate("/");
       } else {
         toast.warning(data.message || "Đăng nhập Google không thành công");
