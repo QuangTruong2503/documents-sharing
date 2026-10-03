@@ -1,0 +1,41 @@
+import {
+  LayoutDashboard,
+  FileText,
+  Library,
+  ShieldAlert,
+  Users,
+  FolderTree,
+  Tags,
+  BarChart3,
+  Activity,
+  ClipboardList,
+  Globe2,
+} from "lucide-react";
+export const tabs = [
+  {
+    id: "dashboard",
+    label: "Tổng quan",
+    group: "Tổng quan",
+    icon: LayoutDashboard,
+  },
+  { id: "documents", label: "Tài liệu", group: "Nội dung", icon: FileText },
+  { id: "collections", label: "Bộ sưu tập", group: "Nội dung", icon: Library },
+  { id: "reports", label: "Báo cáo", group: "Nội dung", icon: ShieldAlert },
+  { id: "users", label: "Người dùng", group: "Người dùng", icon: Users },
+  {
+    id: "categories",
+    label: "Chuyên mục",
+    group: "Phân loại",
+    icon: FolderTree,
+  },
+  { id: "tags", label: "Thẻ", group: "Phân loại", icon: Tags },
+  { id: "analytics", label: "Thống kê", group: "Phân tích", icon: BarChart3 },
+  { id: "engagement", label: "Tương tác", group: "Phân tích", icon: Activity },
+  {
+    id: "audit",
+    label: "Nhật ký hoạt động",
+    group: "Hệ thống",
+    icon: ClipboardList,
+  },
+  { id: "seo", label: "SEO", group: "Hệ thống", icon: Globe2 },
+];

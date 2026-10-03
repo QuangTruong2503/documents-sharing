@@ -1,3 +1,5 @@
+import { useLocation, useParams } from "react-router-dom";
+import LibraryLayout from "pages/Library/LibraryLayout.tsx";
 import RequireAuth from "components/RequireAuth";
 import "styles/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -31,6 +33,8 @@ import MyReports from "pages/Reports/MyReports.tsx";
 import ReportDetail from "pages/Reports/ReportDetail.tsx";
 import PublicProfile from "pages/PublicProfile/PublicProfile.tsx";
 import PublicSharePage from "pages/Share/PublicSharePage.tsx";
+
+const LegacyFolderRedirect = () => { const { folderId } = useParams(); const location = useLocation(); const suffix = location.pathname.match(/\/(documents|members|invites)$/)?.[0] || ""; return <Navigate to={`/library/folders/${folderId}${suffix}${location.search}`} state={location.state} replace />; };
 
 const queryClient = new QueryClient();
 
@@ -108,7 +112,13 @@ function App() {
                   <Route path="/account/*" element={<RequireAuth><AccountPage /></RequireAuth>} />
                   {/* Document */}
                   <Route path="/upload-document" element={<RequireAuth><UploadDocument /></RequireAuth>} />
-                  <Route path="/library" element={<RequireAuth><MyLibraryPage /></RequireAuth>} />
+                  <Route path="/library" element={<RequireAuth><LibraryLayout /></RequireAuth>}>
+                    <Route index element={<MyLibraryPage />} />
+                    <Route path="folders/:folderId" element={<FolderDetailPage />} />
+                    <Route path="folders/:folderId/documents" element={<FolderDetailPage />} />
+                    <Route path="folders/:folderId/members" element={<FolderDetailPage />} />
+                    <Route path="folders/:folderId/invites" element={<FolderDetailPage />} />
+                  </Route>
                   <Route path="/documents" element={<Navigate to="/library" replace />} />
                   <Route path="/documents/my" element={<Navigate to="/library" replace />} />
                   <Route path="/documents/shared-with-me" element={<Navigate to="/library?area=shared" replace />} />
@@ -134,19 +144,18 @@ function App() {
                   <Route path="/folders" element={<Navigate to="/library?tab=folders" replace />} />
                   <Route path="/folders/my" element={<Navigate to="/library?tab=folders" replace />} />
                   <Route path="/folders/shared-with-me" element={<Navigate to="/library?tab=shared" replace />} />
-                  <Route path="/folders/:folderId" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
-                  <Route path="/folders/:folderId/documents" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
-                  <Route path="/folders/:folderId/members" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
-                  <Route path="/folders/:folderId/invites" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
-                  <Route path="/documents/folders/:folderId" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
-                  <Route path="/documents/folders/:folderId/documents" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
-                  <Route path="/documents/folders/:folderId/members" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
-                  <Route path="/documents/folders/:folderId/invites" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
+                  <Route path="/folders/:folderId" element={<RequireAuth><LegacyFolderRedirect /></RequireAuth>} />
+                  <Route path="/folders/:folderId/documents" element={<RequireAuth><LegacyFolderRedirect /></RequireAuth>} />
+                  <Route path="/folders/:folderId/members" element={<RequireAuth><LegacyFolderRedirect /></RequireAuth>} />
+                  <Route path="/folders/:folderId/invites" element={<RequireAuth><LegacyFolderRedirect /></RequireAuth>} />
+                  <Route path="/documents/folders/:folderId" element={<RequireAuth><LegacyFolderRedirect /></RequireAuth>} />
+                  <Route path="/documents/folders/:folderId/documents" element={<RequireAuth><LegacyFolderRedirect /></RequireAuth>} />
+                  <Route path="/documents/folders/:folderId/members" element={<RequireAuth><LegacyFolderRedirect /></RequireAuth>} />
+                  <Route path="/documents/folders/:folderId/invites" element={<RequireAuth><LegacyFolderRedirect /></RequireAuth>} />
                   <Route path="/documents/files/:documentID" element={<DocumentDetail />} />
-                  <Route path="/library/folders/:folderId" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
-                  <Route path="/library/folders/:folderId/documents" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
-                  <Route path="/library/folders/:folderId/members" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
-                  <Route path="/library/folders/:folderId/invites" element={<RequireAuth><FolderDetailPage /></RequireAuth>} />
+
+
+
                   <Route path="/folder-invites" element={<RequireAuth><MyFolderInvitesPage /></RequireAuth>} />
                   <Route path="/folder-invites/:inviteId" element={<RequireAuth><MyFolderInvitesPage /></RequireAuth>} />
                 </Routes>

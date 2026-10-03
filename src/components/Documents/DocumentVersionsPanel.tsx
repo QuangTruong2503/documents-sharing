@@ -37,21 +37,7 @@ interface DocumentVersionsPanelProps {
   currentFileSize?: number;
 }
 
-const ALLOWED_EXTENSIONS = [
-  "pdf",
-  "doc",
-  "docx",
-  "ppt",
-  "pptx",
-  "xls",
-  "xlsx",
-  "txt",
-  "zip",
-  "rar",
-  "png",
-  "jpg",
-  "jpeg",
-];
+const ALLOWED_EXTENSIONS = ["pdf"];
 const MAX_VERSION_FILE_BYTES = 10 * 1024 * 1024;
 
 const versionIdOf = (version: DocumentVersion) => version.id ?? version.versionId;
@@ -284,7 +270,7 @@ export default function DocumentVersionsPanel({
         <form onSubmit={uploadVersion} className="rounded-lg border border-line bg-canvas p-3">
           <div className="grid gap-3">
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-ink">File phiên bản mới</span>
+              <span className="mb-1 block text-sm font-medium text-ink">File phiên bản mới (PDF, tối đa 10MB)</span>
               <input
                 ref={fileInputRef}
                 type="file"

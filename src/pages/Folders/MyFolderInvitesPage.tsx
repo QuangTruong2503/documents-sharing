@@ -5,7 +5,8 @@ import { toast } from "react-toastify";
 import PageTitle from "components/PageTitle.js";
 import foldersApi from "api/foldersApi.js";
 import { formatDateToVN } from "utils/formatDateToVN";
-import { apiMessage, roleLabel } from "./FolderListPage.tsx";
+import { roleLabel } from "utils/folderDisplay.tsx";
+import { apiMessage } from "utils/apiMessage.ts";
 
 interface FolderInvite {
   invite_id: number;

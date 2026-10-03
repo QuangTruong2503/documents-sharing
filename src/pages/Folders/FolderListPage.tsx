@@ -1,3 +1,5 @@
+import { Badge, roleLabel } from "utils/folderDisplay.tsx";
+import { apiMessage } from "utils/apiMessage.ts";
 import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -35,26 +37,6 @@ const visibilityLabel: Record<string, string> = {
   shared: "Chia sẻ",
   public: "Công khai",
 };
-
-const roleLabel: Record<string, string> = {
-  owner: "Chủ sở hữu",
-  admin: "Quản trị",
-  editor: "Biên tập",
-  contributor: "Đóng góp",
-  commenter: "Bình luận",
-  viewer: "Xem",
-  public: "Công khai",
-};
-
-function apiMessage(error: any, fallback: string) {
-  return error?.response?.data?.message || error?.message || fallback;
-}
-
-const Badge = ({ children }: { children: React.ReactNode }) => (
-  <span className="inline-flex items-center rounded-md border border-line px-2 py-1 text-xs font-medium text-ink-secondary">
-    {children}
-  </span>
-);
 
 const EmptyState = ({ tab, onCreate }: { tab: string; onCreate: () => void }) => (
   <div className="surface-card p-10 text-center">

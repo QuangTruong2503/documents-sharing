@@ -1,3 +1,4 @@
+import Modal from "./dialogs/Modal.tsx";
 import React, { useEffect, useId, useRef } from "react";
 import { AlertTriangle, RefreshCw, X } from "lucide-react";
 
@@ -45,11 +46,9 @@ const WorkspaceConfirmDialog: React.FC<WorkspaceConfirmDialogProps> = ({
   }, [loading, onCancel]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
+    <Modal onClose={onCancel} busy={loading}>
       <div
         className="w-full max-w-md rounded-lg border border-line bg-surface p-6 shadow-card"
-        role="dialog"
-        aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={messageId}
       >
@@ -88,7 +87,7 @@ const WorkspaceConfirmDialog: React.FC<WorkspaceConfirmDialogProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

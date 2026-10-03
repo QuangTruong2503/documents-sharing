@@ -8,7 +8,7 @@ export const siteSeo = {
   defaultTitle: "DocShare - Nền tảng chia sẻ tài liệu học tập",
   defaultDescription:
     "DocShare là nền tảng lưu trữ, tìm kiếm và chia sẻ tài liệu học tập miễn phí cho học sinh, sinh viên và cộng đồng tự học.",
-  defaultImage: `${siteUrl}/og-image.svg`,
+  defaultImage: `${siteUrl}/og-image.png`,
   twitterCard: "summary_large_image",
 };
 

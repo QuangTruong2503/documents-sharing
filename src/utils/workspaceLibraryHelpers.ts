@@ -45,7 +45,7 @@ export const toDateTimeLocalValue = (value?: string | null) => {
 };
 
 export const canEvery = (items: WorkspaceItem[], permission: keyof NonNullable<WorkspaceItem["permissions"]>) =>
-  items.length > 0 && items.every((item) => item.permissions?.[permission] !== false);
+  items.length > 0 && items.every((item) => item.permissions?.[permission] === true);
 
 const mimeExtensionMap: Record<string, string> = {
   "application/pdf": "pdf",
