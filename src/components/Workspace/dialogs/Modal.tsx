@@ -1,6 +1,9 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+const modalStack: HTMLElement[] = [];
+let savedBodyOverflow = "";
+
 export default function Modal({ children, onClose, busy = false, label = "Hộp thoại", drawer = false }: {
   children: React.ReactNode; onClose: () => void; busy?: boolean; label?: string; drawer?: boolean;
 }) {
@@ -14,14 +17,17 @@ export default function Modal({ children, onClose, busy = false, label = "Hộp 
   busyRef.current = busy;
   useEffect(() => {
     const previous = originalFocus.current;
-    const overflow = document.body.style.overflow;
+    if (!modalStack.length) savedBodyOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const panel = ref.current!;
+    modalStack.push(panel);
+    const isTop = () => modalStack[modalStack.length - 1] === panel;
     const heading = panel.querySelector("h1, h2, h3");
     setTitle(heading?.textContent || label);
     const focusable = () => Array.from(panel.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]')).filter(el => el.getClientRects().length > 0);
     if (!panel.contains(document.activeElement)) (panel.querySelector<HTMLElement>("input, select, textarea") || focusable()[0] || panel).focus();
     const keydown = (event: KeyboardEvent) => {
+      if (!isTop()) return;
       if (event.key === "Escape") {
         event.preventDefault(); event.stopPropagation();
         if (!busyRef.current) callback.current();
@@ -35,6 +41,7 @@ export default function Modal({ children, onClose, busy = false, label = "Hộp 
       }
     };
     const keepFocus = (event: FocusEvent) => {
+      if (!isTop()) return;
       if (!panel.contains(event.target as Node)) (focusable()[0] || panel).focus();
     };
     document.addEventListener("keydown", keydown, true);
@@ -42,7 +49,9 @@ export default function Modal({ children, onClose, busy = false, label = "Hộp 
     return () => {
       document.removeEventListener("keydown", keydown, true);
       document.removeEventListener("focusin", keepFocus);
-      document.body.style.overflow = overflow;
+      const index = modalStack.indexOf(panel);
+      if (index >= 0) modalStack.splice(index, 1);
+      if (!modalStack.length) document.body.style.overflow = savedBodyOverflow;
       if (previous?.isConnected) previous.focus();
     };
   }, [titleId, label]);

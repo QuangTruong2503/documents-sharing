@@ -38,7 +38,7 @@ const ShareDialog = ({ item, onClose }: { item: WorkspaceItem; onClose: () => vo
           setSettings(response.shareLink);
           setForm({
             access: response.shareLink.access || "anyone_with_link",
-            permission: response.shareLink.permission || "viewer",
+            permission: "viewer",
             allowDownload: response.shareLink.allowDownload !== false,
             password: "",
             expiresAt: toDateTimeLocalValue(response.shareLink.expiresAt),
@@ -119,7 +119,7 @@ const ShareDialog = ({ item, onClose }: { item: WorkspaceItem; onClose: () => vo
           <label>
             <span className="mb-1 block text-sm font-semibold text-ink">Quyền truy cập chung</span>
             <select value={form.access} onChange={(event) => setForm({ ...form, access: event.target.value })} className="input-field">
-              <option value="restricted">Hạn chế</option>
+              <option value="restricted">Hạn chế · chỉ xem qua thư viện</option>
               <option value="anyone_with_link">Bất kỳ ai có liên kết</option>
             </select>
           </label>
@@ -127,7 +127,7 @@ const ShareDialog = ({ item, onClose }: { item: WorkspaceItem; onClose: () => vo
             <span className="mb-1 block text-sm font-semibold text-ink">Quyền</span>
             <select value={form.permission} onChange={(event) => setForm({ ...form, permission: event.target.value })} className="input-field">
               <option value="viewer">Người xem</option>
-              <option value="editor">Người chỉnh sửa</option>
+
             </select>
           </label>
         </div>

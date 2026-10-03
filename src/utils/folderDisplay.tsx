@@ -1,4 +1,4 @@
-import React from "react";
+export { default as Badge } from "../components/Badge";
 export const roleLabel: Record<string, string> = {
   owner: "Chủ sở hữu",
   admin: "Quản trị",
@@ -8,12 +8,3 @@ export const roleLabel: Record<string, string> = {
   viewer: "Xem",
   public: "Công khai",
 };
-
-
-
-export const Badge = ({ children }: { children: React.ReactNode }) => (
-  <span className="inline-flex items-center rounded-md border border-line px-2 py-1 text-xs font-medium text-ink-secondary">
-    {children}
-  </span>
-);
-
