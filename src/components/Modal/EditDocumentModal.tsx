@@ -1,3 +1,4 @@
+import Modal from "components/Workspace/dialogs/Modal.tsx";
 // EditModal.tsx
 import React, { useState, useEffect } from "react";
 import documentsApi from "api/documentsApi";
@@ -119,8 +120,9 @@ const EditModal: React.FC<EditModalProps> = ({
       </div>
     );
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <Modal onClose={onClose} busy={loading}>
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        {loading && <p className="py-8 text-center">Đang tải...</p>}
         {documentData && !loading && (
           <form onSubmit={handleSubmit}>
             <h2 className="text-xl font-bold mb-4">Chỉnh sửa tài liệu</h2>
@@ -186,7 +188,7 @@ const EditModal: React.FC<EditModalProps> = ({
           </form>
         )}
       </div>
-    </div>
+    </Modal>
   );
 };
 

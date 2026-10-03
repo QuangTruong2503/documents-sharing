@@ -21,6 +21,7 @@ const WorkspaceCreateDropdown = ({
   const menuId = useId();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const disabled = !canUpload && !canCreateFolder;
 
   useEffect(() => {
@@ -43,6 +44,7 @@ const WorkspaceCreateDropdown = ({
   }, []);
 
   const runAction = (action: () => void) => {
+    triggerRef.current?.focus();
     setOpen(false);
     action();
   };
@@ -50,6 +52,7 @@ const WorkspaceCreateDropdown = ({
   return (
     <div ref={menuRef} className={`relative inline-block text-left ${className}`}>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((current) => !current)}
         disabled={disabled}

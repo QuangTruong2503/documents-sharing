@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import { Bell, ClipboardList, FileClock, FolderOpen, Link2, ShieldAlert } from "lucide-react";
 import { formatDateToVN } from "utils/formatDateToVN";
 
-interface ActivityItem {
+export interface ActivityItem {
   id: string;
   type: "workspace" | "sharing" | "versioning" | "moderation" | "notification" | "audit" | string;
   title: string;
@@ -26,21 +26,21 @@ interface WorkspaceActivityViewProps {
 const summaryCards = [
   { key: "myFolders", label: "Thư mục của tôi", icon: FolderOpen },
   { key: "sharedFolders", label: "Thư mục chia sẻ", icon: FolderOpen },
-  { key: "activeShareLinks", label: "Link đang bật", icon: Link2 },
+  { key: "activeShareLinks", label: "Liên kết đang bật", icon: Link2 },
   { key: "documentVersions", label: "Phiên bản", icon: FileClock },
-  { key: "activeReports", label: "Report đang mở", icon: ShieldAlert },
+  { key: "activeReports", label: "Báo cáo đang mở", icon: ShieldAlert },
   { key: "unreadNotifications", label: "Thông báo chưa đọc", icon: Bell },
-  { key: "auditEvents", label: "Audit events", icon: ClipboardList },
-  { key: "moderationQueue", label: "Queue kiểm duyệt", icon: ShieldAlert },
+  { key: "auditEvents", label: "Sự kiện kiểm toán", icon: ClipboardList },
+  { key: "moderationQueue", label: "Hàng đợi kiểm duyệt", icon: ShieldAlert },
 ];
 
 const sectionMeta: Record<string, { title: string; icon: React.ElementType }> = {
-  notifications: { title: "Notification", icon: Bell },
-  shareLinks: { title: "Sharing", icon: Link2 },
-  versions: { title: "Versioning", icon: FileClock },
-  reports: { title: "Report / Moderation", icon: ShieldAlert },
-  invites: { title: "Workspace / Library", icon: FolderOpen },
-  auditLogs: { title: "Audit", icon: ClipboardList },
+  notifications: { title: "Thông báo", icon: Bell },
+  shareLinks: { title: "Chia sẻ", icon: Link2 },
+  versions: { title: "Phiên bản", icon: FileClock },
+  reports: { title: "Báo cáo / Kiểm duyệt", icon: ShieldAlert },
+  invites: { title: "Thư viện", icon: FolderOpen },
+  auditLogs: { title: "Kiểm toán", icon: ClipboardList },
 };
 
 const itemTone: Record<string, string> = {
@@ -64,7 +64,7 @@ const ActivityRow = ({ item }: { item: ActivityItem }) => {
       </div>
       {item.status && (
         <span className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${itemTone[item.status] || "bg-canvas text-ink-secondary"}`}>
-          {item.status}
+          {{ active: "Đang hoạt động", unread: "Chưa đọc", pending: "Đang chờ", revoked: "Đã thu hồi", expired: "Hết hạn", accepted: "Đã chấp nhận", rejected: "Đã từ chối", resolved: "Đã giải quyết", dismissed: "Đã bỏ qua" }[item.status] || item.status}
         </span>
       )}
     </div>
@@ -126,7 +126,7 @@ const WorkspaceActivityView: React.FC<WorkspaceActivityViewProps> = ({ data }) =
                   </div>
                   <p className="mt-2 text-sm text-ink-secondary">
                     {key === "notifications" && "Theo dõi thông báo chưa đọc và điều hướng nhanh."}
-                    {key === "shareLinks" && "Kiểm tra link chia sẻ đang hoạt động, hết hạn hoặc đã thu hồi."}
+                    {key === "shareLinks" && "Kiểm tra liên kết chia sẻ đang hoạt động, hết hạn hoặc đã thu hồi."}
                     {key === "versions" && "Theo dõi các phiên bản tài liệu mới nhất."}
                     {key === "reports" && "Xem trạng thái report của bạn hoặc hàng chờ kiểm duyệt của admin."}
                     {key === "invites" && "Theo dõi lời mời thư mục và cộng tác workspace."}

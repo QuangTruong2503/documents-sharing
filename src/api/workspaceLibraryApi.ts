@@ -2,6 +2,32 @@ import axiosInstance from "./axiosInstance";
 
 export type WorkspaceItemType = "document" | "folder";
 
+export interface FolderTreeNode {
+  id: number;
+  name: string;
+  parentFolderId: number | null;
+  children: FolderTreeNode[];
+  canReceiveItems: boolean;
+  rootArea: "my" | "shared";
+  isOwner: boolean;
+}
+
+export interface DocumentPreviewResponse {
+  document: WorkspaceItem;
+  metadata?: { ownerName?: string; createdAt?: string; updatedAt?: string; views?: number; downloads?: number };
+}
+
+export interface ShareLinkSettings {
+  id: string;
+  shareUrl: string;
+  access: string;
+  permission: string;
+  allowDownload: boolean;
+  expiresAt?: string | null;
+  maxViews?: number | null;
+  maxDownloads?: number | null;
+}
+
 export interface WorkspacePermissions {
   canView?: boolean;
   canDownload?: boolean;
@@ -56,6 +82,7 @@ export interface WorkspaceFolder {
   isShared?: boolean;
   permission?: string;
   permissions?: WorkspacePermissions;
+  rootArea?: "my" | "shared" | "team";
   breadcrumb?: Array<{ id: number | null; name: string; href?: string }>;
 }
 
@@ -63,6 +90,7 @@ const cleanParams = (params: Record<string, any> = {}) =>
   Object.fromEntries(Object.entries(params).filter(([, value]) => value !== "" && value !== null && value !== undefined));
 
 const workspaceLibraryApi = {
+  getSummary: () => axiosInstance.get("library/summary").then(response => response.data),
   getMyLibrary: (params = {}) =>
     axiosInstance.get("library/my", { params: cleanParams(params) }).then((response) => response.data),
 
@@ -70,7 +98,7 @@ const workspaceLibraryApi = {
     axiosInstance.get(`folders/${folderId}/items`, { params: cleanParams(params) }).then((response) => response.data),
 
   getFolderTree: (params = { root: "my", includeShared: true }) =>
-    axiosInstance.get("folders/tree", { params: cleanParams(params) }).then((response) => response.data),
+    axiosInstance.get<{ nodes: FolderTreeNode[] }>("folders/tree", { params: cleanParams(params) }).then((response) => response.data),
 
   createFolder: (payload: { name: string; parentFolderId?: number | null; description?: string; color?: string | null }) =>
     axiosInstance.post("folders", payload).then((response) => response.data?.folder ?? response.data),
@@ -96,7 +124,7 @@ const workspaceLibraryApi = {
     axiosInstance.get(`documents/${documentId}/status`).then((response) => response.data),
 
   getDocumentPreview: (documentId: number) =>
-    axiosInstance.get(`documents/${documentId}/preview`).then((response) => response.data),
+    axiosInstance.get<DocumentPreviewResponse>(`documents/${documentId}/preview`).then((response) => response.data),
 
   downloadDocument: (documentId: number) =>
     axiosInstance.get(`documents/${documentId}/download`, { responseType: "blob" }),
@@ -138,10 +166,10 @@ const workspaceLibraryApi = {
     axiosInstance.get("library/favorites", { params: cleanParams(params) }).then((response) => response.data),
 
   createShareLink: (payload: Record<string, any>) =>
-    axiosInstance.post("share-links", payload).then((response) => response.data),
+    axiosInstance.post<{ shareLink: ShareLinkSettings }>("share-links", payload).then((response) => response.data),
 
   getShareLinkSettings: (params: { itemId: number; itemType: WorkspaceItemType }) =>
-    axiosInstance.get("share-links", { params }).then((response) => response.data),
+    axiosInstance.get<{ shareLink: ShareLinkSettings | null }>("share-links", { params }).then((response) => response.data),
 
   disableShareLink: (shareLinkId: string) =>
     axiosInstance.delete(`share-links/${shareLinkId}`).then((response) => response.data),

@@ -6,6 +6,7 @@ interface PaginationProps {
   totalPages: number;
   totalCount: number;
   onPageChange: (page: number) => void;
+  itemLabel?: string;
 }
 
 const PaginationComponent: React.FC<PaginationProps> = ({
@@ -13,6 +14,7 @@ const PaginationComponent: React.FC<PaginationProps> = ({
   totalPages,
   totalCount,
   onPageChange,
+  itemLabel = "tài liệu",
 }) => {
   if (totalPages <= 1) return null; // Không cần phân trang nếu chỉ có 1 trang
 
@@ -23,9 +25,11 @@ const PaginationComponent: React.FC<PaginationProps> = ({
         totalPages={totalPages}
         onPageChange={onPageChange}
         showIcons
+        previousLabel="Trang trước"
+        nextLabel="Trang sau"
       />
       <p className="text-sm text-gray-600 mt-2">
-        Trang {currentPage} / {totalPages} (Tổng cộng: {totalCount.toLocaleString()} tài liệu)
+        Trang {currentPage} / {totalPages} (Tổng cộng: {totalCount.toLocaleString("vi-VN")} {itemLabel})
       </p>
     </div>
   );
