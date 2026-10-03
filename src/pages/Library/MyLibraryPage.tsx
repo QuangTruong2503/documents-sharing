@@ -297,7 +297,6 @@ const WorkspaceToolbar = ({
   onTrash: () => void;
   onRestore: () => void;
   onDeleteForever: () => void;
-  onFavorite: () => void;
 }) => {
   const selectedCount = selectedItems.length;
   const single = selectedCount === 1;
@@ -530,6 +529,7 @@ const WorkspaceItemCard = ({
   item,
   area,
   selected,
+  onFavorite,
   onSelect,
   onPreview,
   onCopyLink,
@@ -544,6 +544,7 @@ const WorkspaceItemCard = ({
   item: WorkspaceItem;
   area: LibraryArea;
   selected: boolean;
+  onFavorite: () => void;
   onSelect: () => void;
   onPreview: () => void;
   onCopyLink: () => void;
@@ -741,15 +742,19 @@ const PreviewDrawer = ({ item, onClose, onShare }: { item: WorkspaceItem | null;
       setPreview(null);
       return;
     }
+    let ignore = false;
+    setPreview(null);
     workspaceLibraryApi
       .getDocumentPreview(item.id)
-      .then((response) => setPreview(response))
-      .catch(() => setPreview(null));
+      .then((response) => { if (!ignore) setPreview(response); })
+      .catch(() => { if (!ignore) setPreview(null); });
+    return () => { ignore = true; };
   }, [item]);
 
   if (!item || item.type !== "document") return null;
-  const document = preview?.document || item;
-  const metadata = preview?.metadata;
+  const currentPreview = String(preview?.document?.id) === String(item.id) ? preview : null;
+  const document = currentPreview?.document || item;
+  const metadata = currentPreview?.metadata;
   const ext = getExtension(document);
   const Icon = fileIconMap[ext] || FileText;
   const canDownload = document.allowDownload !== false && document.permissions?.canDownload !== false;
@@ -990,15 +995,16 @@ const MoveCopyDialog = ({
 
   const flatNodes = useMemo(() => {
     const rows: Array<{ id: number; name: string; depth: number; canReceiveItems: boolean }> = [];
-    const walk = (list: any[], depth: number) => {
+    const walk = (list: any[], depth: number, parentBlocked = false) => {
       list.forEach((node) => {
-        rows.push({ id: node.id, name: node.name, depth, canReceiveItems: node.canReceiveItems !== false });
-        walk(node.children || [], depth + 1);
+        const blocked = parentBlocked || items.some((item) => item.type === "folder" && item.id === node.id);
+        rows.push({ id: node.id, name: node.name, depth, canReceiveItems: !blocked && node.canReceiveItems !== false });
+        walk(node.children || [], depth + 1, blocked);
       });
     };
     walk(nodes, 0);
     return rows;
-  }, [nodes]);
+  }, [nodes, items]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -1132,6 +1138,7 @@ const ShareDialog = ({ item, onClose }: { item: WorkspaceItem; onClose: () => vo
       });
       setSettings(response.shareLink);
       toast.success("Đã tạo liên kết chia sẻ.");
+      return response.shareLink;
     } catch (error: any) {
       toast.error(apiMessage(error, "Không thể tạo link chia sẻ."));
     } finally {
@@ -1140,11 +1147,14 @@ const ShareDialog = ({ item, onClose }: { item: WorkspaceItem; onClose: () => vo
   };
 
   const copyLink = async () => {
-    if (!settings?.shareUrl) {
-      await save();
+    const link = settings?.shareUrl ? settings : await save();
+    if (!link?.shareUrl) return;
+    try {
+      await copyTextToClipboard(link.shareUrl);
+    } catch {
+      toast.error("Không thể sao chép liên kết.");
       return;
     }
-    await copyTextToClipboard(settings.shareUrl);
     toast.success("Đã sao chép liên kết.");
   };
 
@@ -1291,31 +1301,33 @@ const MyLibraryPage: React.FC = () => {
     setSort((current) => (current === nextSort ? current : nextSort));
   }, [area, searchParams]);
 
+  const requestId = useRef(0);
   const loadLibrary = async () => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     try {
       const params = { search: querySearch, sort, ...(area !== "trash" ? { fileType: queryFileType } : {}), pageNumber, pageSize: 50 };
       if (area === "shared-links") {
         const response = await workspaceLibraryApi.getMyShareLinks(params);
+        if (currentRequest !== requestId.current) return;
         setShareLinks(response.shareLinks || []);
         setActivity(null);
         setPagination(normalizeWorkspacePagination(response.pagination));
         setItems([]);
         setFolder(null);
         setWorkspaceCounts({});
-        setStorage({});
         return;
       }
 
       if (area === "activity") {
         const response = await workspaceLibraryApi.getActivity({ limit: 20 });
+        if (currentRequest !== requestId.current) return;
         setActivity(response);
         setShareLinks([]);
         setItems([]);
         setFolder(null);
         setPagination(defaultWorkspacePagination);
         setWorkspaceCounts(response.counts || {});
-        setStorage({});
         return;
       }
 
@@ -1331,6 +1343,7 @@ const MyLibraryPage: React.FC = () => {
                 : area === "team"
                   ? await workspaceLibraryApi.getTeam(params)
                   : await workspaceLibraryApi.getMyLibrary(params);
+      if (currentRequest !== requestId.current) return;
 
       setFolder(response.folder || null);
       setItems(response.items || []);
@@ -1338,17 +1351,20 @@ const MyLibraryPage: React.FC = () => {
       setActivity(null);
       setPagination(normalizeWorkspacePagination(response.pagination));
       setWorkspaceCounts(response.counts || {});
-      setStorage(response.storage || {});
+      if (response.storage) setStorage(response.storage);
       if (response.message) toast.info(response.message);
     } catch (error: any) {
+      if (currentRequest !== requestId.current) return;
       toast.error(apiMessage(error, "Không tải được thư viện."));
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadLibrary();
+    const invalidateRequests = () => { requestId.current++; };
+    return () => { invalidateRequests(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [area, querySearch, queryFileType, pageNumber, sort]);
 
@@ -1383,6 +1399,8 @@ const MyLibraryPage: React.FC = () => {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable]:not([contenteditable=\"false\"])") && event.key !== "Escape") return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a" && area !== "shared-links") {
         event.preventDefault();
         setSelectedKeys(visibleItems.map((item) => `${item.type}-${item.id}`));
@@ -1397,10 +1415,10 @@ const MyLibraryPage: React.FC = () => {
         event.preventDefault();
         searchInputRef.current?.focus();
       }
-      if (event.key === "Delete" && selectedItems.length > 0 && area !== "trash") {
+      if (event.key === "Delete" && canEvery(selectedItems, "canDelete") && selectedItems.length > 0 && area !== "trash") {
         trashSelected();
       }
-      if (event.key === "F2" && selectedItems.length === 1) {
+      if (event.key === "F2" && selectedItems.length === 1 && selectedItems[0].permissions?.canRename !== false) {
         setDialog({ type: "rename", item: selectedItems[0] });
       }
     };

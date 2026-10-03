@@ -20,12 +20,13 @@ export const checkNotSigned = () =>{
   const token = Cookies.get("token");
     const userToken = Cookies.get("user")
     // Kiểm tra token
-    if (!token && !userToken) {
+    if (!token || !userToken) {
       //Xóa thông tin đăng nhập nếu không có token
       Cookies.remove("token");
       Cookies.remove("user");
       // Chuyển hướng nếu chưa đăng nhập
       window.location.href = '/login';
-      return;
+      return true;
     }
+    return false;
 };

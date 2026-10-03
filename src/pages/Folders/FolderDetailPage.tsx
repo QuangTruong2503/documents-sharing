@@ -189,7 +189,7 @@ const FolderWorkspaceSidebar = ({
               key={item.key}
               type="button"
               onClick={() => onTab(item.key)}
-              disabled={item.disabled}
+              disabled={"disabled" in item && item.disabled}
               className={`flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-medium transition ${
                 active ? "bg-primary-soft text-primary" : "text-ink-secondary hover:bg-canvas hover:text-ink"
               } disabled:pointer-events-none disabled:opacity-40`}
@@ -1345,7 +1345,9 @@ const FolderDetailPage: React.FC = () => {
   const visibleItems = useMemo(() => items, [items]);
   const selectedItems = useMemo(() => visibleItems.filter((item) => selectedKeys.includes(`${item.type}-${item.id}`)), [selectedKeys, visibleItems]);
 
+  const requestId = useRef(0);
   const loadFolder = async () => {
+    const currentRequest = ++requestId.current;
     if (!numericFolderId) {
       setError("Không tìm thấy thư mục.");
       setLoading(false);
@@ -1360,24 +1362,30 @@ const FolderDetailPage: React.FC = () => {
         pageNumber,
         pageSize: 50,
       });
+      if (currentRequest !== requestId.current) return;
       setFolder(response.folder);
       setItems(response.items || []);
       setPagination(normalizeWorkspacePagination(response.pagination));
       setError("");
     } catch (error: any) {
+      if (currentRequest !== requestId.current) return;
       setError(apiMessage(error, "Không thể mở thư mục."));
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadFolder();
+    const invalidateRequests = () => { requestId.current++; };
+    return () => { invalidateRequests(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numericFolderId, querySearch, queryFileType, pageNumber, sort]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable]:not([contenteditable=\"false\"])") && event.key !== "Escape") return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a" && activeTab === "documents") {
         event.preventDefault();
         setSelectedKeys(visibleItems.map((item) => `${item.type}-${item.id}`));
@@ -1388,10 +1396,10 @@ const FolderDetailPage: React.FC = () => {
         setDialog(null);
         setConfirmAction(null);
       }
-      if (event.key === "Delete" && selectedItems.length > 0) {
+      if (event.key === "Delete" && canEvery(selectedItems, "canDelete") && selectedItems.length > 0) {
         trashSelected();
       }
-      if (event.key === "F2" && selectedItems.length === 1) {
+      if (event.key === "F2" && selectedItems.length === 1 && selectedItems[0].permissions?.canRename !== false) {
         setDialog({ type: "rename", item: selectedItems[0] });
       }
     };

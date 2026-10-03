@@ -1,5 +1,5 @@
+import { updateStoredUser } from "utils/authSession";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import Cookies from "js-cookie";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -42,6 +42,7 @@ interface UserUpdate {
   fullName?: string;
   full_name?: string;
   avatar?: string;
+  avatarUrl?: string;
   avatar_url?: string;
 }
 
@@ -578,9 +579,9 @@ function Profile() {
         const updatedUser = normalizeUser({
           ...user,
           ...(data.user || {}),
-          avatarUrl: data.user?.avatar || data.user?.avatarUrl || data.user?.avatar_url,
+          avatarUrl: data.user?.avatar || data.user?.avatarUrl || data.user?.avatar_url || user.avatarUrl,
         });
-        Cookies.set("user", JSON.stringify(updatedUser));
+        updateStoredUser(updatedUser);
         setUser(updatedUser);
         clearSelectedImage();
       } else {
@@ -612,7 +613,7 @@ function Profile() {
             ...(responseData.user || {}),
             fullName: responseData.user?.fullName || responseData.user?.full_name || userUpdate.fullName,
           });
-          Cookies.set("user", JSON.stringify(updatedUser));
+          updateStoredUser(updatedUser);
           setUser(updatedUser);
           setIsReload((prev) => !prev);
         } else {

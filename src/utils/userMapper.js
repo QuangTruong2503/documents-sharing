@@ -10,7 +10,11 @@ export const normalizeUser = (user = {}) => ({
   createdAt: user.createdAt ?? user.created_at ?? "",
 });
 
-export const normalizeAuthResponse = (data = {}) => ({
+/**
+ * @template {Record<string, any>} T
+ * @param {T} data
+ */
+export const normalizeAuthResponse = (data) => ({
   ...data,
   user: data.user ? normalizeUser(data.user) : null,
 });

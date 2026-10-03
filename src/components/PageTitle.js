@@ -1,6 +1,6 @@
 import SEO from "components/SEO";
 
-const PageTitle = ({ title, description, url, image, type, robots, jsonLd }) => (
+const PageTitle = ({ title, description, url = undefined, image = undefined, type = undefined, robots = undefined, jsonLd = undefined }) => (
   <SEO
     title={title}
     description={description}

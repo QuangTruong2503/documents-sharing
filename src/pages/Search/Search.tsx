@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import DocumentList from 'components/Documents/DocumentList.tsx'; // Assuming this is the path
 import documentsApi from 'api/documentsApi';
@@ -26,7 +26,10 @@ const Search: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageState, setPageState] = useState({ search, page: 1 });
+  const currentPage = pageState.search === search ? pageState.page : 1;
+  const setCurrentPage = (page: number) => setPageState({ search, page });
+  const requestId = useRef(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
 
@@ -36,28 +39,32 @@ const Search: React.FC = () => {
       return;
     }
 
+    const currentRequest = ++requestId.current;
     setLoading(true);
     setError(null);
 
     try {
       const response = await documentsApi.getSearchDocuments(search, currentPage, 10);
+      if (currentRequest !== requestId.current) return;
       const data: ResponseData = response.data;
 
       setDocuments(data.documents);
-      setCurrentPage(data.pagination.currentPage);
       setTotalPages(data.pagination.totalPages);
       setTotalCount(data.pagination.totalCount);
     } catch (err) {
+      if (currentRequest !== requestId.current) return;
       console.error('Lỗi khi tìm kiếm tài liệu:', err);
       setError('Không thể tải tài liệu. Vui lòng thử lại sau.');
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
   }, [search, currentPage]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     fetchDocuments();
+    const invalidateRequests = () => { requestId.current++; };
+    return () => { invalidateRequests(); };
   }, [fetchDocuments]);
 
   const handlePageChange = (page: number) => {

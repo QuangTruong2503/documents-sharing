@@ -109,7 +109,7 @@ const DocumentInsightsPanel: React.FC<DocumentInsightsPanelProps> = ({ documentI
 
   const maxDailyValue = useMemo(() => {
     if (!insights?.daily?.length) return 1;
-    return Math.max(...insights.daily.map((item) => Math.max(item.views || 0, item.downloads || 0)), 1);
+    return Math.max(...(insights.daily || []).map((item) => Math.max(item.views || 0, item.downloads || 0)), 1);
   }, [insights?.daily]);
 
   if (!visible) return null;
@@ -158,7 +158,7 @@ const DocumentInsightsPanel: React.FC<DocumentInsightsPanelProps> = ({ documentI
                 <span className="text-xs text-ink-secondary">Xem / tải</span>
               </div>
               <div className="flex h-32 items-end gap-1">
-                {insights.daily.map((item) => {
+                {(insights.daily || []).map((item) => {
                   const viewsHeight = Math.max(4, ((item.views || 0) / maxDailyValue) * 100);
                   const downloadsHeight = Math.max(4, ((item.downloads || 0) / maxDailyValue) * 100);
                   return (
@@ -174,7 +174,7 @@ const DocumentInsightsPanel: React.FC<DocumentInsightsPanelProps> = ({ documentI
             <div className="rounded-md border border-line bg-canvas p-4">
               <h3 className="mb-3 font-semibold text-ink">Nguồn truy cập</h3>
               <div className="space-y-3">
-                {insights.sources.length ? insights.sources.map((source) => (
+                {(insights.sources || []).length ? (insights.sources || []).map((source) => (
                   <div key={source.source}>
                     <div className="mb-1 flex justify-between gap-3 text-sm">
                       <span className="truncate text-ink-secondary">{sourceLabel[source.source] || source.source}</span>

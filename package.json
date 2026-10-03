@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/free-regular-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
@@ -20,7 +21,6 @@
     "flowbite": "^2.5.2",
     "flowbite-react": "^0.10.2",
     "js-cookie": "^3.0.5",
-    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.562.0",
     "marked-react": "^3.0.0",
     "react": "^19.0.0",
@@ -35,7 +35,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "typecheck": "tsc --noEmit"
   },
   "eslintConfig": {
     "extends": [
@@ -56,10 +57,12 @@
     ]
   },
   "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@types/js-cookie": "^3.0.6",
     "@types/react-helmet": "^6.1.11",
     "@types/react-helmet-async": "^1.0.3",
     "react-router-dom": "^7.1.1",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.3"
   }
 }

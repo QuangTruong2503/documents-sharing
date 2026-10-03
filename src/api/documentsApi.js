@@ -15,7 +15,7 @@ const documentsApi = {
   },
   //Lấy dữ liệu theo tim kiếm
   getSearchDocuments: (search, pageNumber, pageSize) =>{
-    return axiosInstance.get(`public/search-documents?search=${search}&PageNumber=${pageNumber}&PageSize=${pageSize}`);
+    return axiosInstance.get("public/search-documents", { params: { search, PageNumber: pageNumber, PageSize: pageSize } });
   },
   //Lấy dữ liệu theo tim kiếm
   getDocumentsByCategory: (categoryID, pageNumber, pageSize) =>{
@@ -111,12 +111,7 @@ const documentsApi = {
   },
   // API cập nhật trạng thái lượt thích tài liệu
   updateDocumentLikeStatus: (documentID, reaction) => {
-    const authToken = Cookies.get("token");
-    return axiosInstance.post(`Likes/reaction?documentId=${documentID}&reaction=${reaction}`, {
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-      },
-    });
+    return axiosInstance.post("Likes/reaction", null, { params: { documentId: documentID, reaction } });
   },
 };
 export default documentsApi;

@@ -6,7 +6,7 @@ import userApi from 'api/usersApi';
 import Cookies from 'js-cookie';
 import { Dropdown} from "flowbite-react"
 import { NavLink } from "react-router-dom";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import FullPageLoader from '../Loaders/FullPageLoader';
 import { normalizeUser } from 'utils/userMapper';
@@ -16,8 +16,11 @@ import { stopNotificationRealtime } from 'api/notificationRealtime';
 const AccountButton = ({ onClose }) => {
     const [user, setUser] = useState(null);
     const [isLogout, setIsLogout] = useState(false);
+    const previousUserCookie = useRef(undefined);
     const updateUserFromCookies = () => {
-      const userStr = Cookies.get("user");
+      const userStr = Cookies.get("token") ? Cookies.get("user") : null;
+      if (previousUserCookie.current === userStr) return;
+      previousUserCookie.current = userStr;
       if (userStr) {
         try {
           const parsedUser = normalizeUser(JSON.parse(userStr));

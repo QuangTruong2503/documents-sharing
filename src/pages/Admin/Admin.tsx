@@ -1,5 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import Cookies from "js-cookie";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Navigate, NavLink, useParams } from "react-router-dom";
 import {
   BarChart3,
@@ -35,7 +34,6 @@ import { toast } from "react-toastify";
 import adminApi from "api/adminApi";
 import featureUpgradesApi from "api/featureUpgradesApi.ts";
 import PageTitle from "components/PageTitle";
-import { normalizeUser } from "utils/userMapper";
 
 const PAGE_SIZE = 8;
 const TAXONOMY_PAGE_SIZE = 10;
@@ -101,20 +99,6 @@ const formatStorageLimit = (bytes?: number | null) => {
   return `${(bytes / storageUnits.MB).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} MB`;
 };
 
-const canAccessAdmin = () => {
-  const token = Cookies.get("token");
-  const userStr = Cookies.get("user");
-
-  if (!token || !userStr) return false;
-
-  try {
-    const user = normalizeUser(JSON.parse(userStr));
-    return user.role?.toLowerCase() === "admin";
-  } catch {
-    Cookies.remove("user");
-    return false;
-  }
-};
 
 function Badge({ children, tone = "neutral" }: { children: React.ReactNode; tone?: string }) {
   const tones: Record<string, string> = {
@@ -286,20 +270,27 @@ function UsersView() {
   const [actionMenu, setActionMenu] = useState<{ userId: string; top: number; left: number } | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
 
+  const requestId = useRef(0);
   const load = useCallback(() => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     adminApi
       .getUsers({ PageNumber: page, PageSize: PAGE_SIZE, search, role, sortBy: "created_at", sortDirection: "desc" })
       .then((response) => {
+        if (currentRequest !== requestId.current) return;
         const result = unwrapList(response);
         setRows(result.data);
         setPagination(result.pagination);
       })
-      .catch(() => toast.error("Không tải được danh sách người dùng"))
-      .finally(() => setLoading(false));
+      .catch(() => { if (currentRequest === requestId.current) toast.error("Không tải được danh sách người dùng"); })
+      .finally(() => { if (currentRequest === requestId.current) setLoading(false); });
   }, [page, role, search]);
 
-  useEffect(load, [load]);
+  useEffect(() => {
+    const timeout = window.setTimeout(load, 300);
+    const invalidateRequests = () => { requestId.current++; };
+    return () => { window.clearTimeout(timeout); invalidateRequests(); };
+  }, [load]);
 
   const updateUser = async (user: any, patch: any) => {
     try {
@@ -633,7 +624,9 @@ function DocumentsView() {
   const [visibility, setVisibility] = useState("");
   const [page, setPage] = useState(1);
 
+  const requestId = useRef(0);
   const load = useCallback(() => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     adminApi
       .getDocuments({
@@ -645,15 +638,20 @@ function DocumentsView() {
         sortDirection: "desc",
       })
       .then((response) => {
+        if (currentRequest !== requestId.current) return;
         const result = unwrapList(response);
         setRows(result.data);
         setPagination(result.pagination);
       })
-      .catch(() => toast.error("Không tải được danh sách tài liệu"))
-      .finally(() => setLoading(false));
+      .catch(() => { if (currentRequest === requestId.current) toast.error("Không tải được danh sách tài liệu"); })
+      .finally(() => { if (currentRequest === requestId.current) setLoading(false); });
   }, [page, search, visibility]);
 
-  useEffect(load, [load]);
+  useEffect(() => {
+    const timeout = window.setTimeout(load, 300);
+    const invalidateRequests = () => { requestId.current++; };
+    return () => { window.clearTimeout(timeout); invalidateRequests(); };
+  }, [load]);
 
   const toggleVisibility = async (doc: any) => {
     await adminApi.updateDocument(doc.document_id, { isPublic: !doc.is_public });
@@ -992,18 +990,21 @@ function TaxonomyView({ type }: { type: "categories" | "tags" }) {
   const [page, setPage] = useState(1);
   const [form, setForm] = useState({ id: "", name: "", description: "", parentId: "" });
 
+  const requestId = useRef(0);
   const load = useCallback(() => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     const request = isCategory ? adminApi.getCategories({ search }) : adminApi.getTags({ search });
     request
-      .then((response) => setRows(unwrap(response) ?? []))
-      .catch(() => toast.error(`Không tải được ${isCategory ? "chuyên mục" : "thẻ"}`))
-      .finally(() => setLoading(false));
+      .then((response) => { if (currentRequest === requestId.current) setRows(unwrap(response) ?? []); })
+      .catch(() => { if (currentRequest === requestId.current) toast.error(`Không tải được ${isCategory ? "chuyên mục" : "thẻ"}`); })
+      .finally(() => { if (currentRequest === requestId.current) setLoading(false); });
   }, [isCategory, search]);
 
   useEffect(() => {
-    const timeout = window.setTimeout(load, 250);
-    return () => window.clearTimeout(timeout);
+    const timeout = window.setTimeout(load, 300);
+    const invalidateRequests = () => { requestId.current++; };
+    return () => { window.clearTimeout(timeout); invalidateRequests(); };
   }, [load]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / TAXONOMY_PAGE_SIZE));
@@ -1029,28 +1030,36 @@ function TaxonomyView({ type }: { type: "categories" | "tags" }) {
   const createItem = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.name.trim()) return;
-    if (isCategory) {
-      await adminApi.createCategory({
-        categoryId: form.id || undefined,
-        name: form.name,
-        description: form.description || undefined,
-        parentId: form.parentId || undefined,
-      });
-    } else {
-      await adminApi.createTag({ tagId: form.id || undefined, name: form.name });
+    try {
+      if (isCategory) {
+        await adminApi.createCategory({
+          categoryId: form.id || undefined,
+          name: form.name,
+          description: form.description || undefined,
+          parentId: form.parentId || undefined,
+        });
+      } else {
+        await adminApi.createTag({ tagId: form.id || undefined, name: form.name });
+      }
+      toast.success(`Đã tạo ${isCategory ? "chuyên mục" : "thẻ"}`);
+      setForm({ id: "", name: "", description: "", parentId: "" });
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không thể tạo chuyên mục hoặc thẻ.");
     }
-    toast.success(`Đã tạo ${isCategory ? "chuyên mục" : "thẻ"}`);
-    setForm({ id: "", name: "", description: "", parentId: "" });
-    load();
   };
 
   const deleteItem = async (item: any) => {
     const id = isCategory ? item.category_id : item.tag_id;
     if (!window.confirm(`Xóa ${item.name}?`)) return;
-    if (isCategory) await adminApi.deleteCategory(id);
-    else await adminApi.deleteTag(id);
-    toast.success("Đã xóa");
-    load();
+    try {
+      if (isCategory) await adminApi.deleteCategory(id);
+      else await adminApi.deleteTag(id);
+      toast.success("Đã xóa");
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Không thể xóa chuyên mục hoặc thẻ.");
+    }
   };
 
   return (
@@ -1125,20 +1134,27 @@ function CollectionsView() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
+  const requestId = useRef(0);
   const load = useCallback(() => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     adminApi
       .getCollections({ PageNumber: page, PageSize: PAGE_SIZE, search })
       .then((response) => {
+        if (currentRequest !== requestId.current) return;
         const result = unwrapList(response);
         setRows(result.data);
         setPagination(result.pagination);
       })
-      .catch(() => toast.error("Không tải được bộ sưu tập"))
-      .finally(() => setLoading(false));
+      .catch(() => { if (currentRequest === requestId.current) toast.error("Không tải được bộ sưu tập"); })
+      .finally(() => { if (currentRequest === requestId.current) setLoading(false); });
   }, [page, search]);
 
-  useEffect(load, [load]);
+  useEffect(() => {
+    const timeout = window.setTimeout(load, 300);
+    const invalidateRequests = () => { requestId.current++; };
+    return () => { window.clearTimeout(timeout); invalidateRequests(); };
+  }, [load]);
 
   const deleteCollection = async (collection: any) => {
     if (!window.confirm(`Xóa bộ sưu tập "${collection.name}"?`)) return;
@@ -1672,12 +1688,6 @@ function AdminContent() {
 }
 
 function Admin() {
-  const hasAdminAccess = useMemo(() => canAccessAdmin(), []);
-
-  if (!hasAdminAccess) {
-    return <Navigate to="/" replace />;
-  }
-
   return <AdminContent />;
 }
 
