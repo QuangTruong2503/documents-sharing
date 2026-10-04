@@ -432,7 +432,7 @@ const MyLibraryPage: React.FC = () => {
       )}
       {dialog?.type === "move" && <MoveCopyDialog mode={dialog.mode} items={dialog.items} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
       {dialog?.type === "merge" && <MergeDialog items={dialog.items} parentFolderId={null} onClose={() => setDialog(null)} onDone={closeDialogAndReload} />}
-      {dialog?.type === "share" && <ShareDialog item={dialog.item} onClose={() => setDialog(null)} />}
+      {dialog?.type === "share" && <ShareDialog item={{ id: dialog.item.id, type: dialog.item.type, name: getItemName(dialog.item) }} onClose={() => setDialog(null)} onChanged={refreshSummary} />}
       {confirmAction && (
         <WorkspaceConfirmDialog
           title={confirmAction.title}

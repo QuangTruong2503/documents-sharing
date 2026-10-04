@@ -22,7 +22,9 @@ import {
 import PageTitle from "components/PageTitle";
 import Cookies from "js-cookie";
 import { toast } from "react-toastify";
-import workspaceLibraryApi from "api/workspaceLibraryApi.ts";
+import ShareDialog from "components/Workspace/dialogs/ShareDialog.tsx";
+import { copyTextToClipboard } from "utils/workspaceItemLinks.ts";
+import { apiMessage } from "utils/apiMessage.ts";
 import featureUpgradesApi from "api/featureUpgradesApi.ts";
 import { buildCloudinaryAttachmentUrl } from "utils/workspaceLibraryHelpers.ts";
 
@@ -45,6 +47,7 @@ interface DocumentData {
   parent_folder_id?: number | null;
   folder_visibility?: string | null;
   access_source?: string | null;
+  can_share?: boolean;
 }
 
 interface Collection {
@@ -93,8 +96,8 @@ const folderVisibilityLabel: Record<string, string> = {
 
 const accessSourceLabel: Record<string, string> = {
   folder: "Truy cập qua thư mục",
-  public: "Tài liệu công khai",
-  owner: "Tài liệu của bạn",
+  public_document: "Tài liệu công khai",
+  owner_or_admin: "Tài liệu của bạn",
 };
 
 const formatFileSize = (size?: number) => {
@@ -137,18 +140,6 @@ const PdfViewer: React.FC = () => {
   const [savingToCollection, setSavingToCollection] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [shareSettings, setShareSettings] = useState<any>(null);
-  const [shareSaving, setShareSaving] = useState(false);
-  const [shareDisabling, setShareDisabling] = useState(false);
-  const [shareForm, setShareForm] = useState({
-    access: "anyone_with_link",
-    permission: "viewer",
-    allowDownload: true,
-    password: "",
-    expiresAt: "",
-    maxViews: "",
-    maxDownloads: "",
-  });
   const [reportOptions, setReportOptions] = useState({
     suggestedReasons: [
       "Nội dung vi phạm bản quyền",
@@ -365,87 +356,21 @@ const PdfViewer: React.FC = () => {
   const handleDislike = () => {
     alert("Chức năng Dislike chưa được triển khai!");
   };
-  const toDateTimeLocalValue = (value?: string | null) => {
-    if (!value) return "";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "";
-    const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-    return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
-  };
-
   const handleShare = async () => {
-    if (!Cookies.get("token")) {
-      if (checkNotSigned()) return;
-      return;
-    }
-    setShowShareModal(true);
+    if (!documentData) return;
+    if (documentData.can_share) { setShowShareModal(true); return; }
+    const url = `${window.location.origin}/document/${documentData.document_id}`;
     try {
-      const response = await workspaceLibraryApi.getShareLinkSettings({ itemId: Number(documentID), itemType: "document" });
-      const shareLink = response.shareLink;
-      if (shareLink) {
-        setShareSettings(shareLink);
-        setShareForm({
-          access: shareLink.access || "anyone_with_link",
-          permission: shareLink.permission || "viewer",
-          allowDownload: shareLink.allowDownload !== false,
-          password: "",
-          expiresAt: toDateTimeLocalValue(shareLink.expiresAt),
-          maxViews: shareLink.maxViews ? String(shareLink.maxViews) : "",
-          maxDownloads: shareLink.maxDownloads ? String(shareLink.maxDownloads) : "",
-        });
+      if (navigator.share) {
+        await navigator.share({ title: documentData.title, url });
+      } else {
+        await copyTextToClipboard(url);
+        toast.success(documentData.is_public
+          ? "Đã sao chép liên kết trang tài liệu."
+          : "Đã sao chép liên kết. Chỉ người có quyền truy cập thư mục mới mở được.");
       }
-    } catch {
-      setShareSettings(null);
-    }
-  };
-
-  const saveShareLink = async () => {
-    setShareSaving(true);
-    try {
-      const response = await workspaceLibraryApi.createShareLink({
-        itemId: Number(documentID),
-        itemType: "document",
-        access: shareForm.access,
-        permission: shareForm.permission,
-        allowDownload: shareForm.allowDownload,
-        password: shareForm.password || null,
-        expiresAt: shareForm.expiresAt || null,
-        maxViews: shareForm.maxViews ? Number(shareForm.maxViews) : null,
-        maxDownloads: shareForm.maxDownloads ? Number(shareForm.maxDownloads) : null,
-      });
-      setShareSettings(response.shareLink);
-      toast.success("Đã lưu liên kết chia sẻ.");
-      return response.shareLink;
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Không tạo được liên kết chia sẻ.");
-    } finally {
-      setShareSaving(false);
-    }
-  };
-
-  const copyShareLink = async () => {
-    const link = shareSettings?.shareUrl ? shareSettings : await saveShareLink();
-    if (!link?.shareUrl) return;
-    try {
-      await navigator.clipboard.writeText(link.shareUrl);
-    } catch {
-      toast.error("Không thể sao chép liên kết.");
-      return;
-    }
-    toast.success("Đã sao chép liên kết.");
-  };
-
-  const disableShareLink = async () => {
-    if (!shareSettings?.id) return;
-    setShareDisabling(true);
-    try {
-      await workspaceLibraryApi.disableShareLink(shareSettings.id);
-      setShareSettings(null);
-      toast.success("Đã tắt liên kết chia sẻ.");
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Không tắt được liên kết.");
-    } finally {
-      setShareDisabling(false);
+      if (error?.name !== "AbortError") toast.error(apiMessage(error, "Không thể chia sẻ liên kết."));
     }
   };
   const handleReport = async () => {
@@ -868,71 +793,10 @@ const PdfViewer: React.FC = () => {
         />
       )}
       {showShareModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
-          <div className="surface-card w-full max-w-xl bg-surface p-6 shadow-card">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-bold text-ink">Chia sẻ tài liệu</h2>
-                <p className="mt-2 line-clamp-2 text-sm text-ink-secondary">{documentData.title}</p>
-              </div>
-              <button type="button" onClick={() => setShowShareModal(false)} className="rounded-md p-2 text-ink-secondary hover:bg-canvas">
-                Đóng
-              </button>
-            </div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <label>
-                <span className="mb-1 block text-sm font-semibold text-ink">Quyền truy cập</span>
-                <select value={shareForm.access} onChange={(event) => setShareForm({ ...shareForm, access: event.target.value })} className="input-field">
-                  <option value="restricted">Restricted</option>
-                  <option value="anyone_with_link">Anyone with link</option>
-                </select>
-              </label>
-              <label>
-                <span className="mb-1 block text-sm font-semibold text-ink">Permission</span>
-                <select value={shareForm.permission} onChange={(event) => setShareForm({ ...shareForm, permission: event.target.value })} className="input-field">
-                  <option value="viewer">Viewer</option>
-                  <option value="editor">Editor</option>
-                </select>
-              </label>
-            </div>
-            <label className="mt-4 flex items-center gap-3 rounded-md border border-line p-3 text-sm text-ink-secondary">
-              <input type="checkbox" checked={shareForm.allowDownload} onChange={(event) => setShareForm({ ...shareForm, allowDownload: event.target.checked })} />
-              <span>Cho phép tải xuống</span>
-            </label>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label>
-                <span className="mb-1 block text-sm font-semibold text-ink">Mật khẩu</span>
-                <input value={shareForm.password} onChange={(event) => setShareForm({ ...shareForm, password: event.target.value })} className="input-field" placeholder="Không bắt buộc" />
-              </label>
-              <label>
-                <span className="mb-1 block text-sm font-semibold text-ink">Ngày hết hạn</span>
-                <input type="datetime-local" value={shareForm.expiresAt} onChange={(event) => setShareForm({ ...shareForm, expiresAt: event.target.value })} className="input-field" />
-              </label>
-              <label>
-                <span className="mb-1 block text-sm font-semibold text-ink">Giới hạn lượt xem</span>
-                <input type="number" min="1" value={shareForm.maxViews} onChange={(event) => setShareForm({ ...shareForm, maxViews: event.target.value })} className="input-field" placeholder="Không giới hạn" />
-              </label>
-              <label>
-                <span className="mb-1 block text-sm font-semibold text-ink">Giới hạn lượt tải</span>
-                <input type="number" min="1" value={shareForm.maxDownloads} onChange={(event) => setShareForm({ ...shareForm, maxDownloads: event.target.value })} className="input-field" placeholder="Không giới hạn" />
-              </label>
-            </div>
-            <div className="mt-5 rounded-md border border-line bg-canvas p-3 text-sm text-ink-secondary">
-              {shareSettings?.shareUrl || "Chưa có link. Bấm tạo/cập nhật để lấy liên kết."}
-            </div>
-            <div className="mt-6 flex flex-wrap justify-end gap-2">
-              {shareSettings?.id && (
-                <button type="button" onClick={disableShareLink} disabled={shareDisabling} className="btn-secondary border-danger text-danger hover:border-danger hover:text-danger">
-                  {shareDisabling ? "Đang tắt..." : "Tắt link"}
-                </button>
-              )}
-              <button type="button" onClick={saveShareLink} disabled={shareSaving} className="btn-secondary">
-                {shareSaving ? "Đang lưu..." : "Tạo/Cập nhật link"}
-              </button>
-              <button type="button" onClick={copyShareLink} className="btn-primary">Sao chép liên kết</button>
-            </div>
-          </div>
-        </div>
+        <ShareDialog
+          item={{ id: documentData.document_id, type: "document", name: documentData.title }}
+          onClose={() => setShowShareModal(false)}
+        />
       )}
       {showSaveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
