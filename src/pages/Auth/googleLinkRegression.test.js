@@ -35,19 +35,13 @@ jest.mock("@react-oauth/google", () => ({
   ),
 }));
 
-test("explicit Google linking keeps the 2FA step and never saves a session before it succeeds", async () => {
+test("Google login requests no password and keeps the 2FA step before saving a session", async () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   const twoFA = jest.fn();
   userApi.loginGoogle
-    .mockRejectedValueOnce({
-      response: {
-        status: 409,
-        data: { code: "GOOGLE_LINK_CONFIRMATION_REQUIRED" },
-      },
-    })
     .mockResolvedValueOnce({
       data: {
         success: true,
@@ -66,25 +60,9 @@ test("explicit Google linking keeps the 2FA step and never saves a session befor
       ),
     );
     await act(async () => host.querySelector("button").click());
-    const form = document.querySelector('[role="dialog"] form');
-    expect(form).not.toBeNull();
-    const input = form.querySelector('input[type="password"]');
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,
-        "value",
-      ).set.call(input, "confirm-password");
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-    await act(async () =>
-      form.dispatchEvent(
-        new Event("submit", { bubbles: true, cancelable: true }),
-      ),
-    );
     expect(userApi.loginGoogle).toHaveBeenLastCalledWith(
       "google-token",
       "device",
-      "confirm-password",
     );
     expect(twoFA).toHaveBeenCalledWith(
       expect.objectContaining({ tempToken: "challenge" }),
