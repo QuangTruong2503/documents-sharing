@@ -1,85 +1,97 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import Marked from "marked-react";
-import geminiGenerate from "api/geminiGenerate";
+import aiGenerate from "api/aiGenerate";
 import config from "config/config";
-
-interface DocumentSummaryByAIProps {
+import { apiMessage } from "utils/apiMessage";
+import { readAIHistory, writeAIHistory } from "utils/aiHistory";
+import Modal from "components/Workspace/dialogs/Modal";
+const DocumentSummaryByAI: React.FC<{
   documentId: number;
   onClose: () => void;
-}
-
-const DocumentSummaryByAI: React.FC<DocumentSummaryByAIProps> = ({ documentId, onClose }) => {
-  const [summary, setSummary] = useState<string>("");
-  const [status, setStatus] = useState<string>("");
-
-  // ✅ Bọc trong useCallback để dùng trong useEffect
-  const fetchSummary = useCallback(async () => {
+}> = ({ documentId, onClose }) => {
+  const [summary, setSummary] = useState("");
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState(false);
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    setSummary("");
+    setError(false);
+    setStatus("Đang đọc tài liệu và tạo tóm tắt…");
     if (!documentId) {
-      alert("Thiếu document ID.");
+      setError(true);
+      setStatus("Mã tài liệu không hợp lệ.");
       return;
     }
-
-    setStatus("Đang xử lý...");
-    setSummary("");
-
-    try {
-      const response = await geminiGenerate.getSummarizeDocument(documentId);
-      const result = await response.data;
-      const summaryText = result.summary || result.content || "Không có nội dung trả về.";
-      setSummary(summaryText);
-      setStatus("✅ Hoàn tất!");
-    } catch (error) {
-      console.error("Lỗi khi lấy tóm tắt:", error);
-      setStatus("❌ Có lỗi xảy ra khi xử lý.");
-    }
-  }, [documentId]); // ✅ Chỉ phụ thuộc vào documentId
-
-  const hasFetched = useRef(false);
-
-  useEffect(() => {
-    if (!hasFetched.current) {
-      hasFetched.current = true;
-      fetchSummary();
-    }
-  }, [fetchSummary]); // ✅ Thêm fetchSummary vào dependencies
-  useEffect(() => {
-    if (summary) {
-      const SESSION_STORAGE_KEY = config.SESSION_STORAGE_KEY_FOR_AI_CHAT;
-      const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      let chatHistory = saved ? JSON.parse(saved) : [];
-  
-      chatHistory.push({
-        role: "ai",
-        content: `📝 Tóm tắt tài liệu #${documentId}:\n\n${summary}`
+    aiGenerate
+      .getSummarizeDocument(documentId, controller.signal)
+      .then(({ data }) => {
+        if (!active) return;
+        if (typeof data.summary !== "string" || !data.summary.trim())
+          throw new Error("AI không trả về tóm tắt.");
+        setSummary(data.summary);
+        setStatus(
+          data.truncated
+            ? `Đã tóm tắt một phần tài liệu (${data.processed_pages}/${data.total_pages} trang); nội dung vượt giới hạn xử lý.`
+            : "Đã hoàn tất tóm tắt.",
+        );
+        const key = config.SESSION_STORAGE_KEY_FOR_AI_CHAT;
+        writeAIHistory(key, [
+          ...readAIHistory(key),
+          {
+            role: "ai",
+            content: `Tóm tắt tài liệu #${documentId}${data.truncated ? " (một phần)" : ""}:\n\n${data.summary}`,
+          },
+        ]);
+      })
+      .catch((failure) => {
+        if (active) {
+          setError(true);
+          setStatus(
+            apiMessage(failure, "Không tạo được tóm tắt. Vui lòng thử lại."),
+          );
+        }
       });
-  
-      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(chatHistory));
-    }
-  }, [summary, documentId]);
-  
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [documentId, revision]);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white w-full max-w-xl p-6 rounded-lg shadow-lg relative">
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-4 text-gray-500 hover:text-gray-800 text-xl"
-        >
-          &times;
-        </button>
-
-        <h2 className="text-xl font-semibold mb-4">💬 Gemini AI đang tóm tắt tài liệu</h2>
-        {status && <p className="text-sm text-gray-500 italic mb-3">{status}</p>}
-
-        <div className="h-64 overflow-y-auto border border-gray-300 rounded-md p-4 bg-gray-50 prose prose-sm prose-blue max-w-none">
-          {summary ? (
-            <Marked>{summary}</Marked>
-          ) : (
-            <p className="text-gray-400">Đang chờ phản hồi từ AI...</p>
-          )}
+    <Modal label="Tóm tắt tài liệu bằng AI" onClose={onClose}>
+      <section className="w-full space-y-4 rounded-xl bg-surface p-6">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold">Tóm tắt tài liệu bằng AI</h2>
+          <button
+            aria-label="Đóng tóm tắt"
+            className="btn-secondary"
+            onClick={onClose}
+          >
+            Đóng
+          </button>
         </div>
-      </div>
-    </div>
+        <p
+          role={error ? "alert" : "status"}
+          className="text-sm text-ink-secondary"
+        >
+          {status}
+        </p>
+        {error && (
+          <button
+            className="btn-secondary"
+            onClick={() => setRevision((value) => value + 1)}
+          >
+            Thử lại
+          </button>
+        )}
+        {summary && (
+          <div className="prose prose-sm max-h-96 max-w-none overflow-y-auto rounded border border-line bg-canvas p-4">
+            <Marked>{summary}</Marked>
+          </div>
+        )}
+      </section>
+    </Modal>
   );
 };
-
 export default DocumentSummaryByAI;

@@ -26,6 +26,22 @@ export interface ShareLinkSettings {
   expiresAt?: string | null;
   maxViews?: number | null;
   maxDownloads?: number | null;
+  requiresPassword?: boolean;
+  views?: number;
+  downloads?: number;
+  itemName?: string | null;
+}
+
+export interface ShareLinkPayload {
+  itemId: number;
+  itemType: WorkspaceItemType;
+  access: "anyone_with_link";
+  permission: "viewer";
+  allowDownload: boolean;
+  password?: string;
+  expiresAt: string | null;
+  maxViews: number | null;
+  maxDownloads: number | null;
 }
 
 export interface WorkspacePermissions {
@@ -165,7 +181,7 @@ const workspaceLibraryApi = {
   getFavorites: (params = {}) =>
     axiosInstance.get("library/favorites", { params: cleanParams(params) }).then((response) => response.data),
 
-  createShareLink: (payload: Record<string, any>) =>
+  createShareLink: (payload: ShareLinkPayload) =>
     axiosInstance.post<{ shareLink: ShareLinkSettings }>("share-links", payload).then((response) => response.data),
 
   getShareLinkSettings: (params: { itemId: number; itemType: WorkspaceItemType }) =>

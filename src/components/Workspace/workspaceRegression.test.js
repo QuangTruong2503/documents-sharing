@@ -19,7 +19,7 @@ const { copyTextToClipboard } = require("utils/workspaceItemLinks.ts");
 jest.mock("react-router-dom", () => require("../../../node_modules/react-router/dist/development/index.js"), { virtual: true });
 jest.mock("api/workspaceLibraryApi.ts", () => ({ __esModule: true, default: {
   getSummary: jest.fn(), getMyLibrary: jest.fn(), getFavorites: jest.fn(), getTrash: jest.fn(),
-  getDocumentPreview: jest.fn(), getShareLinkSettings: jest.fn(), createShareLink: jest.fn(),
+  getDocumentPreview: jest.fn(), getShareLinkSettings: jest.fn(), createShareLink: jest.fn(), disableShareLink: jest.fn(),
   setFavorite: jest.fn(), getFolderTree: jest.fn(), moveItems: jest.fn(), copyItems: jest.fn(), getFolderItems: jest.fn(),
 } }));
 jest.mock("react-toastify", () => ({ toast: { error: jest.fn(), success: jest.fn(), info: jest.fn() } }));
@@ -99,13 +99,157 @@ test("late preview response cannot replace the latest document", async () => {
 });
 
 test("copy link creates a missing link and catches clipboard errors", async () => {
-  api.createShareLink.mockResolvedValue({ shareLink: { id: "token", shareUrl: "https://example.com/s/token" } });
-  await render(<MemoryRouter initialEntries={["/library"]}><Routes><Route path="/library" element={<LibraryLayout />}><Route index element={<ShareDialog item={item} onClose={() => {}} />} /></Route></Routes></MemoryRouter>);
+  api.createShareLink.mockResolvedValue({ shareLink: { id: "token", shareUrl: "https://example.com/s/token", access: "anyone_with_link" } });
+  await render(<ShareDialog item={item} onClose={() => {}} />);
+  await click(byText("button", "Tạo liên kết"));
   await click(byText("button", "Sao chép liên kết"));
   expect(copyTextToClipboard).toHaveBeenCalledWith("https://example.com/s/token");
   copyTextToClipboard.mockRejectedValue(new Error("denied"));
   await click(byText("button", "Sao chép liên kết"));
   expect(toast.error).toHaveBeenCalledWith("Không thể sao chép liên kết.");
+});
+
+const activeLink = { id: "token", access: "anyone_with_link", permission: "viewer", shareUrl: "https://example.com/s/token", allowDownload: true, views: 12, downloads: 3 };
+const shareDialog = async (link = null, onChanged = jest.fn()) => {
+  api.getShareLinkSettings.mockResolvedValue({ shareLink: link });
+  api.createShareLink.mockImplementation(async payload => ({ shareLink: { ...activeLink, ...link, ...payload } }));
+  api.disableShareLink.mockResolvedValue({ success: true });
+  await render(<ShareDialog item={item} onClose={() => {}} onChanged={onChanged} />);
+  return onChanged;
+};
+const advancedButton = () => document.querySelector('button[aria-expanded]');
+const changeValue = async (element, value) => {
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(element.tagName === "SELECT" ? HTMLSelectElement.prototype : HTMLInputElement.prototype, "value").set.call(element, value);
+    element.dispatchEvent(new Event(element.tagName === "SELECT" ? "change" : "input", { bubbles: true }));
+  });
+};
+
+test("sharing starts off without unsupported access or permission controls", async () => {
+  await shareDialog();
+  expect(document.querySelector('[role="switch"]').getAttribute("aria-checked")).toBe("false");
+  expect(document.querySelector("select")).toBeNull();
+  expect(document.querySelector('[role="dialog"]').textContent).not.toMatch(/Editor|Restricted|Permission|Quyền truy cập/);
+  const changed = jest.fn();
+  await shareDialog(null, changed);
+  await click(byText("button", "Tạo liên kết"));
+  expect(api.createShareLink).toHaveBeenCalledWith(expect.objectContaining({ access: "anyone_with_link", permission: "viewer" }));
+  expect(api.createShareLink.mock.calls[0][0]).not.toHaveProperty("password");
+  expect(changed).toHaveBeenCalledTimes(1);
+});
+
+test("legacy restricted links appear off and never expose their dead URL", async () => {
+  await shareDialog({ ...activeLink, access: "restricted" });
+  expect(document.querySelector('[role="switch"]').getAttribute("aria-checked")).toBe("false");
+  expect(document.querySelector('input[aria-label="Liên kết chia sẻ"]')).toBeNull();
+  expect(byText("button", "Sao chép liên kết")).toBeUndefined();
+});
+
+test("turning sharing off revokes the saved link and refreshes the summary", async () => {
+  const changed = await shareDialog(activeLink);
+  await click(document.querySelector('[role="switch"]'));
+  expect(api.disableShareLink).toHaveBeenCalledWith("token");
+  expect(document.querySelector('[role="switch"]').getAttribute("aria-checked")).toBe("false");
+  expect(changed).toHaveBeenCalledTimes(1);
+});
+
+test("download changes preserve saved limits and do not send an unsaved password", async () => {
+  const link = { ...activeLink, maxViews: 24, expiresAt: "2099-10-11T03:00:00.000Z", requiresPassword: true };
+  await shareDialog(link);
+  await click(byText("button", "Đổi mật khẩu"));
+  await changeValue(document.querySelector('input[type="password"]'), "draft-secret");
+  await click(document.querySelector('input[type="checkbox"]'));
+  expect(api.createShareLink).toHaveBeenCalledWith(expect.objectContaining({ allowDownload: false, maxViews: 24, expiresAt: link.expiresAt }));
+  expect(api.createShareLink.mock.calls[0][0]).not.toHaveProperty("password");
+  expect(document.querySelector('input[type="password"]').value).toBe("draft-secret");
+  expect(document.querySelector('[role="dialog"]').textContent).toContain("Chưa lưu");
+});
+
+test("saved password is visible and can be removed explicitly", async () => {
+  await shareDialog({ ...activeLink, requiresPassword: true });
+  expect(document.querySelector('[role="dialog"]').textContent).toContain("Đã đặt mật khẩu");
+  await click(byText("button", "Xóa mật khẩu"));
+  expect(api.createShareLink).toHaveBeenCalledWith(expect.objectContaining({ password: "" }));
+});
+
+test("seven day expiration is sent immediately as UTC", async () => {
+  await shareDialog(activeLink); await click(advancedButton());
+  jest.useFakeTimers("modern").setSystemTime(new Date("2026-10-04T03:00:00Z"));
+  try {
+    await changeValue(document.querySelector('select[aria-label="Hết hạn"]'), "7");
+    expect(api.createShareLink).toHaveBeenCalledWith(expect.objectContaining({ expiresAt: "2026-10-11T03:00:00.000Z" }));
+  } finally { jest.useRealTimers(); }
+});
+
+test.each(["0", "1.5", "-1"])("invalid view limit %s stays in the draft and blocks saving", async value => {
+  await shareDialog(activeLink); await click(advancedButton());
+  await changeValue(document.querySelector('input[aria-label="Giới hạn lượt xem"]'), value);
+  await click(byText("button", "Lưu tùy chọn nâng cao"));
+  expect(api.createShareLink).not.toHaveBeenCalled();
+  expect(document.querySelector('[role="alert"]').textContent).toContain("Nhập số nguyên");
+});
+
+test("failed creation preserves the off state", async () => {
+  await shareDialog(); api.createShareLink.mockRejectedValueOnce(new Error("offline"));
+  await click(byText("button", "Tạo liên kết"));
+  expect(toast.error).toHaveBeenCalled();
+  expect(document.querySelector('[role="switch"]').getAttribute("aria-checked")).toBe("false");
+});
+
+test("custom expiry uses browser local time and rejects a past date", async () => {
+  await shareDialog(activeLink); await click(advancedButton());
+  await changeValue(document.querySelector('select[aria-label="Hết hạn"]'), "custom");
+  await changeValue(document.querySelector('input[type="datetime-local"]'), "2000-01-01T10:30");
+  await click(byText("button", "Lưu tùy chọn nâng cao"));
+  expect(api.createShareLink).not.toHaveBeenCalled();
+  expect(document.querySelector('[role="alert"]').textContent).toContain("tương lai");
+  await changeValue(document.querySelector('input[type="datetime-local"]'), "2099-10-11T10:30");
+  await click(byText("button", "Lưu tùy chọn nâng cao"));
+  expect(api.createShareLink).toHaveBeenCalledWith(expect.objectContaining({ expiresAt: new Date("2099-10-11T10:30").toISOString() }));
+});
+
+test("saving a new password preserves the exact existing expiry", async () => {
+  const link = { ...activeLink, expiresAt: "2099-10-11T03:00:45.123Z" };
+  await shareDialog(link);
+  await click(byText("button", "Đặt mật khẩu"));
+  const input = document.querySelector('input[type="password"]');
+  expect(input.autocomplete).toBe("new-password");
+  await changeValue(input, "new-secret");
+  await click(byText("button", "Lưu tùy chọn nâng cao"));
+  expect(api.createShareLink).toHaveBeenCalledWith(expect.objectContaining({ password: "new-secret", expiresAt: link.expiresAt }));
+});
+
+test("expired or exhausted links show warnings and expand their saved limits", async () => {
+  await shareDialog({ ...activeLink, expiresAt: "2000-01-01T00:00:00Z", maxViews: 12, maxDownloads: 3 });
+  expect(advancedButton().getAttribute("aria-expanded")).toBe("true");
+  const dialog = document.querySelector('[role="dialog"]');
+  expect(dialog.textContent).toContain("Liên kết đã hết hạn");
+  expect(dialog.textContent).toContain("đạt giới hạn lượt xem");
+  expect(dialog.textContent).toContain("đạt giới hạn lượt tải");
+});
+
+test("loading does not show an editable default form and failed loading can be retried", async () => {
+  const pending = deferred(); api.getShareLinkSettings.mockReturnValueOnce(pending.promise);
+  await render(<ShareDialog item={item} onClose={() => {}} />);
+  expect(document.querySelector('[role="switch"]')).toBeNull();
+  await act(async () => pending.reject(new Error("offline")));
+  expect(document.querySelector('[role="switch"]')).toBeNull();
+  await click(byText("button", "Thử lại"));
+  expect(document.querySelector('[role="switch"]')).not.toBeNull();
+});
+
+test("copy leaves advanced drafts unsaved and API mutations lock closing and controls", async () => {
+  await shareDialog(activeLink); await click(advancedButton());
+  await changeValue(document.querySelector('input[aria-label="Giới hạn lượt xem"]'), "42");
+  await click(byText("button", "Sao chép liên kết"));
+  expect(api.createShareLink).not.toHaveBeenCalled();
+  expect(copyTextToClipboard).toHaveBeenCalledWith(activeLink.shareUrl);
+  const pending = deferred(); api.createShareLink.mockReturnValueOnce(pending.promise);
+  await click(byText("button", "Lưu tùy chọn nâng cao"));
+  expect(document.querySelector('button[aria-label="Đóng chia sẻ"]').disabled).toBe(true);
+  expect(document.querySelector('[role="switch"]').disabled).toBe(true);
+  await act(async () => pending.resolve({ shareLink: { ...activeLink, maxViews: 42 } }));
+  expect(document.querySelector('[role="dialog"]').textContent).not.toContain("Chưa lưu");
 });
 
 test("move destination requires selection and blocks source, descendants and current parent", async () => {

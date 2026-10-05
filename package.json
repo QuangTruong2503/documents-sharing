@@ -32,7 +32,7 @@
     "ua-parser-js": "^2.0.7"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "react-scripts --disable-warning=DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE --disable-warning=DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",

@@ -1,16 +1,7 @@
-import axiosInstance from "./axiosInstance";
-
-const geminiGenerate = {
-    getSummarizeDocument: (documentId) => {
-        return axiosInstance.get(`public/gemini/document-summary?documentId=${documentId}`);
-    },
-    postGeminiChat: (message) => {
-        return axiosInstance.post(`public/gemini/chat`, message, {
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-    }
-
-}
-export default geminiGenerate;
+import aiGenerate from "./aiGenerate";
+// Compatibility facade for clients that still import the old module.
+const legacyAI = {
+  getSummarizeDocument: aiGenerate.getSummarizeDocument,
+  postGeminiChat: (request) => aiGenerate.postChat(request.message),
+};
+export default legacyAI;
