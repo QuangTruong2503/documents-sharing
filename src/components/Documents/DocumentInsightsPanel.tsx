@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Cookies from "js-cookie";
 import { Activity, Download, Eye, FileClock, Heart, MessageCircle, RefreshCw, Share2 } from "lucide-react";
 import featureUpgradesApi from "api/featureUpgradesApi.ts";
 import { formatDateToVN } from "utils/formatDateToVN";
@@ -81,11 +82,13 @@ const compactDate = (value: string) => {
 };
 
 const DocumentInsightsPanel: React.FC<DocumentInsightsPanelProps> = ({ documentId }) => {
+  const isSignedIn = Boolean(Cookies.get("token"));
   const [insights, setInsights] = useState<DocumentInsights | null>(null);
   const [loading, setLoading] = useState(true);
   const [visible, setVisible] = useState(true);
 
   const loadInsights = useCallback(async () => {
+    if (!isSignedIn) return;
     try {
       setLoading(true);
       const response = await featureUpgradesApi.getDocumentInsights(documentId, { days: 30 });
@@ -101,7 +104,7 @@ const DocumentInsightsPanel: React.FC<DocumentInsightsPanelProps> = ({ documentI
     } finally {
       setLoading(false);
     }
-  }, [documentId]);
+  }, [documentId, isSignedIn]);
 
   useEffect(() => {
     loadInsights();
@@ -112,7 +115,7 @@ const DocumentInsightsPanel: React.FC<DocumentInsightsPanelProps> = ({ documentI
     return Math.max(...(insights.daily || []).map((item) => Math.max(item.views || 0, item.downloads || 0)), 1);
   }, [insights?.daily]);
 
-  if (!visible) return null;
+  if (!isSignedIn || !visible) return null;
 
   return (
     <section className="surface-card p-4 md:p-5">

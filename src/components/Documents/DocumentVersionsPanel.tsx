@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import Cookies from "js-cookie";
 import { AlertTriangle, CheckCircle2, Clock3, Download, FileText, RefreshCw, RotateCcw, Upload, X } from "lucide-react";
 import { toast } from "react-toastify";
 import featureUpgradesApi from "api/featureUpgradesApi.ts";
@@ -108,6 +109,7 @@ export default function DocumentVersionsPanel({
   currentFileType,
   currentFileSize,
 }: DocumentVersionsPanelProps) {
+  const isSignedIn = Boolean(Cookies.get("token"));
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [versions, setVersions] = useState<DocumentVersion[]>([]);
   const [permissions, setPermissions] = useState<VersionPermissions>({});
@@ -143,6 +145,7 @@ export default function DocumentVersionsPanel({
   };
 
   const loadVersions = async () => {
+    if (!isSignedIn) return;
     setLoading(true);
     setLoadError("");
     try {
@@ -167,7 +170,7 @@ export default function DocumentVersionsPanel({
   useEffect(() => {
     loadVersions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [documentId]);
+  }, [documentId, isSignedIn]);
 
   const handleSelectFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const nextFile = event.target.files?.[0] || null;
@@ -248,6 +251,8 @@ export default function DocumentVersionsPanel({
       toast.error(error?.response?.data?.message || "Không mở được file phiên bản.");
     }
   };
+
+  if (!isSignedIn) return null;
 
   return (
     <section className="surface-card p-4 md:p-6">

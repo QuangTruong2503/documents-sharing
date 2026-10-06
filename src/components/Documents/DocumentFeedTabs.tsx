@@ -18,7 +18,7 @@ const normalizeDocuments = (response: any) => {
 
 export default function DocumentFeedTabs() {
   const isSignedIn = Boolean(Cookies.get("token"));
-  const [activeTab, setActiveTab] = useState<FeedKey>("recommended");
+  const [activeTab, setActiveTab] = useState<FeedKey>(() => isSignedIn ? "recommended" : "trending");
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -32,6 +32,7 @@ export default function DocumentFeedTabs() {
   }, [activeTab, visibleTabs]);
 
   useEffect(() => {
+    if (!isSignedIn && activeTab !== "trending") return;
     const load = async () => {
       setLoading(true);
       setError("");
@@ -55,7 +56,7 @@ export default function DocumentFeedTabs() {
     };
 
     load();
-  }, [activeTab]);
+  }, [activeTab, isSignedIn]);
 
   return (
     <section className="py-8">
